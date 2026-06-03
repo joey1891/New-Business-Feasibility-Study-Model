@@ -1817,8 +1817,8 @@
                 { id: 'out_rent', name: '공동 사업실/토지 임차료', data: f.cash_out_rent, type: 'detail', dataGroup: 'sga-group-child' },
                 { id: 'out_dir_fix_sga', name: '판관 고정직접경비 (영업경비)', data: f.cash_out_dir_fix_sga, type: 'detail', dataGroup: 'sga-group-child' },
                 { id: 'out_ind_fix_sga', name: '판관 고정간접경비 (일반운영비)', data: f.cash_out_ind_fix_sga, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_dir_var_sga', name: '판관 매출연동 직접변동비 (수수료)', data: f.cash_out_dir_var_sga, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_ind_var_sga', name: '판관 운영연동 간접변동비 (마케팅)', data: f.cash_out_ind_var_sga, type: 'detail', dataGroup: 'sga-group-child' },
+                { id: 'out_dir_var_sga', name: '판관 직접변동비 (매출연동)', data: f.cash_out_dir_var_sga, type: 'detail', dataGroup: 'sga-group-child' },
+                { id: 'out_ind_var_sga', name: '판관 간접변동비 (운영연동)', data: f.cash_out_ind_var_sga, type: 'detail', dataGroup: 'sga-group-child' },
 
                 // 영업 외 손익 및 당기순이익 산출상세 (이자비용 차감)
                 { id: 'net-income-group-header', name: '당기순이익 (Net Income) 산출 상세', data: f.net_income, type: 'header-sub', isParent: true, groupId: 'net-income-group', highlight: 'bg-indigo-50/70 border-b border-indigo-100 cursor-pointer hover:bg-indigo-100/40 text-indigo-900 font-semibold' },
@@ -2073,6 +2073,9 @@
 
             const simDebtFunded = totalInitialInvestment * debtRatio;
             const simEquityFunded = totalInitialInvestment - simDebtFunded;
+
+            // [참조 오류 해결] 로컬 스코프 내부에서 제조 간접고정경비를 안전하게 가져옵니다.
+            const mfg_indirect_fixed = parseFloat(document.getElementById('mfg_indirect_fixed').value) || 0;
 
             for (let sim = 0; sim < numSimulations; sim++) {
                 let sim_discountedFCFE = [-simEquityFunded];
@@ -2717,6 +2720,7 @@
             lucide.createIcons();
         }
 
+        // Remove loading bubble
         function removeLoadingBubble() {
             const loadingBubble = document.getElementById('ai_chat_loading_bubble');
             if (loadingBubble) {
@@ -2793,7 +2797,6 @@
                 inputEl.focus();
             }
         }
-
 
         // Initialize Webapp on window load
         window.onload = function() {
