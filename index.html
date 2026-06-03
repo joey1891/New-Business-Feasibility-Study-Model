@@ -967,6 +967,41 @@
                 </div>
             </section>
 
+            <!-- 5-Year Income Statement (Financial Accounting) -->
+            <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                        <h4 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="calculator" class="w-5 h-5 text-blue-600"></i> 5개년 추정 손익계산서 (재무회계 기준)
+                        </h4>
+                        <p class="text-[11px] text-slate-500 mt-1">기업회계기준(K-GAAP/IFRS)에 따라 기능별(매출총이익 중심)로 재분류된 전통적 손익계산서입니다.</p>
+                    </div>
+                    <div class="text-[10px] font-semibold text-slate-500 flex items-center gap-3">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-100 inline-block"></span> 그룹 행 (클릭 시 토글)</span>
+                        <span>(단위: 백만원)</span>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse min-w-[1100px]">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 text-xs">
+                                <th class="py-3 px-4 w-[36%]">계정과목</th>
+                                <th class="py-3 px-3 text-right">0년차 (투자기)</th>
+                                <th class="py-3 px-3 text-right">1년차</th>
+                                <th class="py-3 px-3 text-right">2년차</th>
+                                <th class="py-3 px-3 text-right">3년차</th>
+                                <th class="py-3 px-3 text-right">4년차</th>
+                                <th class="py-3 px-3 text-right">5년차 (청산)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="financialAccountingTableBody">
+                            <!-- Dynamic Content Generator by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Detailed Break-Even, Cost Breakdowns & Leverage -->
             <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Cost Breakdown Chart list -->
@@ -1140,7 +1175,9 @@
             'var-group': false,
             'fix-group': false,
             'fcf-calc-group': true,
-            'debt-schedule': false
+            'debt-schedule': false,
+            'fa-cogs-group': true,
+            'fa-sga-group': true
         };
 
         // Standard Global Chart Instances
@@ -1372,6 +1409,8 @@
                 else if (group === 'fix-child') visible = rowGroupsState['fix-group'];
                 else if (group === 'fcf-calc-child') visible = rowGroupsState['fcf-calc-group'];
                 else if (group === 'debt-schedule-child') visible = rowGroupsState['debt-schedule'];
+                else if (group === 'fa-cogs-child') visible = rowGroupsState['fa-cogs-group'];
+                else if (group === 'fa-sga-child') visible = rowGroupsState['fa-sga-group'];
 
                 if (visible) r.classList.remove('hidden'); 
                 else r.classList.add('hidden');
@@ -1887,6 +1926,7 @@
             let simProb = runMonteCarlo(f, totalInitInvestment, initDebt, initEquity, WACC, WACC, WACC);
 
             renderTable(f, initEquity);
+            renderFinancialAccountingTable(f, initEquity);
             renderCharts(f);
             renderCostBreakdown(f);
             renderBEP(f);
@@ -2058,6 +2098,120 @@
                     } else {
                         let txt = (r.t==='pct') ? `${v.toFixed(1)}%` : fmt(v);
                         if(v==='') txt='-';
+                        html += `<td class="py-2 px-3 text-right ${v<0?'text-rose-600':''}">${txt}</td>`;
+                    }
+                }
+                html += `</tr>`;
+            });
+            body.innerHTML = html;
+        }
+
+        function renderFinancialAccountingTable(f, initEq) {
+            const body = document.getElementById('financialAccountingTableBody');
+            
+            // 재무회계 기준 매출원가/판관비 재분류 계산
+            let cogs_total = Array(6).fill(0);
+            let gross_profit = Array(6).fill(0);
+            let gross_profit_margin = Array(6).fill(0);
+            let sga_total = Array(6).fill(0);
+            
+            for(let t=1; t<=5; t++) {
+                // 매출원가 = 제품변동원가 + 고정제조경비 + 감가상각비
+                cogs_total[t] = f.cogs_var_total[t] + f.cogs_fix_total[t] + f.dep_amort[t];
+                gross_profit[t] = f.revenue[t] - cogs_total[t];
+                gross_profit_margin[t] = f.revenue[t] > 0 ? (gross_profit[t] / f.revenue[t]) * 100 : 0;
+                
+                // 판매비와 관리비 = 변동판관비 + 고정판관비
+                sga_total[t] = f.sga_var_total[t] + f.sga_fix_total[t];
+            }
+
+            const sc = [
+                { id:'fa_rev', n:'I. 매출액', d:f.revenue, t:'header', hl:'bg-slate-100 text-slate-900 font-bold border-t border-slate-200' },
+                
+                { id:'fa_cogs_h', n:'II. 매출원가', d:cogs_total, t:'h-sub', p:true, g:'fa-cogs-group', hl:'font-semibold text-rose-700' },
+                
+                // 1. 변동 매출원가 세분화
+                { id:'fa_cogs_v', n:'└─ 변동 매출원가 계', d:f.cogs_var_total, t:'det', cg:'fa-cogs-child', hl:'font-semibold text-slate-700' },
+                { id:'fa_cv_m_r', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 원자재비', d:f.cogs_var_mat_raw, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cv_m_s', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 부자재/포장재비', d:f.cogs_var_mat_sub, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cv_u_e', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 전력비', d:f.cogs_var_util_elec, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cv_u_w', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 수도광열비', d:f.cogs_var_util_water, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cv_u_f', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 스팀/연료비', d:f.cogs_var_util_fuel, t:'det', cg:'fa-cogs-child' },
+                
+                // 2. 고정 제조원가 세분화
+                { id:'fa_cogs_f', n:'└─ 고정 제조원가 계', d:f.cogs_fix_total, t:'det', cg:'fa-cogs-child', hl:'font-semibold text-slate-700' },
+                { id:'fa_cf_l', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 노무비 (고정급)', d:f.cogs_fix_labor, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cf_i_i', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 제조 보험료', d:f.cogs_fix_insurance, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cf_i_m', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 수선유지비', d:f.cogs_fix_maintenance, t:'det', cg:'fa-cogs-child' },
+                { id:'fa_cf_i_w', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 공장 복리후생비', d:f.cogs_fix_welfare, t:'det', cg:'fa-cogs-child' },
+
+                // 3. 감가상각비
+                { id:'fa_cogs_d', n:'└─ 감가상각비', d:f.dep_amort, t:'det', cg:'fa-cogs-child', hl:'font-semibold text-slate-700' },
+
+                { id:'fa_gp', n:'III. 매출총이익 (Gross Profit)', d:gross_profit, t:'header', hl:'bg-blue-50 text-blue-900 font-bold border-y border-blue-100' },
+                { id:'fa_gp_m', n:'매출총이익률 (%)', d:gross_profit_margin, t:'pct', hl:'bg-blue-50/50 text-blue-700' },
+
+                { id:'fa_sga_h', n:'IV. 판매비와 관리비', d:sga_total, t:'h-sub', p:true, g:'fa-sga-group', hl:'font-semibold text-amber-700' },
+                
+                // 1. 변동 판관비 세분화
+                { id:'fa_sga_v', n:'└─ 변동 판관비 계', d:f.sga_var_total, t:'det', cg:'fa-sga-child', hl:'font-semibold text-slate-700' },
+                { id:'fa_sv_d_l', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 물류비', d:f.sga_var_logistics, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sv_d_s', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 창고보관비', d:f.sga_var_storage, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sv_d_c', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 판매수수료', d:f.sga_var_commission, t:'det', cg:'fa-sga-child' },
+
+                // 2. 고정 판관비 세분화
+                { id:'fa_sga_f', n:'└─ 고정 판관비 계', d:f.sga_fix_total, t:'det', cg:'fa-sga-child', hl:'font-semibold text-slate-700' },
+                { id:'fa_sf_l_ex', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인건비 (임원)', d:f.sga_fix_labor_exec, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_l_fn', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인건비 (재무회계)', d:f.sga_fix_labor_fin, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_l_hr', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인건비 (인사총무)', d:f.sga_fix_labor_hr, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_l_sl', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인건비 (영업사원)', d:f.sga_fix_labor_sales, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_l_rn', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인건비 (연구원)', d:f.sga_fix_labor_rnd, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_m', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 마케팅비', d:f.sga_fix_marketing, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_r', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 임차료', d:f.sga_fix_rent, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_etc_t', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 여비교통비', d:f.sga_fix_travel, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_etc_c', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 통신비', d:f.sga_fix_comm, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_etc_f', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 지급수수료', d:f.sga_fix_fee, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_etc_w', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 복리후생비', d:f.sga_fix_welfare_hq, t:'det', cg:'fa-sga-child' },
+                { id:'fa_sf_etc_s', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 소모품비', d:f.sga_fix_supplies, t:'det', cg:'fa-sga-child' },
+
+                { id:'fa_op', n:'V. 영업이익 (Operating Income)', d:f.ebit, t:'header', hl:'bg-indigo-50 text-indigo-900 font-bold border-y border-indigo-100' },
+                { id:'fa_op_m', n:'영업이익률 (%)', d:f.ebit_margin, t:'pct', hl:'bg-indigo-50/50 text-indigo-700' },
+
+                // 영업외비용 세분화
+                { id:'fa_nonop_h', n:'VI. 영업외비용', d:f.interest, t:'h-sub', p:false, hl:'font-semibold text-slate-700' },
+                { id:'fa_nonop_i', n:'└─ 지급이자 (차입금)', d:f.interest, t:'det', hl:'text-slate-600' },
+                
+                { id:'fa_ebt', n:'VII. 법인세비용차감전순이익 (EBT)', d:f.ebt, t:'header', hl:'bg-slate-50 text-slate-800 font-semibold' },
+                { id:'fa_tax_h', n:'VIII. 법인세비용', d:f.tax, t:'h-sub', p:false, hl:'font-semibold text-slate-700' },
+                { id:'fa_tax_i', n:'└─ 법인세등', d:f.tax, t:'det', hl:'text-rose-500' },
+
+                { id:'fa_ni', n:'IX. 당기순이익 (Net Income)', d:f.net_income, t:'header', hl:'bg-slate-900 text-emerald-400 font-bold border-y-2 border-emerald-500' }
+            ];
+
+            let html = '';
+            sc.forEach(r => {
+                let cl = 'transition hover:bg-slate-50 ';
+                let ind = 'pl-4';
+                if(r.t==='info' || r.t==='pct') cl += 'bg-slate-50/50 text-slate-500 text-xs font-semibold';
+                else if(r.t==='header') cl += 'bg-slate-100 text-slate-800 font-bold';
+                else if(r.t==='h-sub') { cl += 'text-slate-900 font-semibold cursor-pointer'; ind = 'pl-6'; }
+                else if(r.t==='det') { cl += 'text-slate-700 text-xs cursor-pointer'; ind = 'pl-10'; }
+                
+                if(r.hl) cl += ' ' + r.hl;
+                
+                let icon = r.p ? `<i id="toggle-icon-${r.g}" data-lucide="chevron-down" class="w-4 h-4 text-slate-400 inline-block shrink-0 mr-1"></i>` : '';
+                
+                html += `<tr class="${cl}" ${r.cg?`data-group="${r.cg}"`:''} ${r.p?`onclick="toggleRowGroup('${r.g}')"`:''}>
+                <td class="py-2 px-3 border-r ${ind} flex items-center">${icon}${r.n}</td>`;
+                
+                for(let t=0; t<=5; t++) {
+                    let v = r.d[t];
+
+                    if(t===0 && r.t!=='header' && r.t!=='summary') {
+                        html += `<td class="py-2 px-3 text-right text-slate-300">-</td>`;
+                    } else {
+                        let txt = (r.t==='pct') ? `${v.toFixed(1)}%` : fmt(v);
+                        if(v==='' || (t===0 && v===0 && r.id!=='fa_ni')) txt='-';
                         html += `<td class="py-2 px-3 text-right ${v<0?'text-rose-600':''}">${txt}</td>`;
                     }
                 }
