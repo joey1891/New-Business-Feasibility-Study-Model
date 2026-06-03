@@ -297,7 +297,7 @@
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1">용기당 표준 용량</label>
                             <div class="relative">
-                                <input type="number" id="param_bottle_size" value="0.5" step="0.1" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="param_bottle_size" value="0.5" step="0.1" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700" onchange="updateParameterLabels(); runAnalysis()">
                                 <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">L</span>
                             </div>
                             <p class="text-[9px] text-indigo-600 mt-0.5">* 기본: 0.5L (500mL/병)</p>
@@ -375,16 +375,22 @@
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">샴푸 L당 단가</label>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="block text-xs font-medium text-slate-600">샴푸 L당 단가</label>
+                                    <span id="lbl_shampoo_bottle_price" class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded">22,500원/병</span>
+                                </div>
                                 <div class="relative">
-                                    <input type="number" id="param_price_shampoo" value="45000" step="1000" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700" onchange="runAnalysis()">
+                                    <input type="number" id="param_price_shampoo" value="45000" step="1000" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700" onchange="updateParameterLabels(); runAnalysis()">
                                     <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">원</span>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">트리트먼트 L당 단가</label>
+                                <div class="flex justify-between items-end mb-1">
+                                    <label class="block text-xs font-medium text-slate-600">트리트먼트 L당 단가</label>
+                                    <span id="lbl_treatment_bottle_price" class="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-1.5 py-0.5 rounded">27,500원/병</span>
+                                </div>
                                 <div class="relative">
-                                    <input type="number" id="param_price_treatment" value="55000" step="1000" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700" onchange="runAnalysis()">
+                                    <input type="number" id="param_price_treatment" value="55000" step="1000" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700" onchange="updateParameterLabels(); runAnalysis()">
                                     <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">원</span>
                                 </div>
                             </div>
@@ -401,16 +407,19 @@
                         <div class="text-xs font-bold text-emerald-800" id="lbl_shampoo_total">총 L당 원재료비: -원</div>
                         <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <label class="block text-[10px] text-slate-500">원액 원료 <span id="lbl_shampoo_active_pct" class="text-[9px] text-emerald-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">원액 원료 <span id="lbl_shampoo_active_pct" class="text-[9px] text-emerald-600"></span></label>
                                 <input type="number" id="param_shampoo_active" value="9000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_shampoo_active_bottle" class="text-[9px] text-emerald-600 text-right mt-0.5 font-medium"></div>
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-500">용기/부자재 <span id="lbl_shampoo_pkg_pct" class="text-[9px] text-emerald-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">용기/부자재 <span id="lbl_shampoo_pkg_pct" class="text-[9px] text-emerald-600"></span></label>
                                 <input type="number" id="param_shampoo_pkg" value="4000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_shampoo_pkg_bottle" class="text-[9px] text-emerald-600 text-right mt-0.5 font-medium"></div>
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-500">포장 상자 <span id="lbl_shampoo_box_pct" class="text-[9px] text-emerald-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">포장 상자 <span id="lbl_shampoo_box_pct" class="text-[9px] text-emerald-600"></span></label>
                                 <input type="number" id="param_shampoo_box" value="2000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_shampoo_box_bottle" class="text-[9px] text-emerald-600 text-right mt-0.5 font-medium"></div>
                             </div>
                         </div>
                     </div>
@@ -425,16 +434,19 @@
                         <div class="text-xs font-bold text-teal-800" id="lbl_treatment_total">총 L당 원재료비: -원</div>
                         <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <label class="block text-[10px] text-slate-500">원액 원료 <span id="lbl_treatment_active_pct" class="text-[9px] text-teal-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">원액 원료 <span id="lbl_treatment_active_pct" class="text-[9px] text-teal-600"></span></label>
                                 <input type="number" id="param_treatment_active" value="11000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_treatment_active_bottle" class="text-[9px] text-teal-600 text-right mt-0.5 font-medium"></div>
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-500">용기/부자재 <span id="lbl_treatment_pkg_pct" class="text-[9px] text-teal-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">용기/부자재 <span id="lbl_treatment_pkg_pct" class="text-[9px] text-teal-600"></span></label>
                                 <input type="number" id="param_treatment_pkg" value="5000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_treatment_pkg_bottle" class="text-[9px] text-teal-600 text-right mt-0.5 font-medium"></div>
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-500">포장 상자 <span id="lbl_treatment_box_pct" class="text-[9px] text-teal-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">포장 상자 <span id="lbl_treatment_box_pct" class="text-[9px] text-teal-600"></span></label>
                                 <input type="number" id="param_treatment_box" value="2000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_treatment_box_bottle" class="text-[9px] text-teal-600 text-right mt-0.5 font-medium"></div>
                             </div>
                         </div>
                     </div>
@@ -449,16 +461,19 @@
                         <div class="text-xs font-bold text-sky-800" id="lbl_mfg_total">총 L당 직접경비: -원</div>
                         <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <label class="block text-[10px] text-slate-500">전력비 <span id="lbl_mfg_elec_pct" class="text-[9px] text-sky-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">전력비 <span id="lbl_mfg_elec_pct" class="text-[9px] text-sky-600"></span></label>
                                 <input type="number" id="param_mfg_elec" value="1500" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_mfg_elec_bottle" class="text-[9px] text-sky-600 text-right mt-0.5 font-medium"></div>
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-500">수도 용수 <span id="lbl_mfg_water_pct" class="text-[9px] text-sky-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">수도 용수 <span id="lbl_mfg_water_pct" class="text-[9px] text-sky-600"></span></label>
                                 <input type="number" id="param_mfg_water" value="1000" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_mfg_water_bottle" class="text-[9px] text-sky-600 text-right mt-0.5 font-medium"></div>
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-500">스팀 연료 <span id="lbl_mfg_fuel_pct" class="text-[9px] text-sky-600"></span></label>
+                                <label class="block text-[10px] text-slate-500 mb-0.5">스팀 연료 <span id="lbl_mfg_fuel_pct" class="text-[9px] text-sky-600"></span></label>
                                 <input type="number" id="param_mfg_fuel" value="500" class="w-full bg-white border border-slate-200 rounded p-1 text-xs font-bold" onchange="updateParameterLabels(); runAnalysis();">
+                                <div id="lbl_mfg_fuel_bottle" class="text-[9px] text-sky-600 text-right mt-0.5 font-medium"></div>
                             </div>
                         </div>
                     </div>
@@ -1164,17 +1179,50 @@
             const sMix = parseFloat(document.getElementById('param_shampoo_mix').value);
             document.getElementById('lbl_shampoo_mix').innerText = `${sMix}% (트리트먼트 ${100 - sMix}%)`;
             
-            const calcPct = (a,p,b, el1, el2, el3, elTotal) => {
+            const bottleSize = parseFloat(document.getElementById('param_bottle_size').value) || 0;
+            const pShampoo = parseFloat(document.getElementById('param_price_shampoo').value) || 0;
+            const pTreatment = parseFloat(document.getElementById('param_price_treatment').value) || 0;
+            
+            if (document.getElementById('lbl_shampoo_bottle_price')) {
+                document.getElementById('lbl_shampoo_bottle_price').innerText = `${Math.round(pShampoo * bottleSize).toLocaleString()}원/병`;
+            }
+            if (document.getElementById('lbl_treatment_bottle_price')) {
+                document.getElementById('lbl_treatment_bottle_price').innerText = `${Math.round(pTreatment * bottleSize).toLocaleString()}원/병`;
+            }
+
+            const calcPct = (a,p,b, el1, el2, el3, elTotal, bEl1, bEl2, bEl3) => {
                 let tot = a+p+b;
-                document.getElementById(elTotal).innerText = `총 L당: ${tot.toLocaleString()}원`;
+                document.getElementById(elTotal).innerText = `총 단가: ${tot.toLocaleString()}원/L (${Math.round(tot * bottleSize).toLocaleString()}원/병)`;
                 document.getElementById(el1).innerText = tot>0?`(${((a/tot)*100).toFixed(0)}%)`:'(0%)';
                 document.getElementById(el2).innerText = tot>0?`(${((p/tot)*100).toFixed(0)}%)`:'(0%)';
                 document.getElementById(el3).innerText = tot>0?`(${((b/tot)*100).toFixed(0)}%)`:'(0%)';
+
+                if(bEl1) document.getElementById(bEl1).innerText = `${Math.round(a * bottleSize).toLocaleString()}원/병`;
+                if(bEl2) document.getElementById(bEl2).innerText = `${Math.round(p * bottleSize).toLocaleString()}원/병`;
+                if(bEl3) document.getElementById(bEl3).innerText = `${Math.round(b * bottleSize).toLocaleString()}원/병`;
             };
 
-            calcPct(parseFloat(document.getElementById('param_shampoo_active').value), parseFloat(document.getElementById('param_shampoo_pkg').value), parseFloat(document.getElementById('param_shampoo_box').value), 'lbl_shampoo_active_pct', 'lbl_shampoo_pkg_pct', 'lbl_shampoo_box_pct', 'lbl_shampoo_total');
-            calcPct(parseFloat(document.getElementById('param_treatment_active').value), parseFloat(document.getElementById('param_treatment_pkg').value), parseFloat(document.getElementById('param_treatment_box').value), 'lbl_treatment_active_pct', 'lbl_treatment_pkg_pct', 'lbl_treatment_box_pct', 'lbl_treatment_total');
-            calcPct(parseFloat(document.getElementById('param_mfg_elec').value), parseFloat(document.getElementById('param_mfg_water').value), parseFloat(document.getElementById('param_mfg_fuel').value), 'lbl_mfg_elec_pct', 'lbl_mfg_water_pct', 'lbl_mfg_fuel_pct', 'lbl_mfg_total');
+            calcPct(
+                parseFloat(document.getElementById('param_shampoo_active').value), 
+                parseFloat(document.getElementById('param_shampoo_pkg').value), 
+                parseFloat(document.getElementById('param_shampoo_box').value), 
+                'lbl_shampoo_active_pct', 'lbl_shampoo_pkg_pct', 'lbl_shampoo_box_pct', 'lbl_shampoo_total',
+                'lbl_shampoo_active_bottle', 'lbl_shampoo_pkg_bottle', 'lbl_shampoo_box_bottle'
+            );
+            calcPct(
+                parseFloat(document.getElementById('param_treatment_active').value), 
+                parseFloat(document.getElementById('param_treatment_pkg').value), 
+                parseFloat(document.getElementById('param_treatment_box').value), 
+                'lbl_treatment_active_pct', 'lbl_treatment_pkg_pct', 'lbl_treatment_box_pct', 'lbl_treatment_total',
+                'lbl_treatment_active_bottle', 'lbl_treatment_pkg_bottle', 'lbl_treatment_box_bottle'
+            );
+            calcPct(
+                parseFloat(document.getElementById('param_mfg_elec').value), 
+                parseFloat(document.getElementById('param_mfg_water').value), 
+                parseFloat(document.getElementById('param_mfg_fuel').value), 
+                'lbl_mfg_elec_pct', 'lbl_mfg_water_pct', 'lbl_mfg_fuel_pct', 'lbl_mfg_total',
+                'lbl_mfg_elec_bottle', 'lbl_mfg_water_bottle', 'lbl_mfg_fuel_bottle'
+            );
         }
 
         function updateFundingSplitLabels() {
