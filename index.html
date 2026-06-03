@@ -482,11 +482,73 @@
                 <!-- 6. 고정 및 변동 경비 설정 (분리) -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-semibold text-indigo-600 border-b border-indigo-50 pb-1 flex items-center gap-1.5">
-                        <i data-lucide="shield-alert" class="w-4 h-4"></i> 6. 연간 고정경비 및 판관비
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i> 6. 연간 고정/변동 판관비 및 인건비
                     </h3>
                     
-                    <div class="bg-amber-50/30 p-3 rounded-lg border border-amber-100">
-                        <span class="text-[10px] font-bold text-amber-900 block mb-2 border-b border-amber-100/50 pb-1">고정비 항목 (연간 백만원)</span>
+                    <!-- 판관 인건비 상세 -->
+                    <div class="bg-blue-50/30 p-3 rounded-lg border border-blue-100">
+                        <span class="text-[10px] font-bold text-blue-900 block mb-2 border-b border-blue-100/50 pb-1">판관 인건비 상세 (인원 / 1인당 연봉 백만원)</span>
+                        <div class="space-y-1.5">
+                            <div class="grid grid-cols-12 gap-1 items-center">
+                                <label class="col-span-4 text-[10px] font-medium text-slate-600">임원</label>
+                                <div class="col-span-3 relative">
+                                    <input type="number" id="staff_exec_cnt" value="1" min="0" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center pr-4 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">명</span>
+                                </div>
+                                <div class="col-span-5 relative">
+                                    <input type="number" id="staff_exec_sal" value="100" step="5" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-right pr-6 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">백만</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-1 items-center">
+                                <label class="col-span-4 text-[10px] font-medium text-slate-600">재무회계</label>
+                                <div class="col-span-3 relative">
+                                    <input type="number" id="staff_fin_cnt" value="1" min="0" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center pr-4 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">명</span>
+                                </div>
+                                <div class="col-span-5 relative">
+                                    <input type="number" id="staff_fin_sal" value="50" step="5" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-right pr-6 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">백만</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-1 items-center">
+                                <label class="col-span-4 text-[10px] font-medium text-slate-600">인사총무</label>
+                                <div class="col-span-3 relative">
+                                    <input type="number" id="staff_hr_cnt" value="1" min="0" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center pr-4 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">명</span>
+                                </div>
+                                <div class="col-span-5 relative">
+                                    <input type="number" id="staff_hr_sal" value="45" step="5" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-right pr-6 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">백만</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-1 items-center">
+                                <label class="col-span-4 text-[10px] font-medium text-slate-600">영업사원</label>
+                                <div class="col-span-3 relative">
+                                    <input type="number" id="staff_sales_cnt" value="2" min="0" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center pr-4 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">명</span>
+                                </div>
+                                <div class="col-span-5 relative">
+                                    <input type="number" id="staff_sales_sal" value="50" step="5" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-right pr-6 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">백만</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-12 gap-1 items-center">
+                                <label class="col-span-4 text-[10px] font-medium text-slate-600">연구원</label>
+                                <div class="col-span-3 relative">
+                                    <input type="number" id="staff_rnd_cnt" value="1" min="0" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center pr-4 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">명</span>
+                                </div>
+                                <div class="col-span-5 relative">
+                                    <input type="number" id="staff_rnd_sal" value="60" step="5" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-right pr-6 focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                    <span class="absolute right-1 top-1.5 text-[8px] text-slate-400">백만</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50/30 p-3 rounded-lg border border-amber-100 mt-2">
+                        <span class="text-[10px] font-bold text-amber-900 block mb-2 border-b border-amber-100/50 pb-1">기타 고정비 항목 (연간 백만원)</span>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block text-[10px] font-medium text-slate-600 mb-1">제조 간접고정비</label>
@@ -497,12 +559,16 @@
                                 <input type="number" id="param_rentTotal" value="50" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 마케팅비 (고정)</label>
+                                <input type="number" id="sga_fix_marketing" value="30" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
                                 <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 고정 직접경비</label>
                                 <input type="number" id="sga_dir_fix" value="20" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
                                 <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 고정 간접경비</label>
-                                <input type="number" id="sga_ind_fix" value="30" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <input type="number" id="sga_ind_fix" value="20" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                         </div>
                     </div>
@@ -513,10 +579,6 @@
                             <div>
                                 <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 직접변동비(수수료)</label>
                                 <input type="number" id="sga_dir_var" value="3" step="0.5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 간접변동비(마케팅)</label>
-                                <input type="number" id="sga_ind_var" value="2" step="0.5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                         </div>
                     </div>
@@ -606,7 +668,6 @@
                     <input type="hidden" id="param_depYears" value="5">
                     <input type="hidden" id="param_amortization" value="10">
                     <input type="hidden" id="staff_prod" value="3">
-                    <input type="hidden" id="staff_sga" value="4">
                     <input type="hidden" id="param_avgSalary" value="40">
                 </div>
             </div>
@@ -995,13 +1056,25 @@
             document.getElementById('param_mfg_water').value = 1000;
             document.getElementById('param_mfg_fuel').value = 500;
 
+            // 판관 인건비 상세
+            document.getElementById('staff_exec_cnt').value = 1;
+            document.getElementById('staff_exec_sal').value = 100;
+            document.getElementById('staff_fin_cnt').value = 1;
+            document.getElementById('staff_fin_sal').value = 50;
+            document.getElementById('staff_hr_cnt').value = 1;
+            document.getElementById('staff_hr_sal').value = 45;
+            document.getElementById('staff_sales_cnt').value = 2;
+            document.getElementById('staff_sales_sal').value = 50;
+            document.getElementById('staff_rnd_cnt').value = 1;
+            document.getElementById('staff_rnd_sal').value = 60;
+
             document.getElementById('mfg_indirect_fixed').value = 40;
             document.getElementById('param_rentTotal').value = 50;
+            document.getElementById('sga_fix_marketing').value = 30;
             document.getElementById('sga_dir_fix').value = 20;
-            document.getElementById('sga_ind_fix').value = 30;
+            document.getElementById('sga_ind_fix').value = 20;
             
             document.getElementById('sga_dir_var').value = 3;
-            document.getElementById('sga_ind_var').value = 2;
 
             document.getElementById('wc_ar').value = 60;
             document.getElementById('wc_ap').value = 30;
@@ -1285,14 +1358,21 @@
                 cogs_var_mat: [0,0,0,0,0,0], cogs_var_util: [0,0,0,0,0,0], cogs_var_total: [0,0,0,0,0,0],
                 cogs_fix_labor: [0,0,0,0,0,0], cogs_fix_indirect: [0,0,0,0,0,0], cogs_fix_total: [0,0,0,0,0,0],
                 
-                // 분리된 판관비
-                sga_var_dir: [0,0,0,0,0,0], sga_var_ind: [0,0,0,0,0,0], sga_var_total: [0,0,0,0,0,0],
-                sga_fix_labor: [0,0,0,0,0,0], sga_fix_rent: [0,0,0,0,0,0], sga_fix_dir: [0,0,0,0,0,0], sga_fix_ind: [0,0,0,0,0,0], sga_fix_total: [0,0,0,0,0,0],
+                // 분리된 판관비 (인건비 상세 + 마케팅 고정)
+                sga_var_dir: [0,0,0,0,0,0], sga_var_total: [0,0,0,0,0,0],
+                
+                sga_fix_labor_exec: [0,0,0,0,0,0], sga_fix_labor_fin: [0,0,0,0,0,0],
+                sga_fix_labor_hr: [0,0,0,0,0,0], sga_fix_labor_sales: [0,0,0,0,0,0],
+                sga_fix_labor_rnd: [0,0,0,0,0,0], sga_fix_labor: [0,0,0,0,0,0],
+                
+                sga_fix_marketing: [0,0,0,0,0,0], sga_fix_rent: [0,0,0,0,0,0], 
+                sga_fix_dir: [0,0,0,0,0,0], sga_fix_ind: [0,0,0,0,0,0], sga_fix_total: [0,0,0,0,0,0],
                 
                 // CM layout elements
                 var_total: [0,0,0,0,0,0], cm: [0,0,0,0,0,0], cm_ratio: [0,0,0,0,0,0], fix_total: [0,0,0,0,0,0],
                 
-                ebitda: [0,0,0,0,0,0], dep_amort: [0,0,0,0,0,0], ebit: [0,0,0,0,0,0],
+                ebitda: [0,0,0,0,0,0], ebitda_margin: [0,0,0,0,0,0], 
+                dep_amort: [0,0,0,0,0,0], ebit: [0,0,0,0,0,0], ebit_margin: [0,0,0,0,0,0],
                 
                 // Debt schedule
                 beg_debt: [initDebt,0,0,0,0,0], new_debt: [initDebt,0,0,0,0,0], debt_repayment: [0,0,0,0,0,0], end_debt: [initDebt,0,0,0,0,0], interest: [0,0,0,0,0,0], 
@@ -1318,13 +1398,24 @@
             const fix_mfg_indirect = parseFloat(document.getElementById('mfg_indirect_fixed').value);
             const fix_mfg_labor = parseInt(document.getElementById('staff_prod').value) * parseFloat(document.getElementById('param_avgSalary').value);
             
+            // SGA Labor details
+            const s_exec_cnt = parseFloat(document.getElementById('staff_exec_cnt').value);
+            const s_exec_sal = parseFloat(document.getElementById('staff_exec_sal').value);
+            const s_fin_cnt = parseFloat(document.getElementById('staff_fin_cnt').value);
+            const s_fin_sal = parseFloat(document.getElementById('staff_fin_sal').value);
+            const s_hr_cnt = parseFloat(document.getElementById('staff_hr_cnt').value);
+            const s_hr_sal = parseFloat(document.getElementById('staff_hr_sal').value);
+            const s_sales_cnt = parseFloat(document.getElementById('staff_sales_cnt').value);
+            const s_sales_sal = parseFloat(document.getElementById('staff_sales_sal').value);
+            const s_rnd_cnt = parseFloat(document.getElementById('staff_rnd_cnt').value);
+            const s_rnd_sal = parseFloat(document.getElementById('staff_rnd_sal').value);
+
             const fix_sga_rent = parseFloat(document.getElementById('param_rentTotal').value);
-            const fix_sga_labor = parseInt(document.getElementById('staff_sga').value) * parseFloat(document.getElementById('param_avgSalary').value);
+            const fix_sga_marketing = parseFloat(document.getElementById('sga_fix_marketing').value);
             const fix_sga_dir = parseFloat(document.getElementById('sga_dir_fix').value);
             const fix_sga_ind = parseFloat(document.getElementById('sga_ind_fix').value);
             
             const var_sga_dir_pct = parseFloat(document.getElementById('sga_dir_var').value)/100;
-            const var_sga_ind_pct = parseFloat(document.getElementById('sga_ind_var').value)/100;
 
             let depSchedules = [{ year: 0, cost: initCapex, years: depYears }];
             let totalAccCapex = initCapex;
@@ -1353,6 +1444,7 @@
                 
                 f.revenue[t] = ((qS * pShampoo * inf) + (qT * pTreatment * inf)) / 1000000;
                 
+                // Cost of Goods Sold
                 f.cogs_var_mat[t] = ((qS * var_mat_s * inf) + (qT * var_mat_t * inf)) / 1000000;
                 f.cogs_var_util[t] = (f.qty[t] * var_util * inf) / 1000000;
                 f.cogs_var_total[t] = f.cogs_var_mat[t] + f.cogs_var_util[t];
@@ -1361,15 +1453,23 @@
                 f.cogs_fix_indirect[t] = fix_mfg_indirect * inf;
                 f.cogs_fix_total[t] = f.cogs_fix_labor[t] + f.cogs_fix_indirect[t];
                 
+                // SGA Expenses
                 f.sga_var_dir[t] = f.revenue[t] * var_sga_dir_pct;
-                f.sga_var_ind[t] = f.revenue[t] * var_sga_ind_pct;
-                f.sga_var_total[t] = f.sga_var_dir[t] + f.sga_var_ind[t];
+                f.sga_var_total[t] = f.sga_var_dir[t]; // Indirect marketing moved to fixed
 
-                f.sga_fix_labor[t] = fix_sga_labor * inf;
+                // Detailed Labor Costs
+                f.sga_fix_labor_exec[t] = (s_exec_cnt * s_exec_sal) * inf;
+                f.sga_fix_labor_fin[t] = (s_fin_cnt * s_fin_sal) * inf;
+                f.sga_fix_labor_hr[t] = (s_hr_cnt * s_hr_sal) * inf;
+                f.sga_fix_labor_sales[t] = (s_sales_cnt * s_sales_sal) * inf;
+                f.sga_fix_labor_rnd[t] = (s_rnd_cnt * s_rnd_sal) * inf;
+                f.sga_fix_labor[t] = f.sga_fix_labor_exec[t] + f.sga_fix_labor_fin[t] + f.sga_fix_labor_hr[t] + f.sga_fix_labor_sales[t] + f.sga_fix_labor_rnd[t];
+
+                f.sga_fix_marketing[t] = fix_sga_marketing * inf;
                 f.sga_fix_rent[t] = fix_sga_rent * inf;
                 f.sga_fix_dir[t] = fix_sga_dir * inf;
                 f.sga_fix_ind[t] = fix_sga_ind * inf;
-                f.sga_fix_total[t] = f.sga_fix_labor[t] + f.sga_fix_rent[t] + f.sga_fix_dir[t] + f.sga_fix_ind[t];
+                f.sga_fix_total[t] = f.sga_fix_labor[t] + f.sga_fix_marketing[t] + f.sga_fix_rent[t] + f.sga_fix_dir[t] + f.sga_fix_ind[t];
                 
                 // Calculate Contribution Margin & Ratios
                 f.var_total[t] = f.cogs_var_total[t] + f.sga_var_total[t];
@@ -1379,14 +1479,18 @@
                 // Calculate Fixed Costs
                 f.fix_total[t] = f.cogs_fix_total[t] + f.sga_fix_total[t];
 
+                // EBITDA & Margin
                 f.ebitda[t] = f.cm[t] - f.fix_total[t];
+                f.ebitda_margin[t] = f.revenue[t] > 0 ? (f.ebitda[t] / f.revenue[t]) * 100 : 0;
                 
                 f.dep_amort[t] = amortization;
                 depSchedules.forEach(sch => {
                     if (t > sch.year && t <= sch.year + sch.years) f.dep_amort[t] += (sch.cost / sch.years);
                 });
 
+                // EBIT & Margin
                 f.ebit[t] = f.ebitda[t] - f.dep_amort[t];
+                f.ebit_margin[t] = f.revenue[t] > 0 ? (f.ebit[t] / f.revenue[t]) * 100 : 0;
                 
                 // Debt Repayment schedule
                 f.beg_debt[t] = f.end_debt[t-1];
@@ -1521,7 +1625,6 @@
                 { id:'cv_m', n:'└─ [제조] 원재료비 (연동)', d:f.cogs_var_mat, t:'det', cg:'var-child' },
                 { id:'cv_u', n:'└─ [제조] 직접제조경비 (유틸)', d:f.cogs_var_util, t:'det', cg:'var-child' },
                 { id:'sv_d', n:'└─ [판관] 판관 직접변동 (수수료)', d:f.sga_var_dir, t:'det', cg:'var-child' },
-                { id:'sv_i', n:'└─ [판관] 판관 간접변동 (마케팅)', d:f.sga_var_ind, t:'det', cg:'var-child' },
 
                 // 공헌이익
                 { id:'cm', n:'공헌이익 (Contribution Margin)', d:f.cm, t:'header', hl:'bg-indigo-50 text-indigo-900 font-bold' },
@@ -1531,16 +1634,24 @@
                 { id:'fix_h', n:'고정비 계 (현금성)', d:f.fix_total, t:'h-sub', p:true, g:'fix-group', cg:'cash-out-child' },
                 { id:'cf_l', n:'└─ [제조] 노무비 (고정급)', d:f.cogs_fix_labor, t:'det', cg:'fix-child' },
                 { id:'cf_i', n:'└─ [제조] 간접고정비', d:f.cogs_fix_indirect, t:'det', cg:'fix-child' },
-                { id:'sf_l', n:'└─ [판관] 인건비', d:f.sga_fix_labor, t:'det', cg:'fix-child' },
+                { id:'sf_l', n:'└─ [판관] 인건비 총액', d:f.sga_fix_labor, t:'det', cg:'fix-child', hl:'font-semibold text-indigo-700' },
+                { id:'sf_l_ex', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 임원', d:f.sga_fix_labor_exec, t:'det', cg:'fix-child' },
+                { id:'sf_l_fn', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 재무회계', d:f.sga_fix_labor_fin, t:'det', cg:'fix-child' },
+                { id:'sf_l_hr', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인사총무', d:f.sga_fix_labor_hr, t:'det', cg:'fix-child' },
+                { id:'sf_l_sl', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 영업사원', d:f.sga_fix_labor_sales, t:'det', cg:'fix-child' },
+                { id:'sf_l_rn', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 연구원', d:f.sga_fix_labor_rnd, t:'det', cg:'fix-child' },
+                { id:'sf_m', n:'└─ [판관] 마케팅비 (고정)', d:f.sga_fix_marketing, t:'det', cg:'fix-child' },
                 { id:'sf_r', n:'└─ [판관] 임차료', d:f.sga_fix_rent, t:'det', cg:'fix-child' },
                 { id:'sf_d', n:'└─ [판관] 기타 고정경비', d:f.sga_fix_dir, t:'det', cg:'fix-child' },
 
                 // 영업이익 산출
                 { id:'ebitda', n:'EBITDA (상각전 영업이익)', d:f.ebitda, t:'header', hl:'bg-slate-50 text-slate-800 border-t border-slate-200' },
+                { id:'ebitda_m', n:'EBITDA 비율 (%)', d:f.ebitda_margin, t:'pct', hl:'bg-slate-50/50 text-slate-500' },
                 { id:'dep', n:'감가상각비 (-)', d:f.dep_amort, t:'det', hl:'text-rose-500 font-medium' },
 
                 // 영업이익
                 { id:'ebit', n:'영업이익 (EBIT)', d:f.ebit, t:'header', hl:'bg-slate-100 text-slate-900 font-bold border-b border-slate-200' },
+                { id:'ebit_m', n:'영업이익률 (%)', d:f.ebit_margin, t:'pct', hl:'bg-slate-100/50 text-slate-600' },
 
                 // 부채 스케줄
                 { id:'dbt_h', n:'차입금 재무 스케줄', d:f.end_debt, t:'h-sub', p:true, g:'debt-schedule', hl:'bg-blue-50/50' },
@@ -1642,7 +1753,7 @@
                 { n: '제조 고정인건비', v: f.cogs_fix_labor[1], c: 'bg-blue-500' },
                 { n: '제조 고정간접비', v: f.cogs_fix_indirect[1], c: 'bg-amber-400' },
                 { n: '판관 직접변동비', v: f.sga_var_dir[1], c: 'bg-pink-400' },
-                { n: '판관 간접변동비', v: f.sga_var_ind[1], c: 'bg-rose-400' },
+                { n: '판관 고정 마케팅비', v: f.sga_fix_marketing[1], c: 'bg-rose-400' },
                 { n: '판관 고정인건비', v: f.sga_fix_labor[1], c: 'bg-indigo-500' },
                 { n: '판관 임차료/고정비', v: f.sga_fix_rent[1]+f.sga_fix_dir[1]+f.sga_fix_ind[1], c: 'bg-slate-500' },
                 { n: '금융 이자비용', v: f.interest[1], c: 'bg-red-500' }
