@@ -36,19 +36,19 @@
     <!-- Header Navigation -->
     <header class="bg-slate-900 text-white shadow-md px-6 py-4 flex flex-wrap justify-between items-center border-b border-slate-800 shrink-0">
         <div class="flex items-center space-x-3">
-            <div class="bg-indigo-600 p-2 rounded-lg text-white">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white animate-pulse">
                 <i data-lucide="line-chart" class="w-6 h-6"></i>
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
-                    BizEval™ Professional v3.0 <span class="text-xs bg-indigo-500/30 text-indigo-300 font-normal px-2 py-0.5 rounded border border-indigo-500/20">FCFE 주주가치 모델</span>
+                    BizEval™ Professional v3.5 <span class="text-xs bg-indigo-500/30 text-indigo-300 font-normal px-2 py-0.5 rounded border border-indigo-500/20">✨ AI Co-Pilot 지능형 주주가치 모델</span>
                 </h1>
-                <p class="text-xs text-slate-400">자본구조(자기자본/부채) 설계, 이자비용 실시간 연동 및 주주 귀속 잉여현금흐름 정밀 DCF 시뮬레이터</p>
+                <p class="text-xs text-slate-400">자본구조 설계, 이자비용 연동, 주주 귀속 FCFE 정밀 시뮬레이터 & ✨ Gemini AI 맞춤형 경영 진단 결합</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
             <span class="bg-emerald-500/20 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> FCFE Engine Active
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> FCFE & AI Active
             </span>
             <button onclick="resetParameters()" class="text-slate-300 hover:text-white text-sm bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded border border-slate-700 transition flex items-center gap-1">
                 <i data-lucide="rotate-ccw" class="w-4 h-4"></i> 초기화
@@ -70,6 +70,55 @@
 
             <!-- Param Sections -->
             <div class="p-5 space-y-6">
+
+                <!-- [✨ AI 신규 기능] 0-0. AI 스마트 변수 역추산 및 시나리오 제안 엔진 -->
+                <div class="space-y-4 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-indigo-950 flex items-center gap-1.5">
+                        <i data-lucide="sparkles" class="w-4 h-4 text-indigo-600 animate-pulse"></i> ✨ AI 스마트 시나리오 제안
+                    </h3>
+                    <p class="text-[11px] text-slate-600 leading-relaxed">
+                        시장 거시 환경이나 뷰티 트렌드 변동을 기반으로 AI가 최적의 시뮬레이션 파라미터를 과학적으로 추정하여 제안해 줍니다.
+                    </p>
+                    
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-[10px] font-semibold text-indigo-950 mb-1">시나리오 프리셋 선택</label>
+                            <select id="ai_scenario_preset" class="w-full bg-white border border-indigo-200 rounded p-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" onchange="onAiPresetChange()">
+                                <option value="kbeauty" selected>K-뷰티 북미/글로벌 대유행 (우호적)</option>
+                                <option value="stagflation">스태그플레이션 & 고금리 쇼크 (부정적)</option>
+                                <option value="supply_crisis">원자재 수급 대란 및 고환율 (비용 상승)</option>
+                                <option value="esg_regulation">ESG 친환경 패키징 의무화 (용기 원가 급증)</option>
+                                <option value="custom">직접 분석 조건 작성...</option>
+                            </select>
+                        </div>
+                        
+                        <div id="ai_custom_request_container" class="hidden">
+                            <label class="block text-[10px] font-semibold text-indigo-950 mb-1">상세 조건 직접 입력</label>
+                            <textarea id="ai_custom_request" rows="2" placeholder="예: 샴푸 판매는 줄고 고가의 트리트먼트 위주 마진 고전략을 구상할 때 원가 조건 추천" class="w-full bg-white border border-indigo-200 rounded p-2 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none text-slate-700"></textarea>
+                        </div>
+
+                        <button type="button" id="ai_scenario_btn" onclick="generateAiScenario()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 rounded transition flex items-center justify-center gap-1">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> ✨ AI 파라미터 추천 실행
+                        </button>
+                    </div>
+
+                    <!-- AI 시나리오 추천 결과 미리보기 영역 -->
+                    <div id="ai_scenario_results" class="hidden bg-white p-3 rounded border border-indigo-100 text-xs space-y-2 shadow-inner">
+                        <div class="flex justify-between items-center border-b border-indigo-50 pb-1.5">
+                            <span class="font-bold text-indigo-900" id="ai_res_title">-</span>
+                            <span class="text-[9px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-bold">추천 수치</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed font-medium" id="ai_res_rationale">-</p>
+                        
+                        <div class="max-h-36 overflow-y-auto text-[10px] divide-y divide-slate-100 bg-slate-50 p-2 rounded">
+                            <div id="ai_res_param_list" class="space-y-1"></div>
+                        </div>
+
+                        <button type="button" onclick="applyAiParams()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold py-1.5 rounded transition flex items-center justify-center gap-1">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i> 추천된 변수 모델에 반영하기
+                        </button>
+                    </div>
+                </div>
 
                 <!-- 0-1. 초기 설비 투자 세부 내역 (CAPEX) 구성 -->
                 <div class="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
@@ -160,7 +209,7 @@
                     </div>
                 </div>
 
-                <!-- [신규 핵심 추가] 0-3. 초기 투자 조달 구조 및 부채 설계 -->
+                <!-- 0-3. 초기 투자 조달 구조 및 부채 설계 -->
                 <div class="space-y-4 bg-indigo-50/40 p-4 rounded-xl border border-indigo-200/60">
                     <h3 class="text-sm font-semibold text-indigo-950 border-b border-indigo-100 pb-1.5 flex items-center gap-1.5">
                         <i data-lucide="landmark" class="w-4 h-4 text-indigo-700"></i> 0-3. 자본 조달 구조 설정 (FCFE 설계)
@@ -621,6 +670,22 @@
                 </div>
             </section>
 
+            <!-- [✨ AI 신규 기능] AI Business Consulting Card -->
+            <section class="bg-gradient-to-r from-indigo-900 via-indigo-950 to-purple-950 text-white p-6 rounded-2xl shadow-lg border border-indigo-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="space-y-1.5 max-w-2xl">
+                    <span class="bg-indigo-500/30 text-indigo-200 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/20">✨ AI 정밀 경영 진단 및 보고서</span>
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400 animate-pulse"></i> 현 금융 조건 기준 ✨ AI 사업 타당성 종합 리포트 생성
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        부채 비율(LTV), 5개년 FCFE 흐름, 레버리지 위험도(DFL, DTL), 몬테카를로 환율 변동 성공률 등 패키징된 정밀 재무 데이터를 기반으로 CFO 관점의 심층 컨설팅 보고서를 자동 생성합니다.
+                    </p>
+                </div>
+                <button onclick="generateAiViabilityReport()" class="bg-white text-indigo-950 hover:bg-indigo-50 font-extrabold text-sm px-6 py-3 rounded-xl transition shadow-md flex items-center gap-2 shrink-0">
+                    <i data-lucide="file-text" class="w-4.5 h-4.5 text-indigo-600"></i> ✨ AI 컨설팅 리포트 생성
+                </button>
+            </section>
+
             <!-- Charts (FCFE & Monte Carlo) -->
             <section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
@@ -725,20 +790,132 @@
         </main>
     </div>
 
+    <!-- [✨ AI 신규 기능] Full-screen Interactive CFO Report Modal -->
+    <div id="ai_report_modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[80] overflow-y-auto p-4 md:p-6">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-indigo-600 rounded text-white">
+                        <i data-lucide="sparkles" class="w-5 h-5 animate-spin"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold">✨ BizEval AI 비즈니스 타당성 종합 진단 보고서</h3>
+                        <p class="text-[10px] text-slate-300">CFO 및 Venture Capital 시각의 전문 재무 피드백</p>
+                    </div>
+                </div>
+                <button onclick="closeAiReportModal()" class="text-slate-400 hover:text-white transition">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar" id="ai_modal_scroll_container">
+                
+                <!-- Loading State Container -->
+                <div id="ai_loading_container" class="space-y-6 py-12 text-center hidden">
+                    <div class="relative w-24 h-24 mx-auto">
+                        <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center text-indigo-600">
+                            <i data-lucide="sparkles" class="w-8 h-8 animate-pulse"></i>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <h4 class="font-bold text-slate-800 text-sm">✨ 정밀 시뮬레이션 데이터를 해부하고 있습니다...</h4>
+                        <p class="text-xs text-slate-400 max-w-sm mx-auto" id="ai_loading_status">
+                            [1/3] 5개년 주주 가치 재무 데이터 구조 패키징 중
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Report Render Container -->
+                <div id="ai_report_content_container" class="space-y-6 hidden">
+                    
+                    <!-- Top Summary Bar -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-center">
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold block">주주 가치 (Equity NPV)</span>
+                            <span class="text-sm font-extrabold text-indigo-950" id="ai_summary_npv">-</span>
+                        </div>
+                        <div class="border-t sm:border-t-0 sm:border-x border-indigo-100 py-2 sm:py-0">
+                            <span class="text-[10px] text-slate-400 font-bold block">자기자본 수익률 (Equity IRR)</span>
+                            <span class="text-sm font-extrabold text-indigo-950" id="ai_summary_irr">-</span>
+                        </div>
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold block">사업 타당성 확률 (Monte-Carlo)</span>
+                            <span class="text-sm font-extrabold text-indigo-950" id="ai_summary_prob">-</span>
+                        </div>
+                    </div>
+
+                    <!-- Rendered AI Report (Beautiful Custom styled markdown) -->
+                    <div class="prose prose-slate prose-xs max-w-none border-b border-slate-100 pb-6" id="ai_report_html_body">
+                        <!-- AI Generated Content -->
+                    </div>
+
+                    <!-- Action panel for report -->
+                    <div class="flex flex-wrap gap-2 justify-end">
+                        <button onclick="copyReportToClipboard()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold px-3 py-2 rounded-lg border border-slate-200 transition flex items-center gap-1.5">
+                            <i data-lucide="clipboard" class="w-4 h-4"></i> 클립보드에 보고서 복사
+                        </button>
+                    </div>
+
+                    <!-- CFO Follow-up Interactive Chat Area -->
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
+                        <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
+                            <div class="p-1 bg-indigo-100 rounded text-indigo-700">
+                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                            </div>
+                            <h4 class="text-xs font-bold text-slate-800">✨ AI 금융 컨설턴트 1:1 심층 전략 심화 질의응답</h4>
+                        </div>
+                        
+                        <!-- Chat message log -->
+                        <div id="ai_chat_log_container" class="flex flex-col gap-3 max-h-[300px] overflow-y-auto p-4 border border-slate-100 bg-white rounded-lg custom-scrollbar">
+                            <div class="bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 leading-relaxed">
+                                안녕하세요! 생성된 종합 타당성 보고서를 바탕으로 전략 수립을 돕는 전담 CFO 비즈니스 파트너입니다.<br>
+                                <strong>"초기 운전자본 회수 시점을 조율하면 현금흐름이 어떻게 개선될까요?"</strong> 나 <strong>"이익률 개선을 위한 샴푸와 트리트먼트 가격 최적화 방안은?"</strong> 같이 궁금한 점을 편하게 질문해 주십시오!
+                            </div>
+                        </div>
+
+                        <!-- Chat input bar -->
+                        <div class="flex gap-2">
+                            <input type="text" id="ai_chat_input" placeholder="AI 컨설턴트에게 이 시나리오에 대해 추가적인 질문을 던져보세요..." class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none text-slate-700" onkeydown="if(event.key==='Enter') sendAiConsultantMessage()">
+                            <button id="ai_chat_send_btn" onclick="sendAiConsultantMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1 shrink-0">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i> ✨ 질문 전송
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center shrink-0">
+                <span class="text-[10px] text-slate-400">BizEval™ Professional v3.5 & Gemini Flash-0925 Powered</span>
+                <button onclick="closeAiReportModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg transition">
+                    닫기
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <!-- JavaScript Business Logic Core Engine -->
     <script>
         // Collapsible Row Group Memory (Multi-level toggle control)
         const rowGroupsState = {
             'cash-in': true,
             'cash-out': true,
-            'cogs-group': false,  // 제조원가 대그룹 접힘 기본설정
+            'cogs-group': false,  
             'material': false,
             'shampoo-mat': false,
             'treatment-mat': false,
             'direct-mfg': false,
-            'sga-group': false,   // 판관비 대그룹 접힘 기본설정
-            'debt-schedule': true, // 차입금 아코디언 추가
-            'net-income-group': false // 당기순이익 산출 아코디언 추가
+            'sga-group': false,   
+            'debt-schedule': true, 
+            'net-income-group': false 
         };
 
         // Standard Global Chart Instances
@@ -751,6 +928,18 @@
             { name: '원액 고정밀 충진설비', cost: 150 },
             { name: '자동 포장 및 인라인 라벨러', cost: 100 }
         ];
+
+        // 글로벌 금융 데이터 캐싱 객체 (AI 전송용)
+        let latestFinancialCache = {};
+        let chatHistory = []; // CFO Multi-turn Conversation logs
+
+        // AI 시나리오 프리셋 정의
+        const AI_PRESETS = {
+            kbeauty: "K-뷰티의 전세계적 유행으로 해외 시장으로의 판로가 대거 열려, 연간 생산 설비 가동율이 각 연차마다 15%씩 폭발적으로 추가 상승하고, 샴푸 및 트리트먼트 제품의 리터당 판매 단가가 브랜드 프리미엄에 힘입어 각각 20% 증가한 최상의 긍정적 국면을 타당성 시뮬레이션 모델로 제안해줘.",
+            stagflation: "글로벌 공급망 교란과 유가 폭등에 따른 강력한 스태그플레이션이 도래하였습니다. 물가상승률이 연 12%로 대폭 상승하고 한은 기준금리 급상승에 따른 자기자본비용(Cost of Equity/WACC) 역시 14.5%로 대폭 폭증합니다. 소비 침체로 샴푸와 트리트먼트 단가는 10% 강제 하락하며 원부자재 가격은 25% 가파르게 폭등하는 위기 극면 시나리오의 변수를 제안해줘.",
+            supply_crisis: "글로벌 원자재 공급난 및 원/달러 환율 폭등 사태가 겹친 상황입니다. 샴푸 원액 원료비가 리터당 13,000원으로, 트리트먼트 원액 원료비가 16,000원으로 수급 차질로 인해 40% 이상 치솟고 환율연간변동성이 15.5%로 급격하게 불투명해지는 원가 충격 변수 조합을 제안해줘.",
+            esg_regulation: "지속가능경영을 위한 전세계 플라스틱 포장재 전면 금지 및 환경부의 강력한 안전 규제가 전면 시작되었습니다. 친환경 생분해 용기 도입에 따라 샴푸 및 트리트먼트의 용기/부자재 단가가 각각 개당 4,000원 이상씩 대폭 증가합니다. 대신 친환경 프리미엄 친환경 이미지를 부여하여 판매가격을 리터당 5,000원씩 상승 적용하는 비용/가격 트레이드오프 파라미터를 추천해줘."
+        };
 
         // Reset Parameters to Defaults
         function resetParameters() {
@@ -793,12 +982,10 @@
             document.getElementById('util_y4').value = 90;
             document.getElementById('util_y5').value = 90;
 
-            // 초기 운전자본 세부항목 초기화
             document.getElementById('param_init_wc_material').value = 50;
             document.getElementById('param_init_wc_labor').value = 30;
             document.getElementById('param_init_wc_contingency').value = 20;
 
-            // 자금 조달 구조 초기화
             document.getElementById('param_debt_ratio').value = 40;
             document.getElementById('param_debt_rate').value = 5.5;
             document.getElementById('param_debt_repayment_method').value = 'bullet';
@@ -812,6 +999,10 @@
             document.getElementById('use_historical_vol').checked = true;
             document.getElementById('param_fx_vol').value = 8.43;
             toggleFxVolatilityInput();
+
+            document.getElementById('ai_scenario_preset').value = 'kbeauty';
+            document.getElementById('ai_custom_request_container').classList.add('hidden');
+            document.getElementById('ai_scenario_results').classList.add('hidden');
 
             renderEquipments();
             updateFundingSplitLabels();
@@ -937,7 +1128,7 @@
             const rows = document.querySelectorAll('#financialTableBody tr');
             rows.forEach(r => {
                 const group = r.getAttribute('data-group');
-                if (!group) return; // Meta rows always visible
+                if (!group) return; 
 
                 let visible = true;
 
@@ -1185,26 +1376,21 @@
             const wc_ap_days = parseFloat(document.getElementById('wc_ap').value);
             const wc_inv_days = parseFloat(document.getElementById('wc_inv').value);
 
-            // 원화 환율 연간 변동성 변수 로드
             const fx_volatility = parseFloat(document.getElementById('param_fx_vol').value) / 100;
 
-            // 1. Calculate Max CAPA (L) 및 개수(병)
             const batchesPerDay = (shifts * 8) / capaTime;
             const maxAnnualProductionCapa = (batchesPerDay * capaDays * capaSize) * capaYield;
             const maxAnnualProductionBottles = maxAnnualProductionCapa / bottleSize;
 
-            // Update Header CAPA
             document.getElementById('dash_capa_vol').innerText = Math.round(maxAnnualProductionCapa).toLocaleString();
             document.getElementById('dash_capa_bottles').innerText = Math.round(maxAnnualProductionBottles).toLocaleString();
 
-            // 부채 원금 상환 스케줄 연산
             let begDebt = Array(6).fill(0);
             let debtIssued = Array(6).fill(0);
             let debtRepayment = Array(6).fill(0);
             let endDebt = Array(6).fill(0);
             let interestExpense = Array(6).fill(0);
 
-            // Year 0 차입 유입
             debtIssued[0] = totalDebtFunded;
             endDebt[0] = totalDebtFunded;
 
@@ -1213,10 +1399,8 @@
                 interestExpense[t] = begDebt[t] * debtInterestRate;
 
                 if (repaymentMethod === 'bullet') {
-                    // 5년차 말 전액 상환
                     debtRepayment[t] = (t === 5) ? totalDebtFunded : 0;
                 } else {
-                    // 매년 균등 원금 상환
                     debtRepayment[t] = totalDebtFunded / 5;
                 }
                 endDebt[t] = begDebt[t] - debtRepayment[t];
@@ -1239,7 +1423,6 @@
                 revenue_shampoo: [0, 0, 0, 0, 0, 0],
                 revenue_treatment: [0, 0, 0, 0, 0, 0],
 
-                // COGS Raw Material Deep-dive split
                 cogs_material: [0, 0, 0, 0, 0, 0], 
                 shampoo_mat_total: [0, 0, 0, 0, 0, 0],
                 shampoo_mat_active: [0, 0, 0, 0, 0, 0],
@@ -1251,7 +1434,6 @@
                 treatment_mat_pkg: [0, 0, 0, 0, 0, 0],
                 treatment_mat_box: [0, 0, 0, 0, 0, 0],
 
-                // Direct MFG Deep-dive split
                 cogs_direct_exp: [0, 0, 0, 0, 0, 0], 
                 direct_mfg_elec: [0, 0, 0, 0, 0, 0],
                 direct_mfg_water: [0, 0, 0, 0, 0, 0],
@@ -1276,7 +1458,6 @@
                 amortization: [0, 0, 0, 0, 0, 0],
                 ebit: [0, 0, 0, 0, 0, 0],
 
-                // 이자비용 배정 (EBT 산출 핵심)
                 interest_expense: interestExpense,
                 ebt: [0, 0, 0, 0, 0, 0],
                 tax: [0, 0, 0, 0, 0, 0],
@@ -1291,11 +1472,9 @@
                 inv_change: [0, 0, 0, 0, 0, 0],
                 nwc_change: [0, 0, 0, 0, 0, 0],
 
-                // Detailed cash receipts & payouts
                 cash_in_sales: [0, 0, 0, 0, 0, 0],
                 total_cash_in: [0, 0, 0, 0, 0, 0],
 
-                // 대분류 비용 묶음용 (제조원가 합 및 판관비 합)
                 cash_out_cogs_group: [0, 0, 0, 0, 0, 0],
                 cash_out_sga_group: [0, 0, 0, 0, 0, 0],
 
@@ -1314,23 +1493,19 @@
 
                 net_operating_cf: [0, 0, 0, 0, 0, 0],
 
-                // 주주 가치 모델링 분리 계정
                 capex: [-capex, 0, 0, 0, 0, 0],
                 init_wc_data: [-totalInitWc, 0, 0, 0, 0, 0],
 
-                // 차입 및 상환 스케줄
                 beg_debt: begDebt,
                 new_debt_issued: debtIssued,
                 debt_repayment: debtRepayment,
                 end_debt: endDebt,
 
-                // FCFE (주주 잉여현금흐름) 최종 산출
                 fcfe: [-totalEquityFunded, 0, 0, 0, 0, 0],
                 discountedFCFE: [-totalEquityFunded, 0, 0, 0, 0, 0],
                 cumFCFE: [-totalEquityFunded, 0, 0, 0, 0, 0]
             };
 
-            // Year 0 운전자본의 출발 조건 세팅
             fin.ar[0] = 0;
             fin.ap[0] = 0;
             fin.inv[0] = initWcMat; 
@@ -1394,19 +1569,16 @@
                 fin.amortization[t] = amortization;
                 fin.ebit[t] = fin.ebitda[t] - fin.depreciation[t] - fin.amortization[t];
 
-                // FCFE 손익연동: 세전이익(EBT) 및 이자비용 공제 반영
                 fin.ebt[t] = fin.ebit[t] - fin.interest_expense[t];
-                fin.tax[t] = fin.ebt[t] > 0 ? (fin.ebt[t] * taxRate) : 0;
+                fin.tax[t] = fin.ebt[t] > 0 ? (fin.ebit[t] * taxRate) : 0;
                 fin.net_income[t] = fin.ebt[t] - fin.tax[t];
 
-                // Working capital (t = 1 ~ 4 계산)
                 if (t < 5) {
                     fin.ar[t] = (fin.revenue[t] / 365) * wc_ar_days;
                     fin.ap[t] = (fin.cogs_material[t] / 365) * wc_ap_days;
                     fin.inv[t] = (fin.cogs_material[t] / 365) * wc_inv_days;
                     fin.nwc[t] = fin.ar[t] + fin.inv[t] - fin.ap[t];
                 } else {
-                    // 기말 청산 연동 (모든 운전자본 전액 액화 회수)
                     fin.ar[5] = 0;
                     fin.ap[5] = 0;
                     fin.inv[5] = 0;
@@ -1418,11 +1590,9 @@
                 fin.inv_change[t] = fin.inv[t] - fin.inv[t-1];
                 fin.nwc_change[t] = fin.nwc[t] - fin.nwc[t-1];
 
-                // Detailed Cash Inflow
                 fin.cash_in_sales[t] = fin.revenue[t] - fin.ar_change[t];
                 fin.total_cash_in[t] = fin.cash_in_sales[t];
 
-                // Detailed Cash Outflow
                 fin.cash_out_material[t] = fin.cogs_material[t] + fin.inv_change[t] - fin.ap_change[t];
                 fin.cash_out_direct_mfg[t] = fin.cogs_direct_exp[t];
                 fin.cash_out_labor_mfg[t] = fin.cogs_labor[t];
@@ -1436,7 +1606,6 @@
                 fin.cash_out_ind_fix_sga[t] = fin.sga_ind_fix[t];
                 fin.cash_out_tax[t] = fin.tax[t];
 
-                // 제조원가 및 판관비 총합
                 fin.cash_out_cogs_group[t] = 
                     fin.cash_out_material[t] + 
                     fin.cash_out_direct_mfg[t] + 
@@ -1454,12 +1623,7 @@
                 fin.total_cash_out[t] = fin.cash_out_cogs_group[t] + fin.cash_out_sga_group[t] + fin.cash_out_tax[t];
                 fin.net_operating_cf[t] = fin.total_cash_in[t] - fin.total_cash_out[t];
 
-                // [정량 FCFE 산출식]
-                // FCFE = Net Income + D&A - NWC증감 - CAPEX + 차입액 - 원금상환액
-                // t=1~5에는 CAPEX 및 추가차입 없으므로: Net Income + D&A - NWC증감 - 원금상환액
                 fin.fcfe[t] = fin.net_income[t] + fin.depreciation[t] + fin.amortization[t] - fin.nwc_change[t] - fin.debt_repayment[t];
-                
-                // 자기자본비용(Cost of Equity)에 의한 할인 처리
                 fin.discountedFCFE[t] = fin.fcfe[t] / Math.pow(1 + costOfEquity, t);
             }
 
@@ -1523,12 +1687,38 @@
             renderBEP(fin);
 
             // MONTE CARLO STOCHASTIC SIMULATION (FCFE 기반)
-            runMonteCarloSimulation(costOfEquity, capex, depYears, amortization, taxRate, inflation, growth,
+            let simSuccessProb = runMonteCarloSimulation(costOfEquity, capex, depYears, amortization, taxRate, inflation, growth,
                 maxAnnualProductionCapa, utils, shampooMix, tPriceShampoo, tPriceTreatment,
                 sActive, sPkg, sBox, tActive, tPkg, tBox, mElec, mWater, mFuel,
                 staff_prod, staff_sales, staff_admin, staff_hr, avgSalary, rentArea, rentPerPyung,
                 sga_dir_var, sga_ind_var, sga_dir_fix, sga_ind_fix,
                 wc_ar_days, wc_ap_days, wc_inv_days, fx_volatility, bottleSize, debtRatio, debtInterestRate, repaymentMethod);
+
+            // AI 컨설팅 데이터 캐싱용
+            latestFinancialCache = {
+                metrics: {
+                    npv: npvVal,
+                    irr: irrVal,
+                    payback: paybackPeriod,
+                    successProbability: simSuccessProb,
+                    totalEquityFunded: totalEquityFunded,
+                    totalDebtFunded: totalDebtFunded,
+                    wacc: costOfEquity * 100,
+                    inflation: inflation * 100,
+                    taxRate: taxRate * 100,
+                    debtInterestRate: debtInterestRate * 100,
+                    repaymentMethod: repaymentMethod
+                },
+                capex: equipmentData,
+                utilization: utils.map(x => x * 100),
+                revenue: fin.revenue.slice(1),
+                netIncome: fin.net_income.slice(1),
+                fcfe: fin.fcfe.slice(1),
+                leverages: {
+                    dflY1: fin.ebit[1] / (fin.ebt[1] || 1),
+                    dtlY1: (fin.revenue[1] - (fin.cogs_material[1] + fin.cogs_direct_exp[1] + fin.sga_dir_var[1] + fin.sga_ind_var[1])) / (fin.ebt[1] || 1)
+                }
+            };
 
             renderFcfChart(fin);
             updateTableVisibility();
@@ -1706,16 +1896,14 @@
                 }
                 html += `${row.name}</td>`;
 
-                // Render Year data points
                 for(let t = 0; t <= 5; t++) {
                     let val = row.data[t];
                     if (t === 0) {
-                        // 0년차 출력 스크리닝
                         if (row.id === 'capex_row' || row.id === 'init_wc_row' || row.id === 'equity_inject_row' || row.id === 'fcfe_row' || row.id === 'dfcf_row' || row.id === 'cum_row' || row.id === 'debt_new' || row.id === 'debt_end') {
                             
                             let printVal = val;
                             if (row.id === 'fcfe_row' || row.id === 'dfcf_row' || row.id === 'cum_row') {
-                                printVal = -equityFund; // 0년차 주주 현금흐름 유출은 순수 주주 자본금
+                                printVal = -equityFund; 
                             }
                             if (row.id === 'debt_end') {
                                 printVal = debtFund;
@@ -1763,7 +1951,6 @@
             const fix_dir_sga = f.sga_dir_fix[1];
             const fix_ind_sga = f.sga_ind_fix[1];
 
-            // 이자비용 추가 구성
             const int_exp = f.interest_expense[1];
 
             const total = mat + lab_prod + dir_mfg_exp + ind_mfg_exp + lab_sga + rent + var_dir_sga + var_ind_sga + fix_dir_sga + fix_ind_sga + int_exp;
@@ -1812,13 +1999,11 @@
             let html = '';
 
             for(let t = 1; t <= 5; t++) {
-                // 1. Calculate Fixed Costs (Mfg Fixed + SG&A Fixed + D&A)
                 let mfg_fixed = f.cogs_labor[t] + f.cogs_indirect_exp[t];
                 let sga_fixed = f.sga_labor[t] + f.sga_rent[t] + f.sga_dir_fix[t] + f.sga_ind_fix[t];
                 let da_fixed = f.depreciation[t] + f.amortization[t];
                 let total_fixed = mfg_fixed + sga_fixed + da_fixed;
 
-                // 2. Calculate Variable Costs
                 let total_var = f.cogs_material[t] + f.cogs_direct_exp[t] + f.sga_dir_var[t] + f.sga_ind_var[t];
                 
                 let var_ratio = f.revenue[t] > 0 ? (total_var / f.revenue[t]) : 0;
@@ -1826,7 +2011,6 @@
                 
                 let bep_sales = var_ratio < 1 ? (total_fixed / (1 - var_ratio)) : 0;
 
-                // 3. Operating Leverage (DOL)
                 let contribution_margin = f.revenue[t] - total_var;
                 let ebit = f.ebit[t];
                 let dol = 0;
@@ -1837,8 +2021,6 @@
                     dol_str = dol > 0 && dol < 100 ? `${dol.toFixed(2)}배` : "초과";
                 }
 
-                // 4. Financial Leverage (DFL)
-                // DFL = EBIT / (EBIT - Interest) = EBIT / EBT
                 let ebt = f.ebt[t];
                 let dfl = 0;
                 let dfl_str = "N/A";
@@ -1851,7 +2033,6 @@
                     dfl = 1.0;
                 }
 
-                // 5. Total Leverage (DTL)
                 let dtl_str = "N/A";
                 if (ebit > 0 && ebt > 0 && dol > 0 && dfl > 0) {
                     let dtl = dol * dfl;
@@ -1902,7 +2083,6 @@
                 for (let t = 1; t <= 5; t++) {
                     let inflationFactor = Math.pow(1 + inflation, t - 1);
 
-                    // FX shock factor
                     let fxFactor = Math.exp(randomNormal(0, fx_volatility));
                     let revenueFXShock = 0.6 + (0.4 * fxFactor);
                     let materialFXShock = 0.7 + (0.3 * fxFactor);
@@ -1916,7 +2096,6 @@
 
                     let sim_revenue = ((sim_qty_shampoo * sim_price_shampoo) + (sim_qty_treatment * sim_price_treatment)) / 1000000;
 
-                    // Materials total
                     let sim_sMat_unit = (sActive + sPkg + sBox) * inflationFactor * materialFXShock;
                     let sim_tMat_unit = (tActive + tPkg + tBox) * inflationFactor * materialFXShock;
 
@@ -1939,7 +2118,6 @@
                     let sim_dep = t <= depYears ? (capex / depYears) : 0;
                     let sim_ebit = sim_ebitda - sim_dep - amortization;
 
-                    // 이자 비용 및 부채상환 연동
                     let sim_interest = sim_begDebt * debtInterestRate;
                     let sim_ebt = sim_ebit - sim_interest;
                     let sim_tax = sim_ebt > 0 ? (sim_ebt * taxRate) : 0;
@@ -1953,7 +2131,6 @@
                     }
                     sim_begDebt = sim_begDebt - sim_repayment;
 
-                    // NWC
                     let sim_nwc = 0;
                     if (t < 5) {
                         let ar = (sim_revenue / 365) * wc_ar_days;
@@ -1967,7 +2144,6 @@
                     let sim_nwc_change = sim_nwc - sim_nwc_prev;
                     sim_nwc_prev = sim_nwc;
 
-                    // FCFE = Net Income + D&A - NWC증감 - 원금상환액
                     let sim_fcfe = sim_netIncome + sim_dep + amortization - sim_nwc_change - sim_repayment;
                     sim_discountedFCFE.push(sim_fcfe / Math.pow(1 + costOfEquity, t));
                 }
@@ -1990,6 +2166,7 @@
             }
 
             renderMonteCarloChart(npvResults);
+            return successProb;
         }
 
         // Render Charts 1 (FCFE Progress)
@@ -2138,7 +2315,487 @@
             });
         }
 
-        // Initialize Webapp
+        // ==========================================
+        // [✨ AI CORE INTEGRATIONS] - Gemini 2.5 Flash API
+        // ==========================================
+
+        let aiRecommendedParams = null; // AI 시나리오 반영 대기용 데이터
+
+        // Gemini API 호출 래퍼 함수 (Exponential Backoff 적용 및 에러 헨들링 구현)
+        async function callGemini(promptText, systemInstructionText = null, isJson = false, jsonSchema = null) {
+            const apiKey = ""; // Runtime 환경에서 주입됨
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: promptText }] }]
+            };
+            
+            if (systemInstructionText) {
+                payload.systemInstruction = { parts: [{ text: systemInstructionText }] };
+            }
+            
+            if (isJson) {
+                payload.generationConfig = {
+                    responseMimeType: "application/json"
+                };
+                if (jsonSchema) {
+                    payload.generationConfig.responseSchema = jsonSchema;
+                }
+            }
+            
+            // Retry 딜레이 정의: 1s, 2s, 4s, 8s, 16s
+            const backoffDelays = [1000, 2000, 4000, 8000, 16000];
+            let lastError = null;
+            
+            for (let attempt = 0; attempt < 5; attempt++) {
+                try {
+                    const response = await fetch(url, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        const result = await response.json();
+                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (text) {
+                            return text;
+                        }
+                    } else {
+                        lastError = new Error(`HTTP 에러 발생 (코드: ${response.status})`);
+                    }
+                } catch (err) {
+                    lastError = err;
+                }
+                // 실패 시 백오프 대기 (콘솔 기록 없음)
+                if (attempt < 4) {
+                    await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt]));
+                }
+            }
+            
+            throw lastError || new Error("Gemini API 서버에 일시적 연결 실패가 발생했습니다.");
+        }
+
+        // Preset Scenario select controller
+        function onAiPresetChange() {
+            const presetVal = document.getElementById('ai_scenario_preset').value;
+            const customContainer = document.getElementById('ai_custom_request_container');
+            if (presetVal === 'custom') {
+                customContainer.classList.remove('hidden');
+                document.getElementById('ai_custom_request').focus();
+            } else {
+                customContainer.classList.add('hidden');
+            }
+        }
+
+        // ✨ AI 스마트 시나리오 제안 실행 함수
+        async function generateAiScenario() {
+            const btn = document.getElementById('ai_scenario_btn');
+            const presetVal = document.getElementById('ai_scenario_preset').value;
+            let targetRequest = "";
+            
+            if (presetVal === 'custom') {
+                targetRequest = document.getElementById('ai_custom_request').value.trim();
+                if (!targetRequest) {
+                    showNoticeModal("커스텀 시나리오 조건을 텍스트박스에 구체적으로 입력해주세요.");
+                    return;
+                }
+            } else {
+                targetRequest = AI_PRESETS[presetVal];
+            }
+
+            // UI Loading state
+            btn.disabled = true;
+            btn.innerHTML = `<span class="flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 animate-spin"></i> AI 시나리오 추산 중...</span>`;
+            lucide.createIcons();
+
+            const systemPrompt = `당신은 거시경제 지표 및 화장품 제조업 가치사슬 원가 분석가입니다. 
+사용자가 제시한 특정 경영 위기/기회/친환경 규제 등의 상황 설명을 정밀 해부한 뒤, 시뮬레이터에 적용 가능한 8가지 변수의 조정 추천 수치를 JSON으로 반환해야 합니다.
+반드시 제공된 스키마 구조를 100% 준수하고, 분석 근거(rationale)는 한국어로 전문적이고 신뢰도 높은 경제 용어를 활용해 정교하게 기술하십시오.`;
+
+            const schema = {
+                type: "OBJECT",
+                properties: {
+                    scenario_title: { type: "STRING" },
+                    rationale: { type: "STRING" },
+                    updates: {
+                        type: "OBJECT",
+                        properties: {
+                            param_wacc: { type: "NUMBER", description: "자기자본비용(%) 추천 범위 5 ~ 20" },
+                            param_inflation: { type: "NUMBER", description: "물가상승률(%) 추천 범위 0 ~ 15" },
+                            param_shampoo_mix: { type: "NUMBER", description: "샴푸 판매비중(%) 추천 범위 10 ~ 90" },
+                            param_price_shampoo: { type: "NUMBER", description: "샴푸 L당 판매가(원) 추천 범위 25000 ~ 90000" },
+                            param_price_treatment: { type: "NUMBER", description: "트리트먼트 L당 판매가(원) 추천 범위 30000 ~ 100000" },
+                            param_shampoo_active: { type: "NUMBER", description: "샴푸 L당 원액료(원) 추천 범위 5000 ~ 25000" },
+                            param_treatment_active: { type: "NUMBER", description: "트리트먼트 L당 원액료(원) 추천 범위 7000 ~ 30000" },
+                            param_fx_vol: { type: "NUMBER", description: "원달러환율변동성(%) 추천 범위 3 ~ 20" }
+                        },
+                        required: ["param_wacc", "param_inflation", "param_shampoo_mix", "param_price_shampoo", "param_price_treatment", "param_shampoo_active", "param_treatment_active", "param_fx_vol"]
+                    }
+                },
+                required: ["scenario_title", "rationale", "updates"]
+            };
+
+            try {
+                const responseText = await callGemini(targetRequest, systemPrompt, true, schema);
+                const data = JSON.parse(responseText);
+
+                aiRecommendedParams = data.updates;
+
+                // Render Results to UI Panel
+                document.getElementById('ai_res_title').innerText = data.scenario_title;
+                document.getElementById('ai_res_rationale').innerText = data.rationale;
+
+                // Create parameter comparison list
+                const paramListContainer = document.getElementById('ai_res_param_list');
+                let paramHtml = '';
+
+                const compareMap = [
+                    { label: "자기자본비용 (Ke)", key: "param_wacc", currentId: "param_wacc", unit: "%" },
+                    { label: "물가상승률", key: "param_inflation", currentId: "param_inflation", unit: "%" },
+                    { label: "샴푸 판매 믹스", key: "param_shampoo_mix", currentId: "param_shampoo_mix", unit: "%" },
+                    { label: "샴푸 리터 단가", key: "param_price_shampoo", currentId: "param_price_shampoo", unit: "원" },
+                    { label: "트리트먼트 단가", key: "param_price_treatment", currentId: "param_price_treatment", unit: "원" },
+                    { label: "샴푸 원액 원료비", key: "param_shampoo_active", currentId: "param_shampoo_active", unit: "원" },
+                    { label: "트리트먼트 원액 원료비", key: "param_treatment_active", currentId: "param_treatment_active", unit: "원" },
+                    { label: "원달러 환율 변동성", key: "param_fx_vol", currentId: "param_fx_vol", unit: "%" }
+                ];
+
+                compareMap.forEach(item => {
+                    let currentVal = parseFloat(document.getElementById(item.currentId).value);
+                    let recommendedVal = data.updates[item.key];
+                    
+                    let diff = recommendedVal - currentVal;
+                    let diffStr = diff === 0 ? "동일" : (diff > 0 ? `+${diff.toLocaleString()}` : `${diff.toLocaleString()}`);
+                    let diffColor = diff === 0 ? "text-slate-400" : (diff > 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold");
+
+                    paramHtml += `
+                    <div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-b-0">
+                        <span class="text-slate-600 font-medium">${item.label}</span>
+                        <div class="space-x-1">
+                            <span class="text-slate-400 line-through">${currentVal.toLocaleString()}${item.unit}</span>
+                            <span class="text-indigo-950 font-bold">→ ${recommendedVal.toLocaleString()}${item.unit}</span>
+                            <span class="text-[9px] ${diffColor}">(${diffStr})</span>
+                        </div>
+                    </div>`;
+                });
+
+                paramListContainer.innerHTML = paramHtml;
+                document.getElementById('ai_scenario_results').classList.remove('hidden');
+
+            } catch (err) {
+                showNoticeModal(`AI 변수 생성 실패: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i> ✨ AI 파라미터 추천 실행`;
+                lucide.createIcons();
+            }
+        }
+
+        // 추천 시나리오 변수 시뮬레이터 적용 적용 처리 함수
+        function applyAiParams() {
+            if (!aiRecommendedParams) return;
+            
+            // Apply variables
+            document.getElementById('param_wacc').value = aiRecommendedParams.param_wacc;
+            document.getElementById('param_inflation').value = aiRecommendedParams.param_inflation;
+            document.getElementById('param_shampoo_mix').value = aiRecommendedParams.param_shampoo_mix;
+            document.getElementById('param_price_shampoo').value = aiRecommendedParams.param_price_shampoo;
+            document.getElementById('param_price_treatment').value = aiRecommendedParams.param_price_treatment;
+            document.getElementById('param_shampoo_active').value = aiRecommendedParams.param_shampoo_active;
+            document.getElementById('param_treatment_active').value = aiRecommendedParams.param_treatment_active;
+            
+            // Checkbox and FX Volatility synchronizer
+            const fxVolVal = aiRecommendedParams.param_fx_vol;
+            document.getElementById('use_historical_vol').checked = false;
+            document.getElementById('param_fx_vol').disabled = false;
+            document.getElementById('param_fx_vol').value = fxVolVal;
+
+            // Hide recommended panel with a success message
+            document.getElementById('ai_scenario_results').classList.add('hidden');
+            
+            // Refresh simulation
+            updateParameterLabels();
+            runAnalysis();
+            
+            showNoticeModal("✨ AI 추천 시나리오 매개변수가 시뮬레이션 모델에 완벽히 주입되었습니다!");
+        }
+
+        // Modal Controls
+        function openAiReportModal() {
+            document.getElementById('ai_report_modal').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeAiReportModal() {
+            document.getElementById('ai_report_modal').classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // ✨ AI 사업 타당성 종합 리포트 생성 및 전문가 컨설팅 트리거 함수
+        async function generateAiViabilityReport() {
+            openAiReportModal();
+            
+            const loadingContainer = document.getElementById('ai_loading_container');
+            const reportContainer = document.getElementById('ai_report_content_container');
+            const loadingStatus = document.getElementById('ai_loading_status');
+
+            loadingContainer.classList.remove('hidden');
+            reportContainer.classList.add('hidden');
+
+            // Step 1 status
+            loadingStatus.innerText = "[1/3] 5개년 주주 가치 재무 데이터 패키징 중...";
+
+            // Context packaging
+            const promptData = {
+                contextTitle: "신규 제조 사업장(헤어 뷰티 라인) FCFE 주주가치 모델 데이터",
+                macroVariables: {
+                    discountRate_Ke: `${latestFinancialCache.metrics.wacc}% (자기자본비용)`,
+                    inflationRate: `${latestFinancialCache.metrics.inflation}%`,
+                    taxRate: `${latestFinancialCache.metrics.taxRate}%`,
+                    initialDebtRate: `${latestFinancialCache.metrics.debtInterestRate}%`,
+                    repaymentStructure: latestFinancialCache.metrics.repaymentMethod === 'bullet' ? '5년 만기 일시 상환' : '5년 매년 균등 원금 분할 상환'
+                },
+                fundingStructure: {
+                    totalRequiredFunding: `${(latestFinancialCache.metrics.totalEquityFunded + latestFinancialCache.metrics.totalDebtFunded).toLocaleString()} 백만원`,
+                    equityContribution: `${latestFinancialCache.metrics.totalEquityFunded.toLocaleString()} 백만원`,
+                    debtContribution: `${latestFinancialCache.metrics.totalDebtFunded.toLocaleString()} 백만원`
+                },
+                kpiResults: {
+                    shareholderNPV: `${latestFinancialCache.metrics.npv.toLocaleString()} 백만원`,
+                    shareholderIRR: latestFinancialCache.metrics.irr ? `${latestFinancialCache.metrics.irr.toFixed(2)}%` : "산출 불가",
+                    stochasticSuccessProbability: `${latestFinancialCache.metrics.successProbability.toFixed(1)}% (Monte-Carlo 환율 변동성 충격 시나리오 기준)`,
+                    paybackPeriod: latestFinancialCache.metrics.payback ? `${latestFinancialCache.metrics.payback.toFixed(1)}년` : "5개년 초과"
+                },
+                fiveYearForecast: {
+                    revenue: latestFinancialCache.revenue,
+                    netIncome: latestFinancialCache.netIncome,
+                    fcfe: latestFinancialCache.fcfe,
+                    utilization: latestFinancialCache.utilization
+                },
+                leverageRatios: {
+                    financialLeverageDegree_DFL_Y1: latestFinancialCache.leverages.dflY1 ? latestFinancialCache.leverages.dflY1.toFixed(2) : "산출 불가",
+                    combinedLeverageDegree_DTL_Y1: latestFinancialCache.leverages.dtlY1 ? latestFinancialCache.leverages.dtlY1.toFixed(2) : "산출 불가"
+                }
+            };
+
+            await new Promise(r => setTimeout(r, 1000));
+            loadingStatus.innerText = "[2/3] Gemini 2.5 LLM 컨설팅 추론 엔진 분석 중...";
+
+            const systemInstruction = `당신은 최고 경영자(CEO) 및 벤처 캐피탈(VC) 심사역 시각에서 사업의 미래가치를 진단하는 수석 CFO이자 전문 금융 컨설턴트입니다.
+제시된 '5개년 신규 사업 주주 가치 모델 분석 데이터'를 기반으로 주주 환원 관점에서 타당성을 매우 날카롭게 진단하는 '✨ AI 비즈니스 타당성 종합 리포트'를 한국어로 격식 있게 작성해야 합니다.
+보고서는 구조화된 마크다운 형식으로 작성하며 다음 사항을 풍부한 텍스트로 녹여내어 구성하십시오:
+1. **주주 순현재가치(Equity NPV)** 및 **자기자본 내부수익률(Equity IRR)** 가 주주 가치를 훼손하지 않고 기회비용을 초과하는지 여부에 대한 전문적 최종 선고 (재무적 성공 확률 점수 제시)
+2. **타인자본 조달 비율 및 상환 방식**이 가져오는 주주 레버리지 효과(DFL, DTL) 분석 (부채 사용으로 주주 이익이 극대화되는지, 아니면 도리어 파산 리스크를 높이는지 위험 진단)
+3. 몬테카를로 환율 변동 충격 시뮬레이션 결과에 기초하여 해외 원재료 도입 단가 및 물가 급변 시 발생할 수 있는 시장 민감도 극복 방안 제시
+4. 생산 규격 설계, 연차별 가동 수준 제어, 이익률 개선을 위한 샴푸 및 트리트먼트 제품의 이익 믹스 고도화 전략
+5. 구체적이고 즉각적인 재무 건전성 및 이익 극대화를 위한 단계별 실행 로드맵 (Actionable Recommendation)
+
+수치적인 팩트에 강력하게 근거하되 가독성을 높여서 격조 높은 최고경영자(CFO) 어조를 유지하여 작성하십시오.`;
+
+            try {
+                const reportResponseText = await callGemini(JSON.stringify(promptData), systemInstruction);
+                
+                await new Promise(r => setTimeout(r, 800));
+                loadingStatus.innerText = "[3/3] 경영 보고서 렌더링 및 통계 모니터 통합 중...";
+
+                // Render Top Summary Bar Indicators
+                document.getElementById('ai_summary_npv').innerText = `${fmt(latestFinancialCache.metrics.npv)} 백만원`;
+                document.getElementById('ai_summary_irr').innerText = latestFinancialCache.metrics.irr ? `${latestFinancialCache.metrics.irr.toFixed(2)} %` : "N/A";
+                document.getElementById('ai_summary_prob').innerText = `${latestFinancialCache.metrics.successProbability.toFixed(1)} %`;
+
+                // Render Report Content HTML
+                document.getElementById('ai_report_html_body').innerHTML = renderMarkdownToHtml(reportResponseText);
+
+                // Setup initial Multi-turn Conversation Logs
+                chatHistory = [
+                    { role: "user", parts: [{ text: "여기에 내 5개년 비즈니스 재무 시뮬레이션 결과와 요구 조건이 있어: " + JSON.stringify(promptData) + " 이 조건 하에서 주주 가치 타당성 리포트를 상세하게 생성해줘." }] },
+                    { role: "model", parts: [{ text: reportResponseText }] }
+                ];
+
+                // Clear previous chats from chat logger except initial welcome message
+                const chatContainer = document.getElementById('ai_chat_log_container');
+                chatContainer.innerHTML = `
+                <div class="bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 leading-relaxed">
+                    안녕하세요! 생성된 종합 타당성 보고서를 바탕으로 전략 수립을 돕는 전담 CFO 비즈니스 파트너입니다.<br>
+                    <strong>"초기 운전자본 회수 시점을 조율하면 현금흐름이 어떻게 개선될까요?"</strong> 나 <strong>"이익률 개선을 위한 샴푸와 트리트먼트 가격 최적화 방안은?"</strong> 같이 궁금한 점을 편하게 질문해 주십시오!
+                </div>`;
+
+                loadingContainer.classList.add('hidden');
+                reportContainer.classList.remove('hidden');
+
+                // Smooth scroll to top of modal container
+                document.getElementById('ai_modal_scroll_container').scrollTop = 0;
+
+            } catch (err) {
+                loadingContainer.classList.add('hidden');
+                showNoticeModal(`AI 리포트 생성 중 문제가 발생했습니다: ${err.message}`);
+                closeAiReportModal();
+            } finally {
+                lucide.createIcons();
+            }
+        }
+
+        // 복잡하지 않은 수준에서 마크다운을 미려한 Tailwind 스타일 HTML로 파싱하는 커스텀 마크다운 렌더러
+        function renderMarkdownToHtml(md) {
+            if (!md) return "";
+            let html = md;
+            
+            // XSS 예방 및 HTML 이스케이프 처리
+            html = html
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+                
+            // Headers
+            html = html.replace(/^### (.*?)$/gm, '<h5 class="text-xs font-bold text-indigo-950 mt-5 mb-1.5 flex items-center gap-1.5 border-l-4 border-indigo-500 pl-2">$1</h5>');
+            html = html.replace(/^## (.*?)$/gm, '<h4 class="text-sm font-bold text-indigo-900 mt-6 mb-2.5 border-b border-indigo-100 pb-1 flex items-center gap-2"><i data-lucide="bar-chart" class="w-4 h-4 text-indigo-500"></i> $1</h4>');
+            html = html.replace(/^# (.*?)$/gm, '<h3 class="text-base font-extrabold text-slate-900 mt-8 mb-4 border-b-2 border-indigo-200 pb-1.5">$1</h3>');
+            
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-950 bg-indigo-50/40 px-1 rounded">$1</strong>');
+            
+            // Bullet points
+            html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li class="ml-4 list-disc text-[11px] text-slate-600 mb-1 leading-relaxed">$1</li>');
+            // Numbered list
+            html = html.replace(/^\s*(\d+)\.\s+(.*?)$/gm, '<li class="ml-4 list-decimal text-[11px] text-slate-600 mb-1 leading-relaxed">$2</li>');
+            
+            // Paragraphs
+            const paragraphs = html.split(/\n\n+/);
+            html = paragraphs.map(p => {
+                if (p.trim().startsWith('<h') || p.trim().startsWith('<li') || p.trim().startsWith('<ul') || p.trim().startsWith('<ol')) {
+                    return p;
+                }
+                return `<p class="text-[11px] text-slate-600 leading-relaxed mb-2.5">${p}</p>`;
+            }).join('\n');
+            
+            html = html.replace(/\n/g, '<br>');
+            
+            return html;
+        }
+
+        // FCFE AI Report Copy function
+        function copyReportToClipboard() {
+            // Get raw text from the html container (extract text representation)
+            const reportEl = document.getElementById('ai_report_html_body');
+            
+            // Create temporary textarea per strict iFrame guardrail rules
+            const tempTextarea = document.createElement('textarea');
+            tempTextarea.value = reportEl.innerText;
+            document.body.appendChild(tempTextarea);
+            tempTextarea.select();
+            
+            try {
+                document.execCommand('copy');
+                showNoticeModal("✨ AI 사업 타당성 보고서 텍스트가 클립보드에 성공적으로 복사되었습니다!");
+            } catch (err) {
+                showNoticeModal("클립보드 복사 중 오류가 발생했습니다.");
+            } finally {
+                document.body.removeChild(tempTextarea);
+            }
+        }
+
+        // Chat helper to append user or model messages visually
+        function appendChatBubble(role, text, isLoading = false) {
+            const container = document.getElementById('ai_chat_log_container');
+            const bubble = document.createElement('div');
+            
+            if (role === 'user') {
+                bubble.className = "bg-indigo-600 text-white p-3 rounded-lg max-w-[85%] self-end text-xs shadow-sm font-medium";
+                bubble.innerText = text;
+            } else {
+                bubble.className = "bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 leading-relaxed";
+                if (isLoading) {
+                    bubble.id = "ai_chat_loading_bubble";
+                    bubble.innerHTML = `<span class="flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> ${text}</span>`;
+                } else {
+                    bubble.innerHTML = renderMarkdownToHtml(text);
+                }
+            }
+            
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+            lucide.createIcons();
+        }
+
+        function removeLoadingBubble() {
+            const loadingBubble = document.getElementById('ai_chat_loading_bubble');
+            if (loadingBubble) {
+                loadingBubble.remove();
+            }
+        }
+
+        // ✨ 1:1 대화형 AI 금융 컨설턴트 챗방 메시지 전송 로직
+        async function sendAiConsultantMessage() {
+            const inputEl = document.getElementById('ai_chat_input');
+            const userText = inputEl.value.trim();
+            if (!userText) return;
+            
+            // Disable inputs while query fires
+            inputEl.value = "";
+            inputEl.disabled = true;
+            document.getElementById('ai_chat_send_btn').disabled = true;
+            
+            appendChatBubble('user', userText);
+            appendChatBubble('model', 'CFO AI가 데이터를 재점검하고 있습니다. 잠시만 기다려 주십시오... ☕', true);
+            
+            // Add to conversation history
+            chatHistory.push({ role: "user", parts: [{ text: userText }] });
+            
+            try {
+                const apiKey = "";
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const payload = {
+                    contents: chatHistory,
+                    systemInstruction: { parts: [{ text: `당신은 방금 생성된 '✨ AI 사업 타당성 종합 보고서'를 기반으로 의뢰인과 1:1 심층 재무 전략 상담을 진행하는 전문 CFO 비즈니스 파트너이자 경영 컨설턴트입니다. 반드시 제시되었던 보고서 데이터와 시뮬레이션 컨텍스트를 완벽히 숙지하여, 주주의 관점에서 매우 정밀하고 가치 있는 현실적인 재무 및 마케팅 조언을 제공하세요. 답변은 친절하고 정중한 한국어로 작성하고, 필요시 구조화된 가독성 좋은 마크다운을 활용해 가치 지표를 명확히 짚어주세요.` }] }
+                };
+                
+                const backoffDelays = [1000, 2000, 4000, 8000, 16000];
+                let lastError = null;
+                let responseText = "";
+                
+                for (let attempt = 0; attempt < 5; attempt++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(payload)
+                        });
+                        if (response.ok) {
+                            const result = await response.json();
+                            responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                            if (responseText) break;
+                        } else {
+                            lastError = new Error(`HTTP 에러 발생 (코드: ${response.status})`);
+                        }
+                    } catch (err) {
+                        lastError = err;
+                    }
+                    if (attempt < 4) await new Promise(r => setTimeout(r, backoffDelays[attempt]));
+                }
+                
+                if (!responseText) {
+                    throw lastError || new Error("CFO AI와 일시적인 통신 실패가 일어났습니다.");
+                }
+                
+                removeLoadingBubble();
+                appendChatBubble('model', responseText);
+                
+                // Save model turn to history
+                chatHistory.push({ role: "model", parts: [{ text: responseText }] });
+                
+            } catch (err) {
+                removeLoadingBubble();
+                appendChatBubble('model', `죄송합니다. 오류가 발생했습니다: ${err.message}. 잠시 후 다시 질문해 주세요.`);
+            } finally {
+                inputEl.disabled = false;
+                document.getElementById('ai_chat_send_btn').disabled = false;
+                inputEl.focus();
+            }
+        }
+
+
+        // Initialize Webapp on window load
         window.onload = function() {
             renderEquipments();
             updateFundingSplitLabels();
