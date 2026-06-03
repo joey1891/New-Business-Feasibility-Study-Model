@@ -41,9 +41,9 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
-                    BizEval™ Professional v4.2 <span class="text-xs bg-emerald-500/30 text-emerald-300 font-normal px-2 py-0.5 rounded border border-emerald-500/20">✨ 재고 관리 & 판매 시뮬레이션 탑재</span>
+                    BizEval™ Professional v4.3 <span class="text-xs bg-emerald-500/30 text-emerald-300 font-normal px-2 py-0.5 rounded border border-emerald-500/20">✨ 정밀 원가/경비 세분화 탑재</span>
                 </h1>
-                <p class="text-xs text-slate-400">세분화된 판매량/재고 연동, 로스율 역산 원가 반영, 자본구조, 자동 설비 증설 및 AI 경영 진단</p>
+                <p class="text-xs text-slate-400">세분화된 판매량/재고 연동, 정밀 원가 요소 반영, 자본구조, 자동 설비 증설 및 AI 경영 진단</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -547,7 +547,7 @@
                 <!-- 5. 직접제조경비 세부 구성 (원/L) -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-semibold text-sky-600 border-b border-sky-50 pb-1 flex items-center gap-1.5">
-                        <i data-lucide="droplet" class="w-4 h-4"></i> 5. 직접제조경비(변동) 구성 (투입단가 원/L)
+                        <i data-lucide="droplet" class="w-4 h-4"></i> 5. 직접제조경비(유틸리티) 구성 (투입단가 원/L)
                     </h3>
                     <div class="space-y-3 bg-sky-50/30 p-3 rounded-lg border border-sky-100">
                         <div class="text-xs font-bold text-sky-800" id="lbl_mfg_total">총 실질단가: -원</div>
@@ -574,7 +574,7 @@
                 <!-- 6. 고정 및 변동 경비 설정 (분리) -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-semibold text-indigo-600 border-b border-indigo-50 pb-1 flex items-center gap-1.5">
-                        <i data-lucide="shield-alert" class="w-4 h-4"></i> 6. 연간 고정/변동 판관비 및 인건비
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i> 6. 연간 고정/변동 판관비 및 간접비
                     </h3>
                     
                     <!-- 판관 인건비 상세 -->
@@ -639,38 +639,77 @@
                         </div>
                     </div>
 
+                    <!-- 제조 간접고정비 세분화 -->
                     <div class="bg-amber-50/30 p-3 rounded-lg border border-amber-100 mt-2">
-                        <span class="text-[10px] font-bold text-amber-900 block mb-2 border-b border-amber-100/50 pb-1">기타 고정비 항목 (연간 백만원)</span>
-                        <div class="grid grid-cols-2 gap-3">
+                        <span class="text-[10px] font-bold text-amber-900 block mb-2 border-b border-amber-100/50 pb-1">제조 간접고정비 세부 항목 (연간 백만원)</span>
+                        <div class="grid grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-[10px] font-medium text-slate-600 mb-1">제조 간접고정비</label>
-                                <input type="number" id="mfg_indirect_fixed" value="40" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">제조 보험료</label>
+                                <input type="number" id="mfg_fix_insurance" value="10" step="1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">수선유지비</label>
+                                <input type="number" id="mfg_fix_maintenance" value="20" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">공장 복리후생비</label>
+                                <input type="number" id="mfg_fix_welfare" value="10" step="1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 판관 기타 고정경비 세분화 -->
+                    <div class="bg-purple-50/30 p-3 rounded-lg border border-purple-100 mt-2">
+                        <span class="text-[10px] font-bold text-purple-900 block mb-2 border-b border-purple-100/50 pb-1">판관 고정경비 세부 항목 (연간 백만원)</span>
+                        <div class="grid grid-cols-3 gap-3 mb-3">
                             <div>
                                 <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 임차료 총액</label>
                                 <input type="number" id="param_rentTotal" value="50" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 마케팅비 (고정)</label>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">마케팅비 (고정)</label>
                                 <input type="number" id="sga_fix_marketing" value="30" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 고정 직접경비</label>
-                                <input type="number" id="sga_dir_fix" value="20" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">여비교통비</label>
+                                <input type="number" id="sga_fix_travel" value="10" step="1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 gap-2 border-t border-purple-100/50 pt-2">
+                            <div>
+                                <label class="block text-[9px] font-medium text-slate-600 mb-1">통신비</label>
+                                <input type="number" id="sga_fix_comm" value="5" step="1" class="w-full bg-white border border-slate-200 rounded p-1 text-[11px] focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 고정 간접경비</label>
-                                <input type="number" id="sga_ind_fix" value="20" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <label class="block text-[9px] font-medium text-slate-600 mb-1">지급수수료</label>
+                                <input type="number" id="sga_fix_fee" value="15" step="1" class="w-full bg-white border border-slate-200 rounded p-1 text-[11px] focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-medium text-slate-600 mb-1">본사 복리후생</label>
+                                <input type="number" id="sga_fix_welfare" value="10" step="1" class="w-full bg-white border border-slate-200 rounded p-1 text-[11px] focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-medium text-slate-600 mb-1">소모품비</label>
+                                <input type="number" id="sga_fix_supplies" value="5" step="1" class="w-full bg-white border border-slate-200 rounded p-1 text-[11px] focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                         </div>
                     </div>
 
+                    <!-- 판관 변동비 항목 세분화 -->
                     <div class="bg-pink-50/30 p-3 rounded-lg border border-pink-100 mt-2">
-                        <span class="text-[10px] font-bold text-pink-900 block mb-2 border-b border-pink-100/50 pb-1">판관 변동비 항목 (매출액 대비 %)</span>
-                        <div class="grid grid-cols-2 gap-3">
+                        <span class="text-[10px] font-bold text-pink-900 block mb-2 border-b border-pink-100/50 pb-1">판관 변동비 세부 항목 (매출액 대비 %)</span>
+                        <div class="grid grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 직접변동비(수수료)</label>
-                                <input type="number" id="sga_dir_var" value="3" step="0.5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">물류비 (%)</label>
+                                <input type="number" id="sga_var_logistics" value="1.5" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">창고보관비 (%)</label>
+                                <input type="number" id="sga_var_storage" value="0.5" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판매수수료 (%)</label>
+                                <input type="number" id="sga_var_commission" value="1.0" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                         </div>
                     </div>
@@ -1177,13 +1216,24 @@
             document.getElementById('staff_rnd_cnt').value = 1;
             document.getElementById('staff_rnd_sal').value = 60;
 
-            document.getElementById('mfg_indirect_fixed').value = 40;
+            // 세분화된 제조 간접비
+            document.getElementById('mfg_fix_insurance').value = 10;
+            document.getElementById('mfg_fix_maintenance').value = 20;
+            document.getElementById('mfg_fix_welfare').value = 10;
+            
+            // 세분화된 판관 고정경비
             document.getElementById('param_rentTotal').value = 50;
             document.getElementById('sga_fix_marketing').value = 30;
-            document.getElementById('sga_dir_fix').value = 20;
-            document.getElementById('sga_ind_fix').value = 20;
+            document.getElementById('sga_fix_travel').value = 10;
+            document.getElementById('sga_fix_comm').value = 5;
+            document.getElementById('sga_fix_fee').value = 15;
+            document.getElementById('sga_fix_welfare').value = 10;
+            document.getElementById('sga_fix_supplies').value = 5;
             
-            document.getElementById('sga_dir_var').value = 3;
+            // 세분화된 판관 변동비
+            document.getElementById('sga_var_logistics').value = 1.5;
+            document.getElementById('sga_var_storage').value = 0.5;
+            document.getElementById('sga_var_commission').value = 1.0;
 
             document.getElementById('wc_ar').value = 60;
             document.getElementById('wc_ap').value = 30;
@@ -1495,29 +1545,37 @@
                 capa: [0,0,0,0,0,0], capa_bottles: [0,0,0,0,0,0],
                 util: [0,0,0,0,0,0],
                 
-                // 생산 및 재고 추적 관리 변수 신설
-                qty: [0,0,0,0,0,0], // 당해 총 생산량
-                qty_prod_s: [0,0,0,0,0,0], qty_prod_t: [0,0,0,0,0,0], // 제품별 생산량
-                qty_sold_s: [0,0,0,0,0,0], qty_sold_t: [0,0,0,0,0,0], // 제품별 판매량
-                qty_sold_total: [0,0,0,0,0,0], // 총 판매량
-                qty_inv_s: [0,0,0,0,0,0], qty_inv_t: [0,0,0,0,0,0], // 제품별 기말재고량
-                qty_inv_total: [0,0,0,0,0,0], // 총 재고량
+                // 생산 및 재고 추적
+                qty: [0,0,0,0,0,0], qty_prod_s: [0,0,0,0,0,0], qty_prod_t: [0,0,0,0,0,0],
+                qty_sold_s: [0,0,0,0,0,0], qty_sold_t: [0,0,0,0,0,0], qty_sold_total: [0,0,0,0,0,0],
+                qty_inv_s: [0,0,0,0,0,0], qty_inv_t: [0,0,0,0,0,0], qty_inv_total: [0,0,0,0,0,0],
 
                 revenue: [0,0,0,0,0,0], 
                 
-                // 분리된 제조원가
-                cogs_var_mat: [0,0,0,0,0,0], cogs_var_util: [0,0,0,0,0,0], cogs_var_total: [0,0,0,0,0,0],
-                cogs_fix_labor: [0,0,0,0,0,0], cogs_fix_indirect: [0,0,0,0,0,0], cogs_fix_total: [0,0,0,0,0,0],
+                // 세분화된 변동 제조원가
+                cogs_var_mat_raw: [0,0,0,0,0,0], cogs_var_mat_sub: [0,0,0,0,0,0], cogs_var_mat: [0,0,0,0,0,0],
+                cogs_var_util_elec: [0,0,0,0,0,0], cogs_var_util_water: [0,0,0,0,0,0], cogs_var_util_fuel: [0,0,0,0,0,0], cogs_var_util: [0,0,0,0,0,0],
+                cogs_var_total: [0,0,0,0,0,0],
                 
-                // 분리된 판관비 (인건비 상세 + 마케팅 고정)
-                sga_var_dir: [0,0,0,0,0,0], sga_var_total: [0,0,0,0,0,0],
+                // 세분화된 고정 제조원가
+                cogs_fix_labor: [0,0,0,0,0,0], 
+                cogs_fix_insurance: [0,0,0,0,0,0], cogs_fix_maintenance: [0,0,0,0,0,0], cogs_fix_welfare: [0,0,0,0,0,0], cogs_fix_indirect: [0,0,0,0,0,0], 
+                cogs_fix_total: [0,0,0,0,0,0],
                 
+                // 세분화된 판관 변동비
+                sga_var_logistics: [0,0,0,0,0,0], sga_var_storage: [0,0,0,0,0,0], sga_var_commission: [0,0,0,0,0,0], sga_var_dir: [0,0,0,0,0,0], 
+                sga_var_total: [0,0,0,0,0,0],
+                
+                // 세분화된 판관 고정 인건비
                 sga_fix_labor_exec: [0,0,0,0,0,0], sga_fix_labor_fin: [0,0,0,0,0,0],
                 sga_fix_labor_hr: [0,0,0,0,0,0], sga_fix_labor_sales: [0,0,0,0,0,0],
                 sga_fix_labor_rnd: [0,0,0,0,0,0], sga_fix_labor: [0,0,0,0,0,0],
                 
+                // 세분화된 판관 기타 고정비
                 sga_fix_marketing: [0,0,0,0,0,0], sga_fix_rent: [0,0,0,0,0,0], 
-                sga_fix_dir: [0,0,0,0,0,0], sga_fix_ind: [0,0,0,0,0,0], sga_fix_total: [0,0,0,0,0,0],
+                sga_fix_travel: [0,0,0,0,0,0], sga_fix_comm: [0,0,0,0,0,0], sga_fix_fee: [0,0,0,0,0,0], sga_fix_welfare_hq: [0,0,0,0,0,0], sga_fix_supplies: [0,0,0,0,0,0],
+                sga_fix_etc_total: [0,0,0,0,0,0],
+                sga_fix_total: [0,0,0,0,0,0],
                 
                 // CM layout elements
                 var_total: [0,0,0,0,0,0], cm: [0,0,0,0,0,0], cm_ratio: [0,0,0,0,0,0], fix_total: [0,0,0,0,0,0],
@@ -1542,26 +1600,34 @@
             const pShampoo = parseFloat(document.getElementById('param_price_shampoo').value);
             const pTreatment = parseFloat(document.getElementById('param_price_treatment').value);
             
-            // 로스율이 반영된 실질 원재료비 및 직접경비 산출
-            const real_s_act = parseFloat(document.getElementById('param_shampoo_active').value) / y_total;
-            const real_s_pkg = parseFloat(document.getElementById('param_shampoo_pkg').value) / (y_fill * y_pack);
-            const real_s_box = parseFloat(document.getElementById('param_shampoo_box').value) / y_pack;
-            const var_mat_s = real_s_act + real_s_pkg + real_s_box;
+            // 로스율이 반영된 실질 원재료비 단가 산출
+            const real_s_act = parseFloat(document.getElementById('param_shampoo_active').value) / y_total; // 원자재
+            const real_s_pkg = parseFloat(document.getElementById('param_shampoo_pkg').value) / (y_fill * y_pack); // 부자재
+            const real_s_box = parseFloat(document.getElementById('param_shampoo_box').value) / y_pack; // 부자재
+            const s_mat_raw = real_s_act;
+            const s_mat_sub = real_s_pkg + real_s_box;
+            const var_mat_s = s_mat_raw + s_mat_sub;
 
-            const real_t_act = parseFloat(document.getElementById('param_treatment_active').value) / y_total;
-            const real_t_pkg = parseFloat(document.getElementById('param_treatment_pkg').value) / (y_fill * y_pack);
-            const real_t_box = parseFloat(document.getElementById('param_treatment_box').value) / y_pack;
-            const var_mat_t = real_t_act + real_t_pkg + real_t_box;
+            const real_t_act = parseFloat(document.getElementById('param_treatment_active').value) / y_total; // 원자재
+            const real_t_pkg = parseFloat(document.getElementById('param_treatment_pkg').value) / (y_fill * y_pack); // 부자재
+            const real_t_box = parseFloat(document.getElementById('param_treatment_box').value) / y_pack; // 부자재
+            const t_mat_raw = real_t_act;
+            const t_mat_sub = real_t_pkg + real_t_box;
+            const var_mat_t = t_mat_raw + t_mat_sub;
 
+            // 유틸리티 단가 산출
             const real_elec = parseFloat(document.getElementById('param_mfg_elec').value) / y_total;
             const real_water = parseFloat(document.getElementById('param_mfg_water').value) / y_total;
             const real_fuel = parseFloat(document.getElementById('param_mfg_fuel').value) / y_total;
             const var_util = real_elec + real_water + real_fuel;
 
-            const fix_mfg_indirect = parseFloat(document.getElementById('mfg_indirect_fixed').value);
+            // 제조 고정비
+            const fix_mfg_insurance = parseFloat(document.getElementById('mfg_fix_insurance').value);
+            const fix_mfg_maintenance = parseFloat(document.getElementById('mfg_fix_maintenance').value);
+            const fix_mfg_welfare = parseFloat(document.getElementById('mfg_fix_welfare').value);
             const fix_mfg_labor = parseInt(document.getElementById('staff_prod').value) * parseFloat(document.getElementById('param_avgSalary').value);
             
-            // SGA Labor details
+            // 판관 인건비 상세
             const s_exec_cnt = parseFloat(document.getElementById('staff_exec_cnt').value);
             const s_exec_sal = parseFloat(document.getElementById('staff_exec_sal').value);
             const s_fin_cnt = parseFloat(document.getElementById('staff_fin_cnt').value);
@@ -1573,12 +1639,19 @@
             const s_rnd_cnt = parseFloat(document.getElementById('staff_rnd_cnt').value);
             const s_rnd_sal = parseFloat(document.getElementById('staff_rnd_sal').value);
 
+            // 판관 기타 고정비 상세
             const fix_sga_rent = parseFloat(document.getElementById('param_rentTotal').value);
             const fix_sga_marketing = parseFloat(document.getElementById('sga_fix_marketing').value);
-            const fix_sga_dir = parseFloat(document.getElementById('sga_dir_fix').value);
-            const fix_sga_ind = parseFloat(document.getElementById('sga_ind_fix').value);
+            const fix_sga_travel = parseFloat(document.getElementById('sga_fix_travel').value);
+            const fix_sga_comm = parseFloat(document.getElementById('sga_fix_comm').value);
+            const fix_sga_fee = parseFloat(document.getElementById('sga_fix_fee').value);
+            const fix_sga_welfare_hq = parseFloat(document.getElementById('sga_fix_welfare').value);
+            const fix_sga_supplies = parseFloat(document.getElementById('sga_fix_supplies').value);
             
-            const var_sga_dir_pct = parseFloat(document.getElementById('sga_dir_var').value)/100;
+            // 판관 변동비 상세 %
+            const pct_logistics = parseFloat(document.getElementById('sga_var_logistics').value)/100;
+            const pct_storage = parseFloat(document.getElementById('sga_var_storage').value)/100;
+            const pct_commission = parseFloat(document.getElementById('sga_var_commission').value)/100;
 
             let depSchedules = [{ year: 0, cost: initCapex, years: depYears }];
             let totalAccCapex = initCapex;
@@ -1628,16 +1701,29 @@
                 f.revenue[t] = ((f.qty_sold_s[t] * pShampoo * inf) + (f.qty_sold_t[t] * pTreatment * inf)) / 1000000;
                 
                 // 매출원가 계산 (재고의 흐름에 따른 변동비 - 판매수량 기준 반영)
-                f.cogs_var_mat[t] = ((f.qty_sold_s[t] * var_mat_s * inf) + (f.qty_sold_t[t] * var_mat_t * inf)) / 1000000;
-                f.cogs_var_util[t] = (f.qty_sold_total[t] * var_util * inf) / 1000000;
+                f.cogs_var_mat_raw[t] = ((f.qty_sold_s[t] * s_mat_raw * inf) + (f.qty_sold_t[t] * t_mat_raw * inf)) / 1000000;
+                f.cogs_var_mat_sub[t] = ((f.qty_sold_s[t] * s_mat_sub * inf) + (f.qty_sold_t[t] * t_mat_sub * inf)) / 1000000;
+                f.cogs_var_mat[t] = f.cogs_var_mat_raw[t] + f.cogs_var_mat_sub[t];
+
+                f.cogs_var_util_elec[t] = (f.qty_sold_total[t] * real_elec * inf) / 1000000;
+                f.cogs_var_util_water[t] = (f.qty_sold_total[t] * real_water * inf) / 1000000;
+                f.cogs_var_util_fuel[t] = (f.qty_sold_total[t] * real_fuel * inf) / 1000000;
+                f.cogs_var_util[t] = f.cogs_var_util_elec[t] + f.cogs_var_util_water[t] + f.cogs_var_util_fuel[t];
+
                 f.cogs_var_total[t] = f.cogs_var_mat[t] + f.cogs_var_util[t];
                 
                 f.cogs_fix_labor[t] = fix_mfg_labor * inf;
-                f.cogs_fix_indirect[t] = fix_mfg_indirect * inf;
+                f.cogs_fix_insurance[t] = fix_mfg_insurance * inf;
+                f.cogs_fix_maintenance[t] = fix_mfg_maintenance * inf;
+                f.cogs_fix_welfare[t] = fix_mfg_welfare * inf;
+                f.cogs_fix_indirect[t] = f.cogs_fix_insurance[t] + f.cogs_fix_maintenance[t] + f.cogs_fix_welfare[t];
                 f.cogs_fix_total[t] = f.cogs_fix_labor[t] + f.cogs_fix_indirect[t];
                 
-                // SGA Expenses
-                f.sga_var_dir[t] = f.revenue[t] * var_sga_dir_pct;
+                // SGA Expenses (변동비 세분화)
+                f.sga_var_logistics[t] = f.revenue[t] * pct_logistics;
+                f.sga_var_storage[t] = f.revenue[t] * pct_storage;
+                f.sga_var_commission[t] = f.revenue[t] * pct_commission;
+                f.sga_var_dir[t] = f.sga_var_logistics[t] + f.sga_var_storage[t] + f.sga_var_commission[t];
                 f.sga_var_total[t] = f.sga_var_dir[t]; 
 
                 // Detailed Labor Costs
@@ -1650,9 +1736,15 @@
 
                 f.sga_fix_marketing[t] = fix_sga_marketing * inf;
                 f.sga_fix_rent[t] = fix_sga_rent * inf;
-                f.sga_fix_dir[t] = fix_sga_dir * inf;
-                f.sga_fix_ind[t] = fix_sga_ind * inf;
-                f.sga_fix_total[t] = f.sga_fix_labor[t] + f.sga_fix_marketing[t] + f.sga_fix_rent[t] + f.sga_fix_dir[t] + f.sga_fix_ind[t];
+                
+                f.sga_fix_travel[t] = fix_sga_travel * inf;
+                f.sga_fix_comm[t] = fix_sga_comm * inf;
+                f.sga_fix_fee[t] = fix_sga_fee * inf;
+                f.sga_fix_welfare_hq[t] = fix_sga_welfare_hq * inf;
+                f.sga_fix_supplies[t] = fix_sga_supplies * inf;
+                f.sga_fix_etc_total[t] = f.sga_fix_travel[t] + f.sga_fix_comm[t] + f.sga_fix_fee[t] + f.sga_fix_welfare_hq[t] + f.sga_fix_supplies[t];
+
+                f.sga_fix_total[t] = f.sga_fix_labor[t] + f.sga_fix_marketing[t] + f.sga_fix_rent[t] + f.sga_fix_etc_total[t];
                 
                 // Calculate Contribution Margin & Ratios
                 f.var_total[t] = f.cogs_var_total[t] + f.sga_var_total[t];
@@ -1800,7 +1892,7 @@
         function renderTable(f, initEq) {
             const body = document.getElementById('financialTableBody');
             
-            // CM Layout Based Structure
+            // CM Layout Based Structure with deeply segmented costs
             const sc = [
                 { id:'m1', n:'설계 생산능력 (CAPA L)', d:f.capa, t:'info' },
                 { id:'m3', n:'연차별 가동률 (%)', d:f.util.map(x=>x*100), t:'pct' },
@@ -1814,9 +1906,19 @@
 
                 // 변동비
                 { id:'var_h', n:'변동비 계', d:f.var_total, t:'h-sub', p:true, g:'var-group', cg:'cash-out-child' },
-                { id:'cv_m', n:'└─ [제조] 원재료비 (할증 반영)', d:f.cogs_var_mat, t:'det', cg:'var-child' },
-                { id:'cv_u', n:'└─ [제조] 직접제조경비 (유틸)', d:f.cogs_var_util, t:'det', cg:'var-child' },
-                { id:'sv_d', n:'└─ [판관] 판관 직접변동 (수수료)', d:f.sga_var_dir, t:'det', cg:'var-child' },
+                { id:'cv_m', n:'└─ [제조] 원재료비 총액', d:f.cogs_var_mat, t:'det', cg:'var-child', hl:'font-semibold text-slate-700' },
+                { id:'cv_m_r', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 원자재비', d:f.cogs_var_mat_raw, t:'det', cg:'var-child' },
+                { id:'cv_m_s', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 부자재/포장재비', d:f.cogs_var_mat_sub, t:'det', cg:'var-child' },
+                
+                { id:'cv_u', n:'└─ [제조] 직접제조경비(유틸) 총액', d:f.cogs_var_util, t:'det', cg:'var-child', hl:'font-semibold text-slate-700' },
+                { id:'cv_u_e', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 전력비', d:f.cogs_var_util_elec, t:'det', cg:'var-child' },
+                { id:'cv_u_w', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 수도광열비', d:f.cogs_var_util_water, t:'det', cg:'var-child' },
+                { id:'cv_u_f', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 스팀/연료비', d:f.cogs_var_util_fuel, t:'det', cg:'var-child' },
+                
+                { id:'sv_d', n:'└─ [판관] 변동비 총액', d:f.sga_var_dir, t:'det', cg:'var-child', hl:'font-semibold text-slate-700' },
+                { id:'sv_d_l', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 물류비', d:f.sga_var_logistics, t:'det', cg:'var-child' },
+                { id:'sv_d_s', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 창고보관비', d:f.sga_var_storage, t:'det', cg:'var-child' },
+                { id:'sv_d_c', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 판매수수료', d:f.sga_var_commission, t:'det', cg:'var-child' },
 
                 // 공헌이익
                 { id:'cm', n:'공헌이익 (Contribution Margin)', d:f.cm, t:'header', hl:'bg-indigo-50 text-indigo-900 font-bold' },
@@ -1825,16 +1927,28 @@
                 // 고정비
                 { id:'fix_h', n:'고정비 계 (현금성)', d:f.fix_total, t:'h-sub', p:true, g:'fix-group', cg:'cash-out-child' },
                 { id:'cf_l', n:'└─ [제조] 노무비 (고정급)', d:f.cogs_fix_labor, t:'det', cg:'fix-child' },
-                { id:'cf_i', n:'└─ [제조] 간접고정비', d:f.cogs_fix_indirect, t:'det', cg:'fix-child' },
+                
+                { id:'cf_i', n:'└─ [제조] 간접고정비 총액', d:f.cogs_fix_indirect, t:'det', cg:'fix-child', hl:'font-semibold text-slate-700' },
+                { id:'cf_i_i', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 제조 보험료', d:f.cogs_fix_insurance, t:'det', cg:'fix-child' },
+                { id:'cf_i_m', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 수선유지비', d:f.cogs_fix_maintenance, t:'det', cg:'fix-child' },
+                { id:'cf_i_w', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 공장 복리후생비', d:f.cogs_fix_welfare, t:'det', cg:'fix-child' },
+                
                 { id:'sf_l', n:'└─ [판관] 인건비 총액', d:f.sga_fix_labor, t:'det', cg:'fix-child', hl:'font-semibold text-indigo-700' },
                 { id:'sf_l_ex', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 임원', d:f.sga_fix_labor_exec, t:'det', cg:'fix-child' },
                 { id:'sf_l_fn', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 재무회계', d:f.sga_fix_labor_fin, t:'det', cg:'fix-child' },
                 { id:'sf_l_hr', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 인사총무', d:f.sga_fix_labor_hr, t:'det', cg:'fix-child' },
                 { id:'sf_l_sl', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 영업사원', d:f.sga_fix_labor_sales, t:'det', cg:'fix-child' },
                 { id:'sf_l_rn', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 연구원', d:f.sga_fix_labor_rnd, t:'det', cg:'fix-child' },
+                
                 { id:'sf_m', n:'└─ [판관] 마케팅비 (고정)', d:f.sga_fix_marketing, t:'det', cg:'fix-child' },
                 { id:'sf_r', n:'└─ [판관] 임차료', d:f.sga_fix_rent, t:'det', cg:'fix-child' },
-                { id:'sf_d', n:'└─ [판관] 기타 고정경비', d:f.sga_fix_dir, t:'det', cg:'fix-child' },
+                
+                { id:'sf_etc', n:'└─ [판관] 기타 고정경비 총액', d:f.sga_fix_etc_total, t:'det', cg:'fix-child', hl:'font-semibold text-slate-700' },
+                { id:'sf_etc_t', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 여비교통비', d:f.sga_fix_travel, t:'det', cg:'fix-child' },
+                { id:'sf_etc_c', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 통신비', d:f.sga_fix_comm, t:'det', cg:'fix-child' },
+                { id:'sf_etc_f', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 지급수수료', d:f.sga_fix_fee, t:'det', cg:'fix-child' },
+                { id:'sf_etc_w', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 본사 복리후생비', d:f.sga_fix_welfare_hq, t:'det', cg:'fix-child' },
+                { id:'sf_etc_s', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 소모품비', d:f.sga_fix_supplies, t:'det', cg:'fix-child' },
 
                 // 영업이익 산출
                 { id:'ebitda', n:'EBITDA (상각전 영업이익)', d:f.ebitda, t:'header', hl:'bg-slate-50 text-slate-800 border-t border-slate-200' },
@@ -1940,14 +2054,15 @@
             const total = f.cogs_var_total[1] + f.cogs_fix_total[1] + f.sga_var_total[1] + f.sga_fix_total[1] + f.interest[1];
             
             const items = [
-                { n: '원재료비 (변동)', v: f.cogs_var_mat[1], c: 'bg-emerald-500' },
-                { n: '직접경비 (유틸)', v: f.cogs_var_util[1], c: 'bg-teal-400' },
+                { n: '원자재 (변동)', v: f.cogs_var_mat_raw[1], c: 'bg-emerald-600' },
+                { n: '부자재 (변동)', v: f.cogs_var_mat_sub[1], c: 'bg-emerald-400' },
+                { n: '유틸리티 (변동)', v: f.cogs_var_util[1], c: 'bg-teal-400' },
                 { n: '제조 고정인건비', v: f.cogs_fix_labor[1], c: 'bg-blue-500' },
-                { n: '제조 고정간접비', v: f.cogs_fix_indirect[1], c: 'bg-amber-400' },
+                { n: '제조 간접고정비', v: f.cogs_fix_indirect[1], c: 'bg-amber-400' },
                 { n: '판관 직접변동비', v: f.sga_var_dir[1], c: 'bg-pink-400' },
-                { n: '판관 고정 마케팅비', v: f.sga_fix_marketing[1], c: 'bg-rose-400' },
+                { n: '판관 마케팅비', v: f.sga_fix_marketing[1], c: 'bg-rose-400' },
                 { n: '판관 고정인건비', v: f.sga_fix_labor[1], c: 'bg-indigo-500' },
-                { n: '판관 임차료/고정비', v: f.sga_fix_rent[1]+f.sga_fix_dir[1]+f.sga_fix_ind[1], c: 'bg-slate-500' },
+                { n: '판관 기타고정비/임차료', v: f.sga_fix_rent[1] + f.sga_fix_etc_total[1], c: 'bg-slate-500' },
                 { n: '금융 이자비용', v: f.interest[1], c: 'bg-red-500' }
             ].sort((a,b)=>b.v-a.v);
 
