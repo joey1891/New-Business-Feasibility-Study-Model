@@ -41,9 +41,9 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
-                    BizEval™ Professional v4.3 <span class="text-xs bg-emerald-500/30 text-emerald-300 font-normal px-2 py-0.5 rounded border border-emerald-500/20">✨ 정밀 원가/경비 세분화 탑재</span>
+                    BizEval™ Professional v4.4 <span class="text-xs bg-amber-500/30 text-amber-300 font-normal px-2 py-0.5 rounded border border-amber-500/20">✨ 운전자본/자산부채 세분화</span>
                 </h1>
-                <p class="text-xs text-slate-400">세분화된 판매량/재고 연동, 정밀 원가 요소 반영, 자본구조, 자동 설비 증설 및 AI 경영 진단</p>
+                <p class="text-xs text-slate-400">세분화된 운전자본 증감, NWC 세부 계정, 로스율 역산 원가 반영, 자본구조, 자동 증설</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -765,7 +765,7 @@
 
                     <!-- 세분화된 운전자본 및 기타 자산/부채 비율 -->
                     <div class="bg-slate-100/60 p-3 rounded-lg border border-slate-200">
-                        <span class="text-[11px] font-bold text-slate-800 block mb-2 border-b border-slate-200 pb-1">운전자본 회전주기 및 자산/부채 연동</span>
+                        <span class="text-[11px] font-bold text-slate-800 block mb-2 border-b border-slate-200 pb-1">운전자본 회전주기 (일)</span>
                         <div class="grid grid-cols-3 gap-2 mb-3">
                             <div>
                                 <label class="block text-[9px] text-slate-500">매출채권 (일)</label>
@@ -780,16 +780,19 @@
                                 <input type="number" id="wc_inv" value="60" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center" onchange="runAnalysis();">
                             </div>
                         </div>
-                        <div class="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
+                        <span class="text-[11px] font-bold text-slate-800 block mb-2 border-b border-slate-200 pb-1 mt-2">기타 자산/부채 연동 (%)</span>
+                        <div class="grid grid-cols-3 gap-2 border-t border-slate-200 pt-2">
                             <div>
-                                <label class="block text-[9px] text-slate-500 font-medium">기타 유동자산 (매출액 %)</label>
-                                <input type="number" id="wc_other_ca" value="1.5" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
-                                <p class="text-[8px] text-slate-400 mt-0.5">선급금, 미수수익 등 (현금유출)</p>
+                                <label class="block text-[9px] text-slate-500 font-medium">선급금 (매출액 %)</label>
+                                <input type="number" id="wc_adv_pay" value="1.5" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
                             </div>
                             <div>
-                                <label class="block text-[9px] text-slate-500 font-medium">기타 유동부채 (비용합계 %)</label>
-                                <input type="number" id="wc_other_cl" value="2.0" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
-                                <p class="text-[8px] text-slate-400 mt-0.5">미지급비용, 선수금 등 (현금유입)</p>
+                                <label class="block text-[9px] text-slate-500 font-medium">선수금 (매출액 %)</label>
+                                <input type="number" id="wc_unearned_rev" value="1.0" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-slate-500 font-medium">미지급금 (영업비용 %)</label>
+                                <input type="number" id="wc_unpaid_exp" value="2.0" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
                             </div>
                         </div>
                     </div>
@@ -936,7 +939,7 @@
                         <h4 class="font-bold text-slate-900 flex items-center gap-2">
                             <i data-lucide="sheet" class="w-5 h-5 text-emerald-600"></i> 5개년 주주 귀속 FCFE 추정 재무제표 (관리회계 기준)
                         </h4>
-                        <p class="text-[11px] text-slate-500 mt-1">생산량과 판매량의 차이로 인한 제품 재고자산 증감분이 NWC(운전자본)에 연동되어 현금흐름을 통제합니다.</p>
+                        <p class="text-[11px] text-slate-500 mt-1">생산량과 판매량의 차이로 인한 제품 재고자산 증감분 및 운전자본 변동이 현금흐름으로 즉각 연동/표시됩니다.</p>
                     </div>
                     <div class="text-[10px] font-semibold text-slate-500 flex items-center gap-3">
                         <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-100 inline-block"></span> 그룹 행 (클릭 시 토글)</span>
@@ -1235,11 +1238,13 @@
             document.getElementById('sga_var_storage').value = 0.5;
             document.getElementById('sga_var_commission').value = 1.0;
 
+            // 세분화된 NWC 연동 비율
             document.getElementById('wc_ar').value = 60;
             document.getElementById('wc_ap').value = 30;
             document.getElementById('wc_inv').value = 60;
-            document.getElementById('wc_other_ca').value = 1.5;
-            document.getElementById('wc_other_cl').value = 2.0;
+            document.getElementById('wc_adv_pay').value = 1.5;
+            document.getElementById('wc_unearned_rev').value = 1.0;
+            document.getElementById('wc_unpaid_exp').value = 2.0;
 
             document.getElementById('util_y1').value = 50;
             document.getElementById('util_y2').value = 70;
@@ -1502,15 +1507,19 @@
             const depYears = parseInt(document.getElementById('param_depYears').value);
             const amortization = parseFloat(document.getElementById('param_amortization').value);
 
+            // Working capital & Assets/Liabilities parameters
             const wc_ar_days = parseFloat(document.getElementById('wc_ar').value);
             const wc_ap_days = parseFloat(document.getElementById('wc_ap').value);
             const wc_inv_days = parseFloat(document.getElementById('wc_inv').value);
-            const wc_other_ca_pct = parseFloat(document.getElementById('wc_other_ca').value) / 100;
-            const wc_other_cl_pct = parseFloat(document.getElementById('wc_other_cl').value) / 100;
+            const wc_adv_pay_pct = parseFloat(document.getElementById('wc_adv_pay').value) / 100;
+            const wc_unearned_rev_pct = parseFloat(document.getElementById('wc_unearned_rev').value) / 100;
+            const wc_unpaid_exp_pct = parseFloat(document.getElementById('wc_unpaid_exp').value) / 100;
 
-            const initWc = parseFloat(document.getElementById('param_init_wc_material').value) + 
-                           parseFloat(document.getElementById('param_init_wc_labor').value) + 
-                           parseFloat(document.getElementById('param_init_wc_contingency').value);
+            const initWcMaterial = parseFloat(document.getElementById('param_init_wc_material').value);
+            const initWcLabor = parseFloat(document.getElementById('param_init_wc_labor').value);
+            const initWcContingency = parseFloat(document.getElementById('param_init_wc_contingency').value);
+            
+            const initWc = initWcMaterial + initWcLabor + initWcContingency;
             document.getElementById('total_init_wc_display').innerText = `${initWc} 백만원`;
             const totalInitInvestment = initCapex + initWc;
 
@@ -1588,11 +1597,26 @@
                 
                 ebt: [0,0,0,0,0,0], tax: [0,0,0,0,0,0], net_income: [0,0,0,0,0,0],
                 
-                // Working capital & Assets/Liabilities
-                ar: [0,0,0,0,0,0], ap: [0,0,0,0,0,0], inv: [0,0,0,0,0,0], other_ca: [0,0,0,0,0,0], other_cl: [0,0,0,0,0,0], nwc: [initWc,0,0,0,0,0], nwc_change: [0,0,0,0,0,0],
+                // Working capital & Assets/Liabilities (Balances)
+                bal_ar: [0,0,0,0,0,0], bal_ap: [0,0,0,0,0,0], bal_inv: [0,0,0,0,0,0], 
+                bal_adv_pay: [0,0,0,0,0,0], bal_unearned_rev: [0,0,0,0,0,0], bal_unpaid_exp: [0,0,0,0,0,0],
+                
+                // Cash flows impacts (Change)
+                cf_ar: [0,0,0,0,0,0], cf_ap: [0,0,0,0,0,0], cf_inv: [0,0,0,0,0,0], cf_wc_total: [0,0,0,0,0,0],
+                cf_adv_pay: [0,0,0,0,0,0], cf_unearned_rev: [0,0,0,0,0,0], cf_unpaid_exp: [0,0,0,0,0,0], cf_other_al_total: [0,0,0,0,0,0],
                 
                 capex_total: [-initCapex,0,0,0,0,0], net_debt_flow: [initDebt,0,0,0,0,0], fcfe: [-initEquity,0,0,0,0,0], cum_fcfe: [-initEquity,0,0,0,0,0], dfcfe: [-initEquity,0,0,0,0,0]
             };
+
+            // Initialize Year 0 Balances and Cash Flows for WC / Assets / Liabilities
+            f.bal_inv[0] = initWcMaterial;
+            f.bal_adv_pay[0] = initWcLabor + initWcContingency;
+            
+            f.cf_inv[0] = -f.bal_inv[0];
+            f.cf_adv_pay[0] = -f.bal_adv_pay[0];
+            
+            f.cf_wc_total[0] = f.cf_inv[0];
+            f.cf_other_al_total[0] = f.cf_adv_pay[0];
 
             const utils = [0, parseFloat(document.getElementById('util_y1').value)/100, parseFloat(document.getElementById('util_y2').value)/100, parseFloat(document.getElementById('util_y3').value)/100, parseFloat(document.getElementById('util_y4').value)/100, parseFloat(document.getElementById('util_y5').value)/100];
             
@@ -1778,29 +1802,44 @@
                 f.end_debt[t] = f.beg_debt[t] - f.debt_repayment[t];
                 f.net_debt_flow[t] = -f.debt_repayment[t];
 
-                // Advanced NWC & Other Assets/Liabilities (재고자산 가치 정밀화)
+                // Advanced NWC & Other Assets/Liabilities (세부 자산/부채 잔액 계산)
                 if (t < 5) {
-                    f.ar[t] = (f.revenue[t]/365) * wc_ar_days;
+                    f.bal_ar[t] = (f.revenue[t]/365) * wc_ar_days;
                     
                     // 기말 제품 재고자산 가치 환산 (제조 시 투입된 변동원가분 자산화)
                     let raw_material_buffer = ((((f.qty_prod_s[t]*var_mat_s) + (f.qty_prod_t[t]*var_mat_t))*inf)/1000000 / 365) * wc_inv_days; 
                     let finished_goods_inv = ((f.qty_inv_s[t] * var_mat_s + f.qty_inv_t[t] * var_mat_t + f.qty_inv_total[t] * var_util) * inf) / 1000000; 
-                    f.inv[t] = raw_material_buffer + finished_goods_inv;
+                    f.bal_inv[t] = raw_material_buffer + finished_goods_inv;
                     
-                    f.ap[t] = (f.cogs_var_mat[t]/365) * wc_ap_days;
-                    f.other_ca[t] = f.revenue[t] * wc_other_ca_pct;
+                    f.bal_ap[t] = (f.cogs_var_mat[t]/365) * wc_ap_days;
+                    
+                    f.bal_adv_pay[t] = f.revenue[t] * wc_adv_pay_pct;
+                    f.bal_unearned_rev[t] = f.revenue[t] * wc_unearned_rev_pct;
+                    
                     let totalOpCost = f.cogs_var_total[t] + f.cogs_fix_total[t] + f.sga_var_total[t] + f.sga_fix_total[t];
-                    f.other_cl[t] = totalOpCost * wc_other_cl_pct;
-                    
-                    f.nwc[t] = f.ar[t] + f.inv[t] + f.other_ca[t] - f.ap[t] - f.other_cl[t];
+                    f.bal_unpaid_exp[t] = totalOpCost * wc_unpaid_exp_pct;
                 } else {
-                    f.nwc[t] = 0; // 5년차 환수
+                    f.bal_ar[t] = 0;
+                    f.bal_inv[t] = 0;
+                    f.bal_ap[t] = 0;
+                    f.bal_adv_pay[t] = 0;
+                    f.bal_unearned_rev[t] = 0;
+                    f.bal_unpaid_exp[t] = 0;
                 }
 
-                f.nwc_change[t] = f.nwc[t] - f.nwc[t-1];
+                // 현금흐름 영향 (자산 증가는 유출(-), 부채 증가는 유입(+))
+                f.cf_ar[t] = -(f.bal_ar[t] - f.bal_ar[t-1]);
+                f.cf_inv[t] = -(f.bal_inv[t] - f.bal_inv[t-1]);
+                f.cf_ap[t] = (f.bal_ap[t] - f.bal_ap[t-1]);
+                f.cf_wc_total[t] = f.cf_ar[t] + f.cf_inv[t] + f.cf_ap[t];
+
+                f.cf_adv_pay[t] = -(f.bal_adv_pay[t] - f.bal_adv_pay[t-1]);
+                f.cf_unearned_rev[t] = (f.bal_unearned_rev[t] - f.bal_unearned_rev[t-1]);
+                f.cf_unpaid_exp[t] = (f.bal_unpaid_exp[t] - f.bal_unpaid_exp[t-1]);
+                f.cf_other_al_total[t] = f.cf_adv_pay[t] + f.cf_unearned_rev[t] + f.cf_unpaid_exp[t];
                 
-                // FCFE Indirect Method
-                f.fcfe[t] = f.net_income[t] + f.dep_amort[t] - f.nwc_change[t] + f.capex_total[t] + f.net_debt_flow[t];
+                // FCFE Indirect Method (자산/부채 증감이 이미 CF 기호로 계산되었으므로 덧셈 처리)
+                f.fcfe[t] = f.net_income[t] + f.dep_amort[t] + f.cf_wc_total[t] + f.cf_other_al_total[t] + f.capex_total[t] + f.net_debt_flow[t];
                 f.dfcfe[t] = f.fcfe[t] / Math.pow(1 + WACC, t);
                 f.cum_fcfe[t] = f.cum_fcfe[t-1] + f.fcfe[t];
             }
@@ -1871,9 +1910,9 @@
                     let ebt = (ebitda - baseF.dep_amort[t]) - baseF.interest[t];
                     let ni = ebt - (ebt>0?ebt*0.2:0);
                     
-                    let nwc = baseF.nwc_change[t]; 
+                    let total_wc_cf = baseF.cf_wc_total[t] + baseF.cf_other_al_total[t];
                     
-                    let fcfe = ni + baseF.dep_amort[t] - nwc + baseF.capex_total[t] + baseF.net_debt_flow[t];
+                    let fcfe = ni + baseF.dep_amort[t] + total_wc_cf + baseF.capex_total[t] + baseF.net_debt_flow[t];
                     simNPV += fcfe / Math.pow(1+Ke, t);
                 }
                 results.push(simNPV);
@@ -1892,7 +1931,7 @@
         function renderTable(f, initEq) {
             const body = document.getElementById('financialTableBody');
             
-            // CM Layout Based Structure with deeply segmented costs
+            // CM Layout Based Structure with deeply segmented costs & WC
             const sc = [
                 { id:'m1', n:'설계 생산능력 (CAPA L)', d:f.capa, t:'info' },
                 { id:'m3', n:'연차별 가동률 (%)', d:f.util.map(x=>x*100), t:'pct' },
@@ -1969,9 +2008,19 @@
                 { id:'fcf_h', n:'주주 현금흐름 (FCFE) 산출 상세', d:Array(6).fill(''), t:'h-sub', p:true, g:'fcf-calc-group', hl:'bg-indigo-50/70 border-y border-indigo-100' },
                 { id:'f_ni', n:'└─ 1. 당기순이익 (+)', d:f.net_income, t:'det', cg:'fcf-calc-child' },
                 { id:'f_da', n:'└─ 2. 감가상각 가산 (+)', d:f.dep_amort, t:'det', cg:'fcf-calc-child' },
-                { id:'f_nw', n:'└─ 3. 운전자본/자산부채 증감 (-)', d:f.nwc_change, t:'det', cg:'fcf-calc-child', hl:'text-amber-600' },
-                { id:'f_cp', n:'└─ 4. 초기/증설 CAPEX 지출 (-)', d:f.capex_total, t:'det', cg:'fcf-calc-child', hl:'text-rose-600' },
-                { id:'f_nd', n:'└─ 5. 차입 조달(+) 및 상환(-)', d:f.net_debt_flow, t:'det', cg:'fcf-calc-child', hl:'text-blue-600' },
+                
+                { id:'f_nw1', n:'└─ 3. 운전자본 증감액', d:f.cf_wc_total, t:'det', cg:'fcf-calc-child', hl:'font-semibold text-amber-700' },
+                { id:'f_nw1_ar', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 매출채권 (증가시-)', d:f.cf_ar, t:'det', cg:'fcf-calc-child', hl:'text-amber-600' },
+                { id:'f_nw1_inv', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 재고자산 (증가시-)', d:f.cf_inv, t:'det', cg:'fcf-calc-child', hl:'text-amber-600' },
+                { id:'f_nw1_ap', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 매입채무 (증가시+)', d:f.cf_ap, t:'det', cg:'fcf-calc-child', hl:'text-amber-600' },
+
+                { id:'f_nw2', n:'└─ 4. 기타 자산/부채 증감액', d:f.cf_other_al_total, t:'det', cg:'fcf-calc-child', hl:'font-semibold text-purple-700' },
+                { id:'f_nw2_adv', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 선급금 (증가시-)', d:f.cf_adv_pay, t:'det', cg:'fcf-calc-child', hl:'text-purple-600' },
+                { id:'f_nw2_urev', n:'&nbsp;&nbsp;&nbsp;&nbsp;├─ 선수금 (증가시+)', d:f.cf_unearned_rev, t:'det', cg:'fcf-calc-child', hl:'text-purple-600' },
+                { id:'f_nw2_uexp', n:'&nbsp;&nbsp;&nbsp;&nbsp;└─ 미지급금 (증가시+)', d:f.cf_unpaid_exp, t:'det', cg:'fcf-calc-child', hl:'text-purple-600' },
+
+                { id:'f_cp', n:'└─ 5. 초기/증설 CAPEX 지출 (-)', d:f.capex_total, t:'det', cg:'fcf-calc-child', hl:'text-rose-600' },
+                { id:'f_nd', n:'└─ 6. 차입 조달(+) 및 상환(-)', d:f.net_debt_flow, t:'det', cg:'fcf-calc-child', hl:'text-blue-600' },
 
                 { id:'fin', n:'최종 자기자본 잉여현금흐름 (FCFE)', d:f.fcfe, t:'header', hl:'bg-slate-900 text-emerald-400 font-bold border-y-2 border-emerald-500' },
                 { id:'cum', n:'누적 주주 현금흐름', d:f.cum_fcfe, t:'summary', hl:'bg-slate-100 font-bold' }
@@ -1999,7 +2048,7 @@
                     if(r.id==='fin' && t===0) v = -initEq;
                     if(r.id==='cum' && t===0) v = -initEq;
 
-                    if(t===0 && r.t!=='header' && r.t!=='summary' && r.id!=='f_nd' && r.id!=='f_cp' && r.id!=='dbt_b' && r.id!=='dbt_h') {
+                    if(t===0 && r.t!=='header' && r.t!=='summary' && !['f_nd','f_cp','dbt_b','dbt_h','f_nw1','f_nw1_ar','f_nw1_inv','f_nw1_ap','f_nw2','f_nw2_adv','f_nw2_urev','f_nw2_uexp'].includes(r.id)) {
                         html += `<td class="py-2 px-3 text-right text-slate-300">-</td>`;
                     } else {
                         let txt = (r.t==='pct') ? `${v.toFixed(1)}%` : fmt(v);
@@ -2200,7 +2249,8 @@
             const pData = {
                 metrics: latestFinancialCache.metrics,
                 leverage: { DOL_Y2: document.getElementById('bep_table_body').children[1].children[3].innerText },
-                nwc_change: latestFinancialCache.f.nwc_change.slice(1),
+                cf_wc: latestFinancialCache.f.cf_wc_total.slice(1),
+                cf_other_al: latestFinancialCache.f.cf_other_al_total.slice(1),
                 inventory_build_up: latestFinancialCache.f.qty_inv_total.slice(1),
                 expansion_capex_triggered: latestFinancialCache.f.capex_total.slice(1).some(v=>v<0)
             };
