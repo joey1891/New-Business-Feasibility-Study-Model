@@ -43,7 +43,7 @@
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
                     BizEval™ Professional v4.4 <span class="text-xs bg-amber-500/30 text-amber-300 font-normal px-2 py-0.5 rounded border border-amber-500/20">✨ 운전자본/자산부채 세분화</span>
                 </h1>
-                <p class="text-xs text-slate-400">세분화된 운전자본 증감, NWC 세부 계정, 로스율 역산 원가 반영, 자본구조, 자동 증설</p>
+                <p class="text-xs text-slate-400">세분화된 운전자본 증감, NWC 세부 계정, 로스율 역산 원가 반영, 자본구조, 자동 증설, 재무상태표</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -1002,8 +1002,43 @@
                 </div>
             </section>
 
+            <!-- 5-Year Balance Sheet (Financial Accounting) -->
+            <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                        <h4 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="library" class="w-5 h-5 text-purple-600"></i> 5개년 추정 재무상태표 (대차대조표)
+                        </h4>
+                        <p class="text-[11px] text-slate-500 mt-1">기업회계기준(K-GAAP/IFRS)에 따른 자산, 부채, 자본의 연도별 잔액 변동을 보여줍니다. (당기순이익 전액 유보 가정)</p>
+                    </div>
+                    <div class="text-[10px] font-semibold text-slate-500 flex items-center gap-3">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-purple-100 inline-block"></span> 그룹 행 (클릭 시 토글)</span>
+                        <span>(단위: 백만원)</span>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse min-w-[1100px]">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 text-xs">
+                                <th class="py-3 px-4 w-[36%]">계정과목</th>
+                                <th class="py-3 px-3 text-right">0년차 (투자기)</th>
+                                <th class="py-3 px-3 text-right">1년차</th>
+                                <th class="py-3 px-3 text-right">2년차</th>
+                                <th class="py-3 px-3 text-right">3년차</th>
+                                <th class="py-3 px-3 text-right">4년차</th>
+                                <th class="py-3 px-3 text-right">5년차 (청산)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="balanceSheetTableBody">
+                            <!-- Dynamic Content Generator by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Detailed Break-Even, Cost Breakdowns & Leverage -->
-            <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <!-- Cost Breakdown Chart list -->
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                     <h4 class="font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-3 text-sm">
@@ -1177,7 +1212,12 @@
             'fcf-calc-group': true,
             'debt-schedule': false,
             'fa-cogs-group': true,
-            'fa-sga-group': true
+            'fa-sga-group': true,
+            'bs-ca-group': true,
+            'bs-nca-group': true,
+            'bs-cl-group': true,
+            'bs-ncl-group': true,
+            'bs-te-group': true
         };
 
         // Standard Global Chart Instances
@@ -1398,7 +1438,7 @@
         }
 
         function updateTableVisibility() {
-            const rows = document.querySelectorAll('#financialTableBody tr');
+            const rows = document.querySelectorAll('tbody tr[data-group]');
             rows.forEach(r => {
                 const group = r.getAttribute('data-group');
                 if (!group) return; 
@@ -1411,6 +1451,11 @@
                 else if (group === 'debt-schedule-child') visible = rowGroupsState['debt-schedule'];
                 else if (group === 'fa-cogs-child') visible = rowGroupsState['fa-cogs-group'];
                 else if (group === 'fa-sga-child') visible = rowGroupsState['fa-sga-group'];
+                else if (group === 'bs-ca-child') visible = rowGroupsState['bs-ca-group'];
+                else if (group === 'bs-nca-child') visible = rowGroupsState['bs-nca-group'];
+                else if (group === 'bs-cl-child') visible = rowGroupsState['bs-cl-group'];
+                else if (group === 'bs-ncl-child') visible = rowGroupsState['bs-ncl-group'];
+                else if (group === 'bs-te-child') visible = rowGroupsState['bs-te-group'];
 
                 if (visible) r.classList.remove('hidden'); 
                 else r.classList.add('hidden');
@@ -1645,7 +1690,14 @@
                 cf_ar: [0,0,0,0,0,0], cf_ap: [0,0,0,0,0,0], cf_inv: [0,0,0,0,0,0], cf_wc_total: [0,0,0,0,0,0],
                 cf_adv_pay: [0,0,0,0,0,0], cf_unearned_rev: [0,0,0,0,0,0], cf_unpaid_exp: [0,0,0,0,0,0], cf_other_al_total: [0,0,0,0,0,0],
                 
-                capex_total: [-initCapex,0,0,0,0,0], net_debt_flow: [initDebt,0,0,0,0,0], fcfe: [-initEquity,0,0,0,0,0], cum_fcfe: [-initEquity,0,0,0,0,0], dfcfe: [-initEquity,0,0,0,0,0]
+                capex_total: [-initCapex,0,0,0,0,0], net_debt_flow: [initDebt,0,0,0,0,0], fcfe: [-initEquity,0,0,0,0,0], cum_fcfe: [-initEquity,0,0,0,0,0], dfcfe: [-initEquity,0,0,0,0,0],
+
+                // Balance Sheet specific elements
+                bs_cash: [0,0,0,0,0,0], bs_ar: [0,0,0,0,0,0], bs_inv: [0,0,0,0,0,0], bs_adv: [0,0,0,0,0,0], bs_ca: [0,0,0,0,0,0],
+                bs_ppe: [0,0,0,0,0,0], bs_nca: [0,0,0,0,0,0], bs_ta: [0,0,0,0,0,0],
+                bs_ap: [0,0,0,0,0,0], bs_unpaid: [0,0,0,0,0,0], bs_unearned: [0,0,0,0,0,0], bs_std: [0,0,0,0,0,0], bs_cl: [0,0,0,0,0,0],
+                bs_ltd: [0,0,0,0,0,0], bs_ncl: [0,0,0,0,0,0], bs_tl: [0,0,0,0,0,0],
+                bs_cap: [0,0,0,0,0,0], bs_re: [0,0,0,0,0,0], bs_te: [0,0,0,0,0,0], bs_tle: [0,0,0,0,0,0]
             };
 
             // Initialize Year 0 Balances and Cash Flows for WC / Assets / Liabilities
@@ -1657,6 +1709,24 @@
             
             f.cf_wc_total[0] = f.cf_inv[0];
             f.cf_other_al_total[0] = f.cf_adv_pay[0];
+
+            // Year 0 Balance Sheet
+            f.bs_ar[0] = 0; f.bs_inv[0] = initWcMaterial; f.bs_adv[0] = initWcLabor + initWcContingency;
+            f.bs_ppe[0] = initCapex;
+            f.bs_nca[0] = f.bs_ppe[0];
+            f.bs_ap[0] = 0; f.bs_unpaid[0] = 0; f.bs_unearned[0] = 0;
+            f.bs_std[0] = (repayment === 'bullet') ? 0 : initDebt / 5;
+            f.bs_ltd[0] = initDebt - f.bs_std[0];
+            f.bs_cl[0] = f.bs_ap[0] + f.bs_unpaid[0] + f.bs_unearned[0] + f.bs_std[0];
+            f.bs_ncl[0] = f.bs_ltd[0];
+            f.bs_tl[0] = f.bs_cl[0] + f.bs_ncl[0];
+            f.bs_cap[0] = initEquity;
+            f.bs_re[0] = 0;
+            f.bs_te[0] = f.bs_cap[0] + f.bs_re[0];
+            f.bs_tle[0] = f.bs_tl[0] + f.bs_te[0];
+            f.bs_cash[0] = f.bs_tle[0] - (f.bs_ar[0] + f.bs_inv[0] + f.bs_adv[0] + f.bs_nca[0]);
+            f.bs_ca[0] = f.bs_cash[0] + f.bs_ar[0] + f.bs_inv[0] + f.bs_adv[0];
+            f.bs_ta[0] = f.bs_ca[0] + f.bs_nca[0];
 
             const utils = [0, parseFloat(document.getElementById('util_y1').value)/100, parseFloat(document.getElementById('util_y2').value)/100, parseFloat(document.getElementById('util_y3').value)/100, parseFloat(document.getElementById('util_y4').value)/100, parseFloat(document.getElementById('util_y5').value)/100];
             
@@ -1885,6 +1955,44 @@
                 f.fcfe[t] = f.net_income[t] + f.dep_amort[t] + f.cf_wc_total[t] + f.cf_other_al_total[t] + f.capex_total[t] + f.net_debt_flow[t];
                 f.dfcfe[t] = f.fcfe[t] / Math.pow(1 + WACC, t);
                 f.cum_fcfe[t] = f.cum_fcfe[t-1] + f.fcfe[t];
+
+                // Balance Sheet computations for year t
+                let current_cum_capex = initCapex;
+                for(let i=1; i<=t; i++) {
+                    if (f.capex_total[i] < 0) current_cum_capex += -f.capex_total[i];
+                }
+                let current_cum_dep = 0;
+                for(let i=1; i<=t; i++) {
+                    current_cum_dep += f.dep_amort[i];
+                }
+
+                f.bs_ar[t] = f.bal_ar[t];
+                f.bs_inv[t] = f.bal_inv[t];
+                f.bs_adv[t] = f.bal_adv_pay[t];
+                f.bs_ppe[t] = current_cum_capex - current_cum_dep;
+                if(f.bs_ppe[t] < 0) f.bs_ppe[t] = 0;
+                f.bs_nca[t] = f.bs_ppe[t];
+
+                f.bs_ap[t] = f.bal_ap[t];
+                f.bs_unpaid[t] = f.bal_unpaid_exp[t];
+                f.bs_unearned[t] = f.bal_unearned_rev[t];
+                f.bs_std[t] = (t < 5) ? f.debt_repayment[t+1] : 0;
+                f.bs_ltd[t] = f.end_debt[t] - f.bs_std[t];
+                if(f.bs_ltd[t] < 0) f.bs_ltd[t] = 0;
+                
+                f.bs_cl[t] = f.bs_ap[t] + f.bs_unpaid[t] + f.bs_unearned[t] + f.bs_std[t];
+                f.bs_ncl[t] = f.bs_ltd[t];
+                f.bs_tl[t] = f.bs_cl[t] + f.bs_ncl[t];
+
+                f.bs_cap[t] = initEquity;
+                f.bs_re[t] = f.bs_re[t-1] + f.net_income[t]; // 순이익 누적 (배당 가정 X)
+                f.bs_te[t] = f.bs_cap[t] + f.bs_re[t];
+                
+                f.bs_tle[t] = f.bs_tl[t] + f.bs_te[t];
+                
+                f.bs_cash[t] = f.bs_tle[t] - (f.bs_ar[t] + f.bs_inv[t] + f.bs_adv[t] + f.bs_nca[t]);
+                f.bs_ca[t] = f.bs_cash[t] + f.bs_ar[t] + f.bs_inv[t] + f.bs_adv[t];
+                f.bs_ta[t] = f.bs_ca[t] + f.bs_nca[t];
             }
 
             document.getElementById('dash_capa_vol').innerText = Math.round(f.capa[5]).toLocaleString();
@@ -1927,6 +2035,7 @@
 
             renderTable(f, initEquity);
             renderFinancialAccountingTable(f, initEquity);
+            renderBalanceSheetTable(f);
             renderCharts(f);
             renderCostBreakdown(f);
             renderBEP(f);
@@ -2214,6 +2323,68 @@
                         if(v==='' || (t===0 && v===0 && r.id!=='fa_ni')) txt='-';
                         html += `<td class="py-2 px-3 text-right ${v<0?'text-rose-600':''}">${txt}</td>`;
                     }
+                }
+                html += `</tr>`;
+            });
+            body.innerHTML = html;
+        }
+
+        function renderBalanceSheetTable(f) {
+            const body = document.getElementById('balanceSheetTableBody');
+            
+            const sc = [
+                // 자산
+                { id:'bs_ta', n:'자산 총계 (Total Assets)', d:f.bs_ta, t:'header', hl:'bg-slate-100 text-slate-900 font-bold border-t border-slate-200' },
+                { id:'bs_ca_h', n:'I. 유동자산', d:f.bs_ca, t:'h-sub', p:true, g:'bs-ca-group', hl:'font-semibold text-emerald-700' },
+                { id:'bs_cash', n:'└─ 현금및현금성자산', d:f.bs_cash, t:'det', cg:'bs-ca-child' },
+                { id:'bs_ar', n:'└─ 매출채권', d:f.bs_ar, t:'det', cg:'bs-ca-child' },
+                { id:'bs_inv', n:'└─ 재고자산', d:f.bs_inv, t:'det', cg:'bs-ca-child' },
+                { id:'bs_adv', n:'└─ 선급금', d:f.bs_adv, t:'det', cg:'bs-ca-child' },
+                
+                { id:'bs_nca_h', n:'II. 비유동자산', d:f.bs_nca, t:'h-sub', p:true, g:'bs-nca-group', hl:'font-semibold text-emerald-700' },
+                { id:'bs_ppe', n:'└─ 유형자산 (순액)', d:f.bs_ppe, t:'det', cg:'bs-nca-child' },
+
+                // 부채
+                { id:'bs_tl', n:'부채 총계 (Total Liabilities)', d:f.bs_tl, t:'header', hl:'bg-slate-50 text-slate-800 font-bold border-t border-slate-200 mt-2' },
+                { id:'bs_cl_h', n:'I. 유동부채', d:f.bs_cl, t:'h-sub', p:true, g:'bs-cl-group', hl:'font-semibold text-rose-700' },
+                { id:'bs_ap', n:'└─ 매입채무', d:f.bs_ap, t:'det', cg:'bs-cl-child' },
+                { id:'bs_std', n:'└─ 유동성장기부채', d:f.bs_std, t:'det', cg:'bs-cl-child' },
+                { id:'bs_unpaid', n:'└─ 미지급금', d:f.bs_unpaid, t:'det', cg:'bs-cl-child' },
+                { id:'bs_unearned', n:'└─ 선수금', d:f.bs_unearned, t:'det', cg:'bs-cl-child' },
+
+                { id:'bs_ncl_h', n:'II. 비유동부채', d:f.bs_ncl, t:'h-sub', p:true, g:'bs-ncl-group', hl:'font-semibold text-rose-700' },
+                { id:'bs_ltd', n:'└─ 장기차입금', d:f.bs_ltd, t:'det', cg:'bs-ncl-child' },
+
+                // 자본
+                { id:'bs_te', n:'자본 총계 (Total Equity)', d:f.bs_te, t:'header', hl:'bg-slate-50 text-slate-800 font-bold border-t border-slate-200 mt-2' },
+                { id:'bs_te_h', n:'I. 자본항목', d:f.bs_te, t:'h-sub', p:true, g:'bs-te-group', hl:'font-semibold text-indigo-700' },
+                { id:'bs_cap', n:'└─ 자본금 (납입자본)', d:f.bs_cap, t:'det', cg:'bs-te-child' },
+                { id:'bs_re', n:'└─ 이익잉여금', d:f.bs_re, t:'det', cg:'bs-te-child' },
+
+                // 검증
+                { id:'bs_tle', n:'부채 및 자본 총계 (Liabilities & Equity)', d:f.bs_tle, t:'header', hl:'bg-slate-900 text-purple-400 font-bold border-y-2 border-purple-500 mt-2' }
+            ];
+
+            let html = '';
+            sc.forEach(r => {
+                let cl = 'transition hover:bg-slate-50 ';
+                let ind = 'pl-4';
+                if(r.t==='header') cl += 'bg-slate-100 text-slate-800 font-bold';
+                else if(r.t==='h-sub') { cl += 'text-slate-900 font-semibold cursor-pointer'; ind = 'pl-6'; }
+                else if(r.t==='det') { cl += 'text-slate-700 text-xs cursor-pointer'; ind = 'pl-10'; }
+                
+                if(r.hl) cl += ' ' + r.hl;
+                
+                let icon = r.p ? `<i id="toggle-icon-${r.g}" data-lucide="chevron-down" class="w-4 h-4 text-slate-400 inline-block shrink-0 mr-1"></i>` : '';
+                
+                html += `<tr class="${cl}" ${r.cg?`data-group="${r.cg}"`:''} ${r.p?`onclick="toggleRowGroup('${r.g}')"`:''}>
+                <td class="py-2 px-3 border-r ${ind} flex items-center">${icon}${r.n}</td>`;
+                
+                for(let t=0; t<=5; t++) {
+                    let v = r.d[t];
+                    let txt = fmt(v);
+                    if(v === 0 && r.t==='det') txt = '-'; 
+                    html += `<td class="py-2 px-3 text-right ${v<0?'text-rose-600':''}">${txt}</td>`;
                 }
                 html += `</tr>`;
             });
