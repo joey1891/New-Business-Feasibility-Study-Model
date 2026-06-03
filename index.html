@@ -40,8 +40,8 @@
                 <i data-lucide="trending-up" class="w-6 h-6"></i>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-tight">BizEval™ Professional v2.5</h1>
-                <p class="text-xs text-slate-400">제품 규격 개수 병기 & 통합 비용 그룹핑 5개년 DCF 모델</p>
+                <h1 class="text-xl font-bold tracking-tight">BizEval™ Professional v2.6</h1>
+                <p class="text-xs text-slate-400">설비별 상세 CAPA 설정 & 3개년 환율 변동성 연동 DCF 모델</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -68,6 +68,55 @@
 
             <!-- Param Sections -->
             <div class="p-5 space-y-6">
+
+                <!-- [신규 기능] 0. 초기 설비 투자 세부 내역 (CAPEX) 구성 -->
+                <div class="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+                    <h3 class="text-sm font-semibold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+                        <i data-lucide="wrench" class="w-4 h-4 text-slate-700"></i> 0. 초기 설비명 및 투자금액 등록
+                    </h3>
+                    
+                    <!-- 설비 추가 입력 폼 -->
+                    <div class="space-y-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-500 mb-0.5">설비명</label>
+                                <input type="text" id="new_eq_name" placeholder="예: 고속 혼합기" class="w-full bg-white border border-slate-200 rounded px-2.5 py-1 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-500 mb-0.5">금액 (백만원)</label>
+                                <div class="relative">
+                                    <input type="number" id="new_eq_cost" placeholder="0" class="w-full bg-white border border-slate-200 rounded px-2.5 py-1 text-xs pr-6 focus:ring-1 focus:ring-indigo-500 focus:outline-none font-bold text-slate-700">
+                                    <span class="absolute right-1.5 top-1 text-[10px] text-slate-400">백만</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" onclick="addEquipment()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-1.5 rounded transition flex items-center justify-center gap-1">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> 설비 추가 등록
+                        </button>
+                    </div>
+
+                    <!-- 등록된 설비 리스트 테이블 -->
+                    <div class="bg-white rounded border border-slate-200 overflow-hidden">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-100 text-slate-600 border-b border-slate-200">
+                                <tr>
+                                    <th class="py-1.5 px-3">설비명</th>
+                                    <th class="py-1.5 px-3 text-right">금액</th>
+                                    <th class="py-1.5 px-3 text-center">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="equipment_list_body" class="divide-y divide-slate-100">
+                                <!-- JS 동적 출력 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- 합산 요약 -->
+                    <div class="flex justify-between items-center bg-indigo-50 px-3 py-2 rounded border border-indigo-100 text-xs">
+                        <span class="font-semibold text-indigo-950">총 설비투자금액 (CAPEX)</span>
+                        <span class="font-extrabold text-indigo-700" id="total_capex_display">0 백만원</span>
+                    </div>
+                </div>
                 
                 <!-- 1. CAPA 및 가동 조건 설정 + 제품 용기 규격 규정 -->
                 <div class="space-y-4">
@@ -336,6 +385,28 @@
                         </div>
                     </div>
                     
+                    <!-- [신규 기능] 환율 통계적 연동 설정 영역 -->
+                    <div class="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 space-y-2 mt-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-indigo-800">원/달러 환율 연간 변동성 설정</span>
+                            <span class="text-[9px] bg-indigo-600 text-white px-1.5 py-0.5 rounded font-bold">통계 데이터 연동</span>
+                        </div>
+                        
+                        <div class="space-y-1.5">
+                            <label class="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 cursor-pointer">
+                                <input type="checkbox" id="use_historical_vol" checked class="rounded text-indigo-600 focus:ring-indigo-500" onchange="toggleFxVolatilityInput()">
+                                <span>최근 3개년 실제 역사적 변동성 적용</span>
+                            </label>
+                            <div class="relative">
+                                <input type="number" id="param_fx_vol" value="8.43" step="0.01" class="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs pr-7 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400" onchange="runAnalysis()">
+                                <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
+                            </div>
+                            <p class="text-[9px] text-slate-500 leading-relaxed">
+                                * 최근 3개년(2023-2026) 원/달러 환율 변동 범위(최저 1,250원 ~ 최고 1,450원)의 연간 평균 통계 표준편차는 <strong>8.43%</strong> 입니다. 체크 시 이 수치가 시뮬레이션 충격 폭에 자동 연동됩니다.
+                            </p>
+                        </div>
+                    </div>
+
                     <!-- Working Capital Cycles (Mini) -->
                     <div class="bg-indigo-50/40 p-3 rounded-lg border border-indigo-100">
                         <span class="text-xs font-bold text-indigo-800">운전자본 회전주기</span>
@@ -366,7 +437,6 @@
                     <input type="hidden" id="param_avgSalary" value="40">
                     <input type="hidden" id="param_rentArea" value="100">
                     <input type="hidden" id="param_rentPerPyung" value="0.5">
-                    <input type="hidden" id="param_fx_vol" value="10">
                 </div>
             </div>
         </aside>
@@ -377,12 +447,12 @@
             <!-- CAPA & Performance Overview -->
             <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-md border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
                 <div>
-                    <span class="bg-indigo-500/20 text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/30">CAPA 운영 상태 대시보드</span>
+                    <span class="bg-indigo-500/20 text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/30">CAPA 및 설비 자산 관리 대시보드</span>
                     <h2 class="text-xl font-bold mt-1.5 flex items-center gap-2">
                         <i data-lucide="factory" class="w-5.5 h-5.5 text-indigo-400"></i> 연간 최대 설계 생산능력 (CAPA): <span id="dash_capa_vol" class="text-emerald-400">-</span> L 
                         <span class="text-sm font-medium text-slate-300">(약 <span id="dash_capa_bottles" class="text-emerald-300">-</span> 병)</span>
                     </h2>
-                    <p class="text-xs text-slate-400 mt-1">설비 용량 200L, 3대 교대조 가동 및 타깃 수율 기준 연간 총 용량입니다.</p>
+                    <p class="text-xs text-slate-400 mt-1">등록된 초기 설비 투자 내역에 근거한 상각비와 수율을 바탕으로 계산을 자동 갱신합니다.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
                     <div class="bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl text-center">
@@ -439,7 +509,7 @@
                         </div>
                     </div>
                     <div class="mt-4 flex items-center text-xs text-slate-500">
-                        <span>초기 투자액 5억원 상쇄 시점</span>
+                        <span>초기 투자액 <span id="kpi_payback_capex_display">-</span> 백만원 상쇄 시점</span>
                     </div>
                 </div>
 
@@ -577,6 +647,13 @@
         let fcfChartInstance = null;
         let monteCarloChartInstance = null;
 
+        // [신규] 초기 설비 리스트 데이터 메모리 저장소
+        let equipmentData = [
+            { name: '초고속 교반 및 혼합설비', cost: 250 },
+            { name: '원액 고정밀 충진설비', cost: 150 },
+            { name: '자동 포장 및 인라인 라벨러', cost: 100 }
+        ];
+
         // Reset Parameters to Defaults
         function resetParameters() {
             document.getElementById('param_capa_size').value = 200;
@@ -618,8 +695,126 @@
             document.getElementById('util_y4').value = 90;
             document.getElementById('util_y5').value = 90;
 
+            // [신규] 설비 데이터 리셋 및 체크박스 리셋
+            equipmentData = [
+                { name: '초고속 교반 및 혼합설비', cost: 250 },
+                { name: '원액 고정밀 충진설비', cost: 150 },
+                { name: '자동 포장 및 인라인 라벨러', cost: 100 }
+            ];
+            document.getElementById('use_historical_vol').checked = true;
+            document.getElementById('param_fx_vol').value = 8.43;
+            toggleFxVolatilityInput();
+
+            renderEquipments();
             updateParameterLabels();
             runAnalysis();
+        }
+
+        // [신규] 설비 리스트 렌더링
+        function renderEquipments() {
+            const tbody = document.getElementById('equipment_list_body');
+            let html = '';
+            let total = 0;
+
+            equipmentData.forEach((eq, index) => {
+                total += eq.cost;
+                html += `
+                <tr class="hover:bg-slate-50">
+                    <td class="py-1.5 px-3 font-medium text-slate-700">${eq.name}</td>
+                    <td class="py-1.5 px-3 text-right font-bold text-slate-900">${eq.cost.toLocaleString()} 백만</td>
+                    <td class="py-1.5 px-3 text-center">
+                        <button type="button" onclick="deleteEquipment(${index})" class="text-rose-500 hover:text-rose-700 transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            if (equipmentData.length === 0) {
+                html = `
+                <tr>
+                    <td colspan="3" class="py-4 text-center text-slate-400 italic">등록된 설비 투자금액이 없습니다.</td>
+                </tr>`;
+            }
+
+            tbody.innerHTML = html;
+            document.getElementById('total_capex_display').innerText = `${total.toLocaleString()} 백만원`;
+            document.getElementById('param_capex').value = total;
+            document.getElementById('kpi_payback_capex_display').innerText = total.toLocaleString();
+            
+            lucide.createIcons();
+        }
+
+        // [신규] 설비 추가 등록 기능
+        function addEquipment() {
+            const nameInput = document.getElementById('new_eq_name');
+            const costInput = document.getElementById('new_eq_cost');
+
+            const name = nameInput.value.trim();
+            const cost = parseFloat(costInput.value);
+
+            if (!name) {
+                // UI 메시지 박스로 경고 처리
+                showNoticeModal('설비명을 입력해 주세요.');
+                return;
+            }
+            if (isNaN(cost) || cost <= 0) {
+                showNoticeModal('올바른 투자금액(백만원)을 입력해 주세요.');
+                return;
+            }
+
+            equipmentData.push({ name, cost });
+            nameInput.value = '';
+            costInput.value = '';
+
+            renderEquipments();
+            runAnalysis();
+        }
+
+        // [신규] 설비 삭제 기능
+        function deleteEquipment(index) {
+            equipmentData.splice(index, 1);
+            renderEquipments();
+            runAnalysis();
+        }
+
+        // [신규] 환율 체크박스 핸들러
+        function toggleFxVolatilityInput() {
+            const checkbox = document.getElementById('use_historical_vol');
+            const fxInput = document.getElementById('param_fx_vol');
+            if (checkbox.checked) {
+                fxInput.value = 8.43;
+                fxInput.disabled = true;
+            } else {
+                fxInput.disabled = false;
+            }
+            runAnalysis();
+        }
+
+        // [신규] Alert 대체 알림 모달 창 띄우기 함수 (iframe 제한 우회 목적)
+        function showNoticeModal(message) {
+            let container = document.getElementById('notice-modal-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'notice-modal-container';
+                container.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100]';
+                document.body.appendChild(container);
+            }
+            container.innerHTML = `
+                <div class="bg-white rounded-2xl p-6 shadow-xl border border-slate-200 max-w-sm w-full mx-4 text-center space-y-4">
+                    <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
+                        <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                    </div>
+                    <div class="space-y-1">
+                        <h4 class="font-bold text-slate-900">알림</h4>
+                        <p class="text-xs text-slate-500">${message}</p>
+                    </div>
+                    <button onclick="document.getElementById('notice-modal-container').remove()" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-lg transition">
+                        확인
+                    </button>
+                </div>
+            `;
+            lucide.createIcons();
         }
 
         // Toggle Expandable Rows dynamically and cascadingly
@@ -772,6 +967,8 @@
             const growth = parseFloat(document.getElementById('param_growth').value) / 100;
             const inflation = parseFloat(document.getElementById('param_inflation').value) / 100;
             const taxRate = parseFloat(document.getElementById('param_taxRate').value) / 100;
+            
+            // [수정] 직접 등록한 설비투자비의 합산을 capex로 이용
             const capex = parseFloat(document.getElementById('param_capex').value);
             const depYears = parseInt(document.getElementById('param_depYears').value);
             const amortization = parseFloat(document.getElementById('param_amortization').value);
@@ -834,6 +1031,7 @@
             const wc_ap_days = parseFloat(document.getElementById('wc_ap').value);
             const wc_inv_days = parseFloat(document.getElementById('wc_inv').value);
 
+            // [수정] 원화 환율 연간 변동성 변수 로드
             const fx_volatility = parseFloat(document.getElementById('param_fx_vol').value) / 100;
 
             // 1. Calculate Max CAPA (L) 및 개수(병)
@@ -1447,7 +1645,7 @@
                 for (let t = 1; t <= 5; t++) {
                     let inflationFactor = Math.pow(1 + inflation, t - 1);
 
-                    // FX shock factor
+                    // FX shock factor (원/달러 변동성 기반 정규분포 충격 발생)
                     let fxFactor = Math.exp(randomNormal(0, fx_volatility));
                     let revenueFXShock = 0.6 + (0.4 * fxFactor);
                     let materialFXShock = 0.7 + (0.3 * fxFactor);
@@ -1666,6 +1864,7 @@
 
         // Initialize Webapp
         window.onload = function() {
+            renderEquipments();
             updateParameterLabels();
             runAnalysis();
         }
