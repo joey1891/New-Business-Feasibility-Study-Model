@@ -40,8 +40,8 @@
                 <i data-lucide="trending-up" class="w-6 h-6"></i>
             </div>
             <div>
-                <h1 class="text-xl font-bold tracking-tight">BizEval™ Professional v2.6</h1>
-                <p class="text-xs text-slate-400">설비별 상세 CAPA 설정 & 3개년 환율 변동성 연동 DCF 모델</p>
+                <h1 class="text-xl font-bold tracking-tight">BizEval™ Professional v2.7</h1>
+                <p class="text-xs text-slate-400">설비투자 & 초기운전자본 구분 및 5개년 회수 연동 DCF 모델</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -69,10 +69,10 @@
             <!-- Param Sections -->
             <div class="p-5 space-y-6">
 
-                <!-- [신규 기능] 0. 초기 설비 투자 세부 내역 (CAPEX) 구성 -->
+                <!-- 0. 초기 설비 투자 세부 내역 (CAPEX) 구성 -->
                 <div class="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
                     <h3 class="text-sm font-semibold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
-                        <i data-lucide="wrench" class="w-4 h-4 text-slate-700"></i> 0. 초기 설비명 및 투자금액 등록
+                        <i data-lucide="wrench" class="w-4 h-4 text-slate-700"></i> 0. 초기 설비 투자액 등록 (CAPEX)
                     </h3>
                     
                     <!-- 설비 추가 입력 폼 -->
@@ -112,9 +112,53 @@
                     </div>
                     
                     <!-- 합산 요약 -->
-                    <div class="flex justify-between items-center bg-indigo-50 px-3 py-2 rounded border border-indigo-100 text-xs">
-                        <span class="font-semibold text-indigo-950">총 설비투자금액 (CAPEX)</span>
+                    <div class="flex justify-between items-center bg-indigo-50/70 px-3 py-2 rounded border border-indigo-100 text-xs">
+                        <span class="font-semibold text-indigo-950">설비투자액 합계 (CAPEX)</span>
                         <span class="font-extrabold text-indigo-700" id="total_capex_display">0 백만원</span>
+                    </div>
+                </div>
+
+                <!-- [신규 기능] 0-2. 초기 운전자본 설정 (Year 0) -->
+                <div class="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
+                    <h3 class="text-sm font-semibold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
+                        <i data-lucide="wallet" class="w-4 h-4 text-slate-700"></i> 0-2. 초기 운전자본 설정 (Year 0)
+                    </h3>
+                    <p class="text-[11px] text-slate-500 leading-relaxed">
+                        공장 가동 전 예비용으로 먼저 집행되어야 하는 초기 운전 예산을 설정합니다. 해당 자본은 5년차 말에 전액 자동 회수됩니다.
+                    </p>
+                    
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-medium text-slate-600 mb-1">원부자재 확보</label>
+                            <div class="relative">
+                                <input type="number" id="param_init_wc_material" value="50" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs font-bold text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <span class="absolute right-1 bottom-1 text-[8px] text-slate-400">백만</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-medium text-slate-600 mb-1">노무/운영 버퍼</label>
+                            <div class="relative">
+                                <input type="number" id="param_init_wc_labor" value="30" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs font-bold text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <span class="absolute right-1 bottom-1 text-[8px] text-slate-400">백만</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-medium text-slate-600 mb-1">비상 예비금</label>
+                            <div class="relative">
+                                <input type="number" id="param_init_wc_contingency" value="20" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs font-bold text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                                <span class="absolute right-1 bottom-1 text-[8px] text-slate-400">백만</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 합산 요약 -->
+                    <div class="flex justify-between items-center bg-amber-50 px-3 py-2 rounded border border-amber-100 text-xs">
+                        <span class="font-semibold text-amber-950">초기 운전자본 합계</span>
+                        <span class="font-extrabold text-amber-700" id="total_init_wc_display">0 백만원</span>
+                    </div>
+                    <div class="flex justify-between items-center bg-emerald-50 px-3 py-2 rounded border border-emerald-100 text-xs">
+                        <span class="font-semibold text-emerald-950">총 초기투자 (설비+운전자본)</span>
+                        <span class="font-extrabold text-emerald-700" id="total_initial_investment_display">0 백만원</span>
                     </div>
                 </div>
                 
@@ -385,7 +429,7 @@
                         </div>
                     </div>
                     
-                    <!-- [신규 기능] 환율 통계적 연동 설정 영역 -->
+                    <!-- 환율 통계적 연동 설정 영역 -->
                     <div class="bg-indigo-50/50 p-3 rounded-lg border border-indigo-100 space-y-2 mt-2">
                         <div class="flex justify-between items-center">
                             <span class="text-xs font-bold text-indigo-800">원/달러 환율 연간 변동성 설정</span>
@@ -508,8 +552,8 @@
                             <i data-lucide="calendar" class="w-5 h-5"></i>
                         </div>
                     </div>
-                    <div class="mt-4 flex items-center text-xs text-slate-500">
-                        <span>초기 투자액 <span id="kpi_payback_capex_display">-</span> 백만원 상쇄 시점</span>
+                    <div class="mt-4 flex items-center text-xs text-slate-500 leading-tight">
+                        <span>총 초기투자액 <span id="kpi_payback_capex_display">-</span> 백만원 상쇄 시점</span>
                     </div>
                 </div>
 
@@ -647,7 +691,7 @@
         let fcfChartInstance = null;
         let monteCarloChartInstance = null;
 
-        // [신규] 초기 설비 리스트 데이터 메모리 저장소
+        // 초기 설비 리스트 데이터 메모리 저장소
         let equipmentData = [
             { name: '초고속 교반 및 혼합설비', cost: 250 },
             { name: '원액 고정밀 충진설비', cost: 150 },
@@ -695,7 +739,11 @@
             document.getElementById('util_y4').value = 90;
             document.getElementById('util_y5').value = 90;
 
-            // [신규] 설비 데이터 리셋 및 체크박스 리셋
+            // 초기 운전자본 세부항목 초기화
+            document.getElementById('param_init_wc_material').value = 50;
+            document.getElementById('param_init_wc_labor').value = 30;
+            document.getElementById('param_init_wc_contingency').value = 20;
+
             equipmentData = [
                 { name: '초고속 교반 및 혼합설비', cost: 250 },
                 { name: '원액 고정밀 충진설비', cost: 150 },
@@ -710,7 +758,7 @@
             runAnalysis();
         }
 
-        // [신규] 설비 리스트 렌더링
+        // 설비 리스트 렌더링
         function renderEquipments() {
             const tbody = document.getElementById('equipment_list_body');
             let html = '';
@@ -740,12 +788,11 @@
             tbody.innerHTML = html;
             document.getElementById('total_capex_display').innerText = `${total.toLocaleString()} 백만원`;
             document.getElementById('param_capex').value = total;
-            document.getElementById('kpi_payback_capex_display').innerText = total.toLocaleString();
             
             lucide.createIcons();
         }
 
-        // [신규] 설비 추가 등록 기능
+        // 설비 추가 등록 기능
         function addEquipment() {
             const nameInput = document.getElementById('new_eq_name');
             const costInput = document.getElementById('new_eq_cost');
@@ -754,7 +801,6 @@
             const cost = parseFloat(costInput.value);
 
             if (!name) {
-                // UI 메시지 박스로 경고 처리
                 showNoticeModal('설비명을 입력해 주세요.');
                 return;
             }
@@ -771,14 +817,14 @@
             runAnalysis();
         }
 
-        // [신규] 설비 삭제 기능
+        // 설비 삭제 기능
         function deleteEquipment(index) {
             equipmentData.splice(index, 1);
             renderEquipments();
             runAnalysis();
         }
 
-        // [신규] 환율 체크박스 핸들러
+        // 환율 체크박스 핸들러
         function toggleFxVolatilityInput() {
             const checkbox = document.getElementById('use_historical_vol');
             const fxInput = document.getElementById('param_fx_vol');
@@ -791,7 +837,7 @@
             runAnalysis();
         }
 
-        // [신규] Alert 대체 알림 모달 창 띄우기 함수 (iframe 제한 우회 목적)
+        // Alert 대체 알림 모달 창 띄우기 함수
         function showNoticeModal(message) {
             let container = document.getElementById('notice-modal-container');
             if (!container) {
@@ -968,10 +1014,22 @@
             const inflation = parseFloat(document.getElementById('param_inflation').value) / 100;
             const taxRate = parseFloat(document.getElementById('param_taxRate').value) / 100;
             
-            // [수정] 직접 등록한 설비투자비의 합산을 capex로 이용
+            // 직접 등록한 설비투자비의 합산을 capex로 이용
             const capex = parseFloat(document.getElementById('param_capex').value);
             const depYears = parseInt(document.getElementById('param_depYears').value);
             const amortization = parseFloat(document.getElementById('param_amortization').value);
+
+            // [신규] 초기 운전자본 세부항목 및 합계 집계
+            const initWcMat = parseFloat(document.getElementById('param_init_wc_material').value) || 0;
+            const initWcLab = parseFloat(document.getElementById('param_init_wc_labor').value) || 0;
+            const initWcCont = parseFloat(document.getElementById('param_init_wc_contingency').value) || 0;
+            const totalInitWc = initWcMat + initWcLab + initWcCont;
+
+            // UI Label Update
+            document.getElementById('total_init_wc_display').innerText = `${totalInitWc.toLocaleString()} 백만원`;
+            const totalInitialInvestment = capex + totalInitWc;
+            document.getElementById('total_initial_investment_display').innerText = `${totalInitialInvestment.toLocaleString()} 백만원`;
+            document.getElementById('kpi_payback_capex_display').innerText = totalInitialInvestment.toLocaleString();
 
             // CAPA & Production Operators
             const capaSize = parseFloat(document.getElementById('param_capa_size').value);
@@ -998,18 +1056,15 @@
             const sActive = parseFloat(document.getElementById('param_shampoo_active').value);
             const sPkg = parseFloat(document.getElementById('param_shampoo_pkg').value);
             const sBox = parseFloat(document.getElementById('param_shampoo_box').value);
-            const shampooUnitRawCost = sActive + sPkg + sBox;
 
             const tActive = parseFloat(document.getElementById('param_treatment_active').value);
             const tPkg = parseFloat(document.getElementById('param_treatment_pkg').value);
             const tBox = parseFloat(document.getElementById('param_treatment_box').value);
-            const treatmentUnitRawCost = tActive + tPkg + tBox;
 
             // Direct MFG Costs Detail
             const mElec = parseFloat(document.getElementById('param_mfg_elec').value);
             const mWater = parseFloat(document.getElementById('param_mfg_water').value);
             const mFuel = parseFloat(document.getElementById('param_mfg_fuel').value);
-            const unitDirectMfgCost = mElec + mWater + mFuel;
 
             const staff_prod = parseInt(document.getElementById('staff_prod').value);
             const staff_sales = parseInt(document.getElementById('staff_sales').value);
@@ -1031,7 +1086,7 @@
             const wc_ap_days = parseFloat(document.getElementById('wc_ap').value);
             const wc_inv_days = parseFloat(document.getElementById('wc_inv').value);
 
-            // [수정] 원화 환율 연간 변동성 변수 로드
+            // 원화 환율 연간 변동성 변수 로드
             const fx_volatility = parseFloat(document.getElementById('param_fx_vol').value) / 100;
 
             // 1. Calculate Max CAPA (L) 및 개수(병)
@@ -1132,11 +1187,19 @@
 
                 net_operating_cf: [0, 0, 0, 0, 0, 0],
 
+                // [수정] 설비 투자와 초기 운전자본 투자를 분리 표기
                 capex: [-capex, 0, 0, 0, 0, 0],
-                fcf: [-capex, 0, 0, 0, 0, 0],
-                discountedFCF: [-capex, 0, 0, 0, 0, 0],
-                cumFCF: [-capex, 0, 0, 0, 0, 0]
+                init_wc_data: [-totalInitWc, 0, 0, 0, 0, 0],
+                fcf: [-totalInitialInvestment, 0, 0, 0, 0, 0],
+                discountedFCF: [-totalInitialInvestment, 0, 0, 0, 0, 0],
+                cumFCF: [-totalInitialInvestment, 0, 0, 0, 0, 0]
             };
+
+            // Year 0 운전자본의 출발 조건 세팅
+            fin.ar[0] = 0;
+            fin.ap[0] = 0;
+            fin.inv[0] = initWcMat; // 원부자재 확보용 예산은 t=0년의 초기 재고 자산으로 계상
+            fin.nwc[0] = totalInitWc; // 현금 버퍼 포함한 총 액이 t=0 시점의 투하 운전자본
 
             for (let t = 1; t <= 5; t++) {
                 let inflationFactor = Math.pow(1 + inflation, t - 1);
@@ -1206,18 +1269,26 @@
                 fin.tax[t] = fin.ebit[t] > 0 ? (fin.ebit[t] * taxRate) : 0;
                 fin.nopat[t] = fin.ebit[t] - fin.tax[t];
 
-                // Working capital
-                fin.ar[t] = (fin.revenue[t] / 365) * wc_ar_days;
-                fin.ap[t] = (fin.cogs_material[t] / 365) * wc_ap_days;
-                fin.inv[t] = (fin.cogs_material[t] / 365) * wc_inv_days;
-                fin.nwc[t] = fin.ar[t] + fin.inv[t] - fin.ap[t];
+                // Working capital (t = 1 ~ 4 계산)
+                if (t < 5) {
+                    fin.ar[t] = (fin.revenue[t] / 365) * wc_ar_days;
+                    fin.ap[t] = (fin.cogs_material[t] / 365) * wc_ap_days;
+                    fin.inv[t] = (fin.cogs_material[t] / 365) * wc_inv_days;
+                    fin.nwc[t] = fin.ar[t] + fin.inv[t] - fin.ap[t];
+                } else {
+                    // [회수 메커니즘 연동] 5년차 말 사업 종료 시점에 모든 매출채권 수금, 재고 소진, 매입채무 변제를 통한 운전자본 전액 회수(Liquidation) 반영
+                    fin.ar[5] = 0;
+                    fin.ap[5] = 0;
+                    fin.inv[5] = 0;
+                    fin.nwc[5] = 0; // 운전자본 잔액을 0으로 만들어 t=5 시점에 전액 회수 유입 처리
+                }
 
                 fin.ar_change[t] = fin.ar[t] - fin.ar[t-1];
                 fin.ap_change[t] = fin.ap[t] - fin.ap[t-1];
                 fin.inv_change[t] = fin.inv[t] - fin.inv[t-1];
                 fin.nwc_change[t] = fin.nwc[t] - fin.nwc[t-1];
 
-                // Detailed Cash Inflow
+                // Detailed Cash Inflow (운전자본 변동 및 5년차 전액 회수액 포함)
                 fin.cash_in_sales[t] = fin.revenue[t] - fin.ar_change[t];
                 fin.total_cash_in[t] = fin.cash_in_sales[t];
 
@@ -1258,7 +1329,7 @@
                 fin.discountedFCF[t] = fin.fcf[t] / Math.pow(1 + wacc, t);
             }
 
-            fin.cumFCF[0] = -capex;
+            fin.cumFCF[0] = -totalInitialInvestment;
             for (let t = 1; t <= 5; t++) {
                 fin.cumFCF[t] = fin.cumFCF[t-1] + fin.fcf[t];
             }
@@ -1267,9 +1338,9 @@
             document.getElementById('dash_vol_y1').innerText = `${Math.round(fin.qty[1]).toLocaleString()} L / ${Math.round(fin.qty_bottles[1]).toLocaleString()} 병`;
             document.getElementById('dash_vol_y5').innerText = `${Math.round(fin.qty[5]).toLocaleString()} L / ${Math.round(fin.qty_bottles[5]).toLocaleString()} 병`;
 
-            // Metrics Calculations
+            // Metrics Calculations (설비+운전자본이 모두 차감된 FCF[0] 기준 회수 계산)
             let npvVal = fin.discountedFCF.reduce((acc, val) => acc + val, 0);
-            let irrInputCf = [-capex, fin.fcf[1], fin.fcf[2], fin.fcf[3], fin.fcf[4], fin.fcf[5]];
+            let irrInputCf = [-totalInitialInvestment, fin.fcf[1], fin.fcf[2], fin.fcf[3], fin.fcf[4], fin.fcf[5]];
             let irrVal = calculateIRR(irrInputCf);
 
             let paybackPeriod = null;
@@ -1363,7 +1434,7 @@
                 { id: 'sales_collect', name: '매출 수금액 (Sales Receipts)', data: f.cash_in_sales, type: 'detail', groupId: 'cash-in-child' },
                 { id: 'rev_shampoo', name: '└ 샴푸 매출액 (Revenues)', data: f.revenue_shampoo, type: 'sub-detail', groupId: 'cash-in-child' },
                 { id: 'rev_treatment', name: '└ 트리트먼트 매출액 (Revenues)', data: f.revenue_treatment, type: 'sub-detail', groupId: 'cash-in-child' },
-                { id: 'ar_adj', name: '└ 매출채권 조정액 (-ΔAR)', data: f.ar_change.map(v => -v), type: 'sub-detail', groupId: 'cash-in-child' },
+                { id: 'ar_adj', name: '└ 매출채권 조정액 및 5년차 회수액 (-ΔAR)', data: f.ar_change.map(v => -v), type: 'sub-detail', groupId: 'cash-in-child' },
 
                 // 3. CASH-OUT Header
                 { 
@@ -1401,8 +1472,8 @@
                 { id: 'treatment_mat_pkg', name: '└─ 트리트먼트 용기/부자재비', data: f.treatment_mat_pkg, type: 'detail-sub-leaf', dataGroup: 'treatment-mat-child' },
                 { id: 'treatment_mat_box', name: '└─ 트리트먼트 포장 상자비', data: f.treatment_mat_box, type: 'detail-sub-leaf', dataGroup: 'treatment-mat-child' },
                 
-                { id: 'out_inv_adj', name: '└ 재고 증감 조정액 (+ΔInv)', data: f.inv_change, type: 'detail-sub-leaf', dataGroup: 'material-child' },
-                { id: 'out_ap_adj', name: '└ 매입채무 조정액 (-ΔAP)', data: f.ap_change.map(v => -v), type: 'detail-sub-leaf', dataGroup: 'material-child' },
+                { id: 'out_inv_adj', name: '└ 재고 증감 조정 및 5년차 소진액 (+ΔInv)', data: f.inv_change, type: 'detail-sub-leaf', dataGroup: 'material-child' },
+                { id: 'out_ap_adj', name: '└ 매입채무 조정 및 5년차 상환액 (-ΔAP)', data: f.ap_change.map(v => -v), type: 'detail-sub-leaf', dataGroup: 'material-child' },
 
                 // 직접제조경비 세부 (제조원가 대분류 하위)
                 { id: 'out_direct_mfg', name: '직접제조경비 지급액 (유틸리티)', data: f.cash_out_direct_mfg, type: 'detail', isParent: true, groupId: 'direct-mfg', dataGroup: 'cogs-group-child' },
@@ -1438,8 +1509,9 @@
                 // Summary structures
                 { id: 'net_operating_cf_row', name: '순 영업활동 현금흐름 (A)', data: f.net_operating_cf, type: 'summary', highlight: 'bg-indigo-50 font-bold text-indigo-900 border-y-2 border-indigo-200' },
                 { id: 'capex_row', name: '설비 자본투자지출 (CAPEX) (B)', data: f.capex, type: 'summary', highlight: 'text-rose-600 font-semibold' },
+                { id: 'init_wc_row', name: '초기 운전자본 투자액 (C) (현금/예비비 버퍼)', data: f.init_wc_data, type: 'summary', highlight: 'text-amber-600 font-semibold border-b' },
                 
-                { id: 'fcf_row', name: '잉여현금흐름 (FCF = A + B)', data: f.fcf, type: 'summary', highlight: 'bg-slate-900 text-emerald-400 font-extrabold text-base' },
+                { id: 'fcf_row', name: '잉여현금흐름 (FCF = A + B + C)', data: f.fcf, type: 'summary', highlight: 'bg-slate-900 text-emerald-400 font-extrabold text-base' },
                 { id: 'dfcf_row', name: '할인된 FCF 현재가치 (PV)', data: f.discountedFCF, type: 'summary', highlight: 'text-indigo-600 font-semibold' },
                 { id: 'cum_row', name: '누적 투자 현금흐름 (Cumulative FCF)', data: f.cumFCF, type: 'summary', highlight: 'bg-slate-100 font-bold border-t' }
             ];
@@ -1489,7 +1561,7 @@
                 for(let t = 0; t <= 5; t++) {
                     let val = row.data[t];
                     if (t === 0) {
-                        if (row.id === 'capex_row' || row.id === 'fcf_row' || row.id === 'dfcf_row' || row.id === 'cum_row') {
+                        if (row.id === 'capex_row' || row.id === 'init_wc_row' || row.id === 'fcf_row' || row.id === 'dfcf_row' || row.id === 'cum_row') {
                             html += `<td class="py-2.5 px-4 text-right border-r border-slate-100 font-bold text-rose-600">${fmt(val)}</td>`;
                         } else {
                             html += `<td class="py-2.5 px-4 text-right border-r border-slate-100 text-slate-300">-</td>`;
@@ -1638,9 +1710,18 @@
             let npvResults = [];
             let positiveNpvCount = 0;
 
+            // 시뮬레이션용 초기 운전자본 값 로드
+            const initWcMat = parseFloat(document.getElementById('param_init_wc_material').value) || 0;
+            const initWcLab = parseFloat(document.getElementById('param_init_wc_labor').value) || 0;
+            const initWcCont = parseFloat(document.getElementById('param_init_wc_contingency').value) || 0;
+            const totalInitWc = initWcMat + initWcLab + initWcCont;
+            const totalInitialInvestment = capex + totalInitWc;
+
             for (let sim = 0; sim < numSimulations; sim++) {
-                let sim_discountedFCF = [-capex];
-                let sim_nwc_prev = 0;
+                let sim_discountedFCF = [-totalInitialInvestment];
+                
+                // 운전자본 0년차 출발 조건 세팅
+                let sim_nwc_prev = totalInitWc;
 
                 for (let t = 1; t <= 5; t++) {
                     let inflationFactor = Math.pow(1 + inflation, t - 1);
@@ -1684,11 +1765,17 @@
                     let sim_tax = sim_ebit > 0 ? (sim_ebit * taxRate) : 0;
                     let sim_nopat = sim_ebit - sim_tax;
 
-                    // NWC adjustment
-                    let ar = (sim_revenue / 365) * wc_ar_days;
-                    let ap = (sim_cogs_material / 365) * wc_ap_days;
-                    let inv = (sim_cogs_material / 365) * wc_inv_days;
-                    let sim_nwc = ar + inv - ap;
+                    // NWC adjustment (t=5 시점 전액 액화/회수 반영)
+                    let sim_nwc = 0;
+                    if (t < 5) {
+                        let ar = (sim_revenue / 365) * wc_ar_days;
+                        let ap = (sim_cogs_material / 365) * wc_ap_days;
+                        let inv = (sim_cogs_material / 365) * wc_inv_days;
+                        sim_nwc = ar + inv - ap;
+                    } else {
+                        sim_nwc = 0; // 5년차 종료 시 전액 회수
+                    }
+
                     let sim_nwc_change = sim_nwc - sim_nwc_prev;
                     sim_nwc_prev = sim_nwc;
 
