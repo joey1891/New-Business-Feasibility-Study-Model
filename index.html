@@ -41,9 +41,9 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
-                    BizEval™ Professional v4.4 <span class="text-xs bg-amber-500/30 text-amber-300 font-normal px-2 py-0.5 rounded border border-amber-500/20">✨ 운전자본/자산부채 세분화</span>
+                    BizEval™ Professional v4.5 <span class="text-xs bg-emerald-500/30 text-emerald-300 font-normal px-2 py-0.5 rounded border border-emerald-500/20">✨ 현금흐름표 추가</span>
                 </h1>
-                <p class="text-xs text-slate-400">세분화된 운전자본 증감, NWC 세부 계정, 로스율 역산 원가 반영, 자본구조, 자동 증설, 재무상태표</p>
+                <p class="text-xs text-slate-400">세분화된 운전자본 증감, NWC 세부 계정, 로스율 역산 원가 반영, 자본구조, 자동 증설, 재무상태표, 현금흐름표</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -1037,6 +1037,41 @@
                 </div>
             </section>
 
+            <!-- 5-Year Cash Flow Statement (Financial Accounting) -->
+            <section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-2">
+                    <div>
+                        <h4 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i data-lucide="arrow-right-left" class="w-5 h-5 text-emerald-600"></i> 5개년 추정 현금흐름표 (간접법)
+                        </h4>
+                        <p class="text-[11px] text-slate-500 mt-1">기업의 현금 유입과 유출을 영업, 투자, 재무 활동으로 나누어 대차대조표의 기말 현금 잔액을 도출합니다.</p>
+                    </div>
+                    <div class="text-[10px] font-semibold text-slate-500 flex items-center gap-3">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-100 inline-block"></span> 그룹 행 (클릭 시 토글)</span>
+                        <span>(단위: 백만원)</span>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm border-collapse min-w-[1100px]">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 text-xs">
+                                <th class="py-3 px-4 w-[36%]">계정과목</th>
+                                <th class="py-3 px-3 text-right">0년차 (투자기)</th>
+                                <th class="py-3 px-3 text-right">1년차</th>
+                                <th class="py-3 px-3 text-right">2년차</th>
+                                <th class="py-3 px-3 text-right">3년차</th>
+                                <th class="py-3 px-3 text-right">4년차</th>
+                                <th class="py-3 px-3 text-right">5년차 (청산)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cashFlowTableBody">
+                            <!-- Dynamic Content Generator by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Detailed Break-Even, Cost Breakdowns & Leverage -->
             <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                 <!-- Cost Breakdown Chart list -->
@@ -1217,7 +1252,11 @@
             'bs-nca-group': true,
             'bs-cl-group': true,
             'bs-ncl-group': true,
-            'bs-te-group': true
+            'bs-te-group': true,
+            // 새롭게 추가된 현금흐름표 그룹
+            'cf-op-group': true,
+            'cf-inv-group': true,
+            'cf-fin-group': true
         };
 
         // Standard Global Chart Instances
@@ -1456,6 +1495,9 @@
                 else if (group === 'bs-cl-child') visible = rowGroupsState['bs-cl-group'];
                 else if (group === 'bs-ncl-child') visible = rowGroupsState['bs-ncl-group'];
                 else if (group === 'bs-te-child') visible = rowGroupsState['bs-te-group'];
+                else if (group === 'cf-op-child') visible = rowGroupsState['cf-op-group'];
+                else if (group === 'cf-inv-child') visible = rowGroupsState['cf-inv-group'];
+                else if (group === 'cf-fin-child') visible = rowGroupsState['cf-fin-group'];
 
                 if (visible) r.classList.remove('hidden'); 
                 else r.classList.add('hidden');
@@ -1697,7 +1739,11 @@
                 bs_ppe: [0,0,0,0,0,0], bs_nca: [0,0,0,0,0,0], bs_ta: [0,0,0,0,0,0],
                 bs_ap: [0,0,0,0,0,0], bs_unpaid: [0,0,0,0,0,0], bs_unearned: [0,0,0,0,0,0], bs_std: [0,0,0,0,0,0], bs_cl: [0,0,0,0,0,0],
                 bs_ltd: [0,0,0,0,0,0], bs_ncl: [0,0,0,0,0,0], bs_tl: [0,0,0,0,0,0],
-                bs_cap: [0,0,0,0,0,0], bs_re: [0,0,0,0,0,0], bs_te: [0,0,0,0,0,0], bs_tle: [0,0,0,0,0,0]
+                bs_cap: [0,0,0,0,0,0], bs_re: [0,0,0,0,0,0], bs_te: [0,0,0,0,0,0], bs_tle: [0,0,0,0,0,0],
+
+                // Cash Flow Statement specifically added arrays
+                cf_op: [0,0,0,0,0,0], cf_inv: [0,0,0,0,0,0], cf_fin: [0,0,0,0,0,0],
+                cf_net: [0,0,0,0,0,0], cf_beg: [0,0,0,0,0,0], cf_end: [0,0,0,0,0,0]
             };
 
             // Initialize Year 0 Balances and Cash Flows for WC / Assets / Liabilities
@@ -1727,6 +1773,14 @@
             f.bs_cash[0] = f.bs_tle[0] - (f.bs_ar[0] + f.bs_inv[0] + f.bs_adv[0] + f.bs_nca[0]);
             f.bs_ca[0] = f.bs_cash[0] + f.bs_ar[0] + f.bs_inv[0] + f.bs_adv[0];
             f.bs_ta[0] = f.bs_ca[0] + f.bs_nca[0];
+
+            // Year 0 Cash Flow Statement
+            f.cf_op[0] = f.cf_wc_total[0] + f.cf_other_al_total[0];
+            f.cf_inv[0] = f.capex_total[0]; // capex_total is negative
+            f.cf_fin[0] = initEquity + initDebt;
+            f.cf_net[0] = f.cf_op[0] + f.cf_inv[0] + f.cf_fin[0];
+            f.cf_beg[0] = 0;
+            f.cf_end[0] = f.cf_net[0];
 
             const utils = [0, parseFloat(document.getElementById('util_y1').value)/100, parseFloat(document.getElementById('util_y2').value)/100, parseFloat(document.getElementById('util_y3').value)/100, parseFloat(document.getElementById('util_y4').value)/100, parseFloat(document.getElementById('util_y5').value)/100];
             
@@ -1993,6 +2047,14 @@
                 f.bs_cash[t] = f.bs_tle[t] - (f.bs_ar[t] + f.bs_inv[t] + f.bs_adv[t] + f.bs_nca[t]);
                 f.bs_ca[t] = f.bs_cash[t] + f.bs_ar[t] + f.bs_inv[t] + f.bs_adv[t];
                 f.bs_ta[t] = f.bs_ca[t] + f.bs_nca[t];
+
+                // Cash Flow Statement (Indirect Method)
+                f.cf_op[t] = f.net_income[t] + f.dep_amort[t] + f.cf_wc_total[t] + f.cf_other_al_total[t];
+                f.cf_inv[t] = f.capex_total[t];
+                f.cf_fin[t] = f.net_debt_flow[t]; // 차입금 상환 및 배당 내역 반영
+                f.cf_net[t] = f.cf_op[t] + f.cf_inv[t] + f.cf_fin[t];
+                f.cf_beg[t] = f.cf_end[t-1];
+                f.cf_end[t] = f.cf_beg[t] + f.cf_net[t];
             }
 
             document.getElementById('dash_capa_vol').innerText = Math.round(f.capa[5]).toLocaleString();
@@ -2036,6 +2098,7 @@
             renderTable(f, initEquity);
             renderFinancialAccountingTable(f, initEquity);
             renderBalanceSheetTable(f);
+            renderCashFlowTable(f, initEquity, initDebt);
             renderCharts(f);
             renderCostBreakdown(f);
             renderBEP(f);
@@ -2363,6 +2426,65 @@
 
                 // 검증
                 { id:'bs_tle', n:'부채 및 자본 총계 (Liabilities & Equity)', d:f.bs_tle, t:'header', hl:'bg-slate-900 text-purple-400 font-bold border-y-2 border-purple-500 mt-2' }
+            ];
+
+            let html = '';
+            sc.forEach(r => {
+                let cl = 'transition hover:bg-slate-50 ';
+                let ind = 'pl-4';
+                if(r.t==='header') cl += 'bg-slate-100 text-slate-800 font-bold';
+                else if(r.t==='h-sub') { cl += 'text-slate-900 font-semibold cursor-pointer'; ind = 'pl-6'; }
+                else if(r.t==='det') { cl += 'text-slate-700 text-xs cursor-pointer'; ind = 'pl-10'; }
+                
+                if(r.hl) cl += ' ' + r.hl;
+                
+                let icon = r.p ? `<i id="toggle-icon-${r.g}" data-lucide="chevron-down" class="w-4 h-4 text-slate-400 inline-block shrink-0 mr-1"></i>` : '';
+                
+                html += `<tr class="${cl}" ${r.cg?`data-group="${r.cg}"`:''} ${r.p?`onclick="toggleRowGroup('${r.g}')"`:''}>
+                <td class="py-2 px-3 border-r ${ind} flex items-center">${icon}${r.n}</td>`;
+                
+                for(let t=0; t<=5; t++) {
+                    let v = r.d[t];
+                    let txt = fmt(v);
+                    if(v === 0 && r.t==='det') txt = '-'; 
+                    html += `<td class="py-2 px-3 text-right ${v<0?'text-rose-600':''}">${txt}</td>`;
+                }
+                html += `</tr>`;
+            });
+            body.innerHTML = html;
+        }
+
+        function renderCashFlowTable(f, initEq, initDebt) {
+            const body = document.getElementById('cashFlowTableBody');
+            
+            // 재무활동 세부 내역 분리 (Year 0에만 자금조달 발생)
+            let cff_equity = [initEq, 0, 0, 0, 0, 0];
+            let cff_debt_in = [initDebt, 0, 0, 0, 0, 0];
+            let cff_debt_out = [0, 0, 0, 0, 0, 0];
+            for (let t = 1; t <= 5; t++) {
+                cff_debt_out[t] = f.net_debt_flow[t]; // net_debt_flow는 상환 시 음수로 기록됨
+            }
+
+            const sc = [
+                { id:'cf_beg', n:'기초 현금 (Beginning Cash)', d:f.cf_beg, t:'header', hl:'bg-slate-50 text-slate-800 font-bold border-b border-slate-200' },
+                
+                { id:'cf_op_h', n:'I. 영업활동현금흐름', d:f.cf_op, t:'h-sub', p:true, g:'cf-op-group', hl:'font-semibold text-emerald-700' },
+                { id:'cf_op_ni', n:'└─ 당기순이익', d:f.net_income, t:'det', cg:'cf-op-child' },
+                { id:'cf_op_da', n:'└─ 감가상각비 가산', d:f.dep_amort, t:'det', cg:'cf-op-child' },
+                { id:'cf_op_wc', n:'└─ 운전자본 증감', d:f.cf_wc_total, t:'det', cg:'cf-op-child' },
+                { id:'cf_op_oa', n:'└─ 기타 자산/부채 증감', d:f.cf_other_al_total, t:'det', cg:'cf-op-child' },
+                
+                { id:'cf_inv_h', n:'II. 투자활동현금흐름', d:f.cf_inv, t:'h-sub', p:true, g:'cf-inv-group', hl:'font-semibold text-blue-700' },
+                { id:'cf_inv_capex', n:'└─ 설비투자 (CAPEX)', d:f.capex_total, t:'det', cg:'cf-inv-child' },
+                
+                { id:'cf_fin_h', n:'III. 재무활동현금흐름', d:f.cf_fin, t:'h-sub', p:true, g:'cf-fin-group', hl:'font-semibold text-purple-700' },
+                { id:'cf_fin_eq', n:'└─ 자기자본 유입 (유상증자)', d:cff_equity, t:'det', cg:'cf-fin-child' },
+                { id:'cf_fin_debt_in', n:'└─ 차입금 유입', d:cff_debt_in, t:'det', cg:'cf-fin-child' },
+                { id:'cf_fin_debt_out', n:'└─ 차입금 상환', d:cff_debt_out, t:'det', cg:'cf-fin-child', hl:'text-rose-500' },
+                
+                { id:'cf_net', n:'당기 현금 증감 (Net Change in Cash)', d:f.cf_net, t:'header', hl:'bg-slate-50 text-slate-800 font-bold border-t border-slate-200 mt-2' },
+                
+                { id:'cf_end', n:'기말 현금 (Ending Cash)', d:f.cf_end, t:'header', hl:'bg-slate-900 text-emerald-400 font-bold border-y-2 border-emerald-500 mt-2' }
             ];
 
             let html = '';
