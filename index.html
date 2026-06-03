@@ -1557,6 +1557,7 @@
                 // 생산 및 재고 추적
                 qty: [0,0,0,0,0,0], qty_prod_s: [0,0,0,0,0,0], qty_prod_t: [0,0,0,0,0,0],
                 qty_sold_s: [0,0,0,0,0,0], qty_sold_t: [0,0,0,0,0,0], qty_sold_total: [0,0,0,0,0,0],
+                qty_beg_inv_total: [0,0,0,0,0,0],
                 qty_inv_s: [0,0,0,0,0,0], qty_inv_t: [0,0,0,0,0,0], qty_inv_total: [0,0,0,0,0,0],
 
                 revenue: [0,0,0,0,0,0], 
@@ -1695,6 +1696,9 @@
                 f.capa[t] = currentCapa;
                 f.capa_bottles[t] = currentCapa / bottleSize;
                 
+                // 기초 재고 이월
+                f.qty_beg_inv_total[t] = f.qty_inv_total[t-1];
+
                 // 생산량
                 f.qty[t] = Math.min(demandQty, currentCapa);
                 f.util[t] = f.qty[t] / f.capa[t];
@@ -1937,6 +1941,7 @@
                 { id:'m3', n:'연차별 가동률 (%)', d:f.util.map(x=>x*100), t:'pct' },
                 
                 { id:'prod_inv_h', n:'당해 생산 / 판매 / 재고 관리 현황 (L)', d:Array(6).fill(''), t:'h-sub', p:true, g:'prod-inv-group', hl:'bg-slate-100 border-y border-slate-200' },
+                { id:'m2_b', n:'└─ 당기 기초 재고수량', d:f.qty_beg_inv_total, t:'det', cg:'prod-inv-child', hl:'font-medium text-slate-500' },
                 { id:'m2_p', n:'└─ 당기 총 생산수량', d:f.qty, t:'det', cg:'prod-inv-child', hl:'font-semibold text-slate-700' },
                 { id:'m2_s', n:'└─ 당기 최종 판매수량', d:f.qty_sold_total, t:'det', cg:'prod-inv-child', hl:'font-bold text-indigo-600' },
                 { id:'m2_i', n:'└─ 기말 누적 제품 재고수량', d:f.qty_inv_total, t:'det', cg:'prod-inv-child', hl:'font-bold text-rose-500' },
