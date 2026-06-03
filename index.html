@@ -41,9 +41,9 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
-                    BizEval™ Professional v3.5 <span class="text-xs bg-indigo-500/30 text-indigo-300 font-normal px-2 py-0.5 rounded border border-indigo-500/20">✨ AI Co-Pilot 지능형 주주가치 모델</span>
+                    BizEval™ Professional v4.0 <span class="text-xs bg-indigo-500/30 text-indigo-300 font-normal px-2 py-0.5 rounded border border-indigo-500/20">✨ AI CFO 고정/변동비 및 확장 투자 모델</span>
                 </h1>
-                <p class="text-xs text-slate-400">자본구조 설계, 이자비용 연동, 주주 귀속 FCFE 정밀 시뮬레이터 & ✨ Gemini AI 맞춤형 경영 진단 결합</p>
+                <p class="text-xs text-slate-400">자본구조, 자동 설비 증설, 세분화된 자산/부채 및 FCFE 정밀 시뮬레이터 & ✨ Gemini AI 경영 진단</p>
             </div>
         </div>
         <div class="flex items-center space-x-4 mt-2 sm:mt-0">
@@ -65,7 +65,7 @@
                 <h2 class="font-bold text-slate-900 flex items-center gap-2">
                     <i data-lucide="sliders" class="w-5 h-5 text-indigo-600"></i> 분석 변수 설정 (Parameters)
                 </h2>
-                <p class="text-xs text-slate-500 mt-1">자본 조달 비율 및 대출 금리가 실시간 주주가치에 반영됩니다.</p>
+                <p class="text-xs text-slate-500 mt-1">자본 조달 비율, 증설 요건 등이 실시간 가치에 반영됩니다.</p>
             </div>
 
             <!-- Param Sections -->
@@ -110,7 +110,7 @@
                         </div>
                         <p class="text-[10px] text-slate-500 leading-relaxed font-medium" id="ai_res_rationale">-</p>
                         
-                        <div class="max-h-36 overflow-y-auto text-[10px] divide-y divide-slate-100 bg-slate-50 p-2 rounded">
+                        <div class="max-h-36 overflow-y-auto text-[10px] divide-y divide-slate-100 bg-slate-50 p-2 rounded custom-scrollbar">
                             <div id="ai_res_param_list" class="space-y-1"></div>
                         </div>
 
@@ -120,10 +120,10 @@
                     </div>
                 </div>
 
-                <!-- 0-1. 초기 설비 투자 세부 내역 (CAPEX) 구성 -->
+                <!-- 0-1. 초기 설비 투자 세부 내역 (CAPEX) 구성 및 자동 증설 설정 -->
                 <div class="space-y-4 bg-slate-50/70 p-4 rounded-xl border border-slate-200/80">
                     <h3 class="text-sm font-semibold text-slate-900 border-b border-slate-200 pb-1.5 flex items-center gap-1.5">
-                        <i data-lucide="wrench" class="w-4 h-4 text-slate-700"></i> 0-1. 초기 설비 투자액 등록 (CAPEX)
+                        <i data-lucide="wrench" class="w-4 h-4 text-slate-700"></i> 0-1. 설비 투자 (CAPEX) 및 자동 증설 시나리오
                     </h3>
                     
                     <!-- 설비 추가 입력 폼 -->
@@ -163,9 +163,32 @@
                     </div>
                     
                     <!-- 합산 요약 -->
-                    <div class="flex justify-between items-center bg-indigo-50/70 px-3 py-2 rounded border border-indigo-100 text-xs">
-                        <span class="font-semibold text-indigo-950">설비투자액 합계 (CAPEX)</span>
+                    <div class="flex justify-between items-center bg-indigo-50/70 px-3 py-2 rounded border border-indigo-100 text-xs mb-2">
+                        <span class="font-semibold text-indigo-950">초기 설비투자액 합계 (CAPEX)</span>
                         <span class="font-extrabold text-indigo-700" id="total_capex_display">0 백만원</span>
+                    </div>
+
+                    <!-- 확장 설비 (Expansion CAPEX) 자동화 설정 -->
+                    <div class="bg-indigo-50/50 p-3 rounded-lg border border-indigo-200">
+                        <label class="flex items-center gap-1.5 text-[11px] font-bold text-indigo-900 cursor-pointer mb-2">
+                            <input type="checkbox" id="param_auto_expansion" checked class="rounded text-indigo-600 focus:ring-indigo-500" onchange="runAnalysis()">
+                            <span>수요(가동률) 증가 시 자동 설비 증설(CAPEX) 허용</span>
+                        </label>
+                        <p class="text-[9px] text-indigo-700 mb-2 leading-tight">가동률이 임계치를 초과하면 수요 대응을 위해 자동으로 자본 투자를 집행하고 CAPA를 확장합니다.</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[9px] font-medium text-slate-500 mb-0.5">임계 가동률 (%)</label>
+                                <input type="number" id="param_expansion_threshold" value="95" step="1" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs text-center font-bold text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[9px] font-medium text-slate-500 mb-0.5">1회 증설 투자액 (백만)</label>
+                                <input type="number" id="param_expansion_cost" value="150" step="10" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs text-center font-bold text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none" onchange="runAnalysis()">
+                            </div>
+                            <div class="col-span-2">
+                                <label class="block text-[9px] font-medium text-slate-500 mb-0.5">1회 증설 시 CAPA 증가량 (L)</label>
+                                <input type="number" id="param_expansion_capa" value="150000" step="10000" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs text-center font-bold text-slate-700 focus:ring-1 focus:ring-indigo-500 focus:outline-none" onchange="runAnalysis()">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -315,23 +338,23 @@
                         <div class="grid grid-cols-5 gap-1.5 text-center">
                             <div>
                                 <span class="text-[10px] text-slate-500">1년차</span>
-                                <input type="number" id="util_y1" value="50" min="0" max="100" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="util_y1" value="50" min="0" max="150" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-500">2년차</span>
-                                <input type="number" id="util_y2" value="70" min="0" max="100" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="util_y2" value="70" min="0" max="150" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-500">3년차</span>
-                                <input type="number" id="util_y3" value="85" min="0" max="100" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="util_y3" value="85" min="0" max="150" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-500">4년차</span>
-                                <input type="number" id="util_y4" value="90" min="0" max="100" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="util_y4" value="90" min="0" max="150" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
                             </div>
                             <div>
                                 <span class="text-[10px] text-slate-500">5년차</span>
-                                <input type="number" id="util_y5" value="90" min="0" max="100" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="util_y5" value="90" min="0" max="150" class="w-full text-center bg-white border border-slate-200 rounded py-1 text-xs font-bold text-slate-700" onchange="runAnalysis()">
                             </div>
                         </div>
                     </div>
@@ -420,7 +443,7 @@
                 <!-- 5. 직접제조경비 세부 구성 (원/L) -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-semibold text-sky-600 border-b border-sky-50 pb-1 flex items-center gap-1.5">
-                        <i data-lucide="droplet" class="w-4 h-4"></i> 5. 직접제조경비 세부 구성 (원/L)
+                        <i data-lucide="droplet" class="w-4 h-4"></i> 5. 직접제조경비(변동) 구성 (원/L)
                     </h3>
                     <div class="space-y-3 bg-sky-50/30 p-3 rounded-lg border border-sky-100">
                         <div class="text-xs font-bold text-sky-800" id="lbl_mfg_total">총 L당 직접경비: -원</div>
@@ -441,79 +464,66 @@
                     </div>
                 </div>
 
-                <!-- 6. 고정 및 변동 경비 설정 -->
+                <!-- 6. 고정 및 변동 경비 설정 (분리) -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-semibold text-indigo-600 border-b border-indigo-50 pb-1 flex items-center gap-1.5">
-                        <i data-lucide="shield-alert" class="w-4 h-4"></i> 6. 연간 고정 제조경비 & 판관비
+                        <i data-lucide="shield-alert" class="w-4 h-4"></i> 6. 연간 고정경비 및 판관비
                     </h3>
-                    <div class="space-y-3">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">제조 간접경비 (연 고정성)</label>
-                            <div class="relative">
-                                <input type="number" id="mfg_indirect_fixed" value="40" step="5" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700" onchange="runAnalysis()">
-                                <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">백만원</span>
-                            </div>
-                        </div>
+                    
+                    <div class="bg-amber-50/30 p-3 rounded-lg border border-amber-100">
+                        <span class="text-[10px] font-bold text-amber-900 block mb-2 border-b border-amber-100/50 pb-1">고정비 항목 (연간 백만원)</span>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">판관 직접변동비</label>
-                                <div class="relative">
-                                    <input type="number" id="sga_dir_var" value="3" step="0.5" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700" onchange="runAnalysis()">
-                                    <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
-                                </div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">제조 간접고정비</label>
+                                <input type="number" id="mfg_indirect_fixed" value="40" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">판관 간접변동비</label>
-                                <div class="relative">
-                                    <input type="number" id="sga_ind_var" value="2" step="0.5" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700" onchange="runAnalysis()">
-                                    <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
-                                </div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 임차료 총액</label>
+                                <input type="number" id="param_rentTotal" value="50" step="5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 고정 직접경비</label>
+                                <input type="number" id="sga_dir_fix" value="20" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 고정 간접경비</label>
+                                <input type="number" id="sga_ind_fix" value="30" step="2" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                         </div>
+                    </div>
+
+                    <div class="bg-pink-50/30 p-3 rounded-lg border border-pink-100 mt-2">
+                        <span class="text-[10px] font-bold text-pink-900 block mb-2 border-b border-pink-100/50 pb-1">판관 변동비 항목 (매출액 대비 %)</span>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">판관 고정 직접경비</label>
-                                <div class="relative">
-                                    <input type="number" id="sga_dir_fix" value="20" step="2" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700" onchange="runAnalysis()">
-                                    <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">백만원</span>
-                                </div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 직접변동비(수수료)</label>
+                                <input type="number" id="sga_dir_var" value="3" step="0.5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-slate-600 mb-1">판관 고정 간접경비</label>
-                                <div class="relative">
-                                    <input type="number" id="sga_ind_fix" value="30" step="2" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-700" onchange="runAnalysis()">
-                                    <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">백만원</span>
-                                </div>
+                                <label class="block text-[10px] font-medium text-slate-600 mb-1">판관 간접변동비(마케팅)</label>
+                                <input type="number" id="sga_ind_var" value="2" step="0.5" class="w-full bg-white border border-slate-200 rounded p-1.5 text-xs focus:ring-1 focus:ring-indigo-500" onchange="runAnalysis()">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 7. 거시경제 및 운전자본 -->
+                <!-- 7. 거시경제 및 세분화된 자산/부채, 운전자본 -->
                 <div class="space-y-4">
                     <h3 class="text-sm font-semibold text-indigo-600 border-b border-indigo-50 pb-1 flex items-center gap-1.5">
-                        <i data-lucide="globe" class="w-4 h-4"></i> 7. 거시 경제 및 운영 환경 설정
+                        <i data-lucide="globe" class="w-4 h-4"></i> 7. 환경, 자산/부채 및 자본비용
                     </h3>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">자기자본비용 (Cost of Equity)</label>
+                            <label class="block text-xs font-medium text-slate-600 mb-1">WACC (Cost of Equity)</label>
                             <div class="relative">
                                 <input type="number" id="param_wacc" value="10.5" step="0.1" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-xs pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-700" onchange="runAnalysis()">
-                                <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
-                            </div>
-                            <p class="text-[9px] text-indigo-600 mt-0.5">* 주주가치(FCFE) 할인 전용 할인율</p>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 mb-1">경제성장률</label>
-                            <div class="relative">
-                                <input type="number" id="param_growth" value="10" step="0.5" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700" onchange="runAnalysis()">
                                 <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 mb-1">물가상승률</label>
                             <div class="relative">
-                                <input type="number" id="param_inflation" value="10" step="0.5" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700" onchange="runAnalysis()">
+                                <input type="number" id="param_inflation" value="3.5" step="0.5" class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1.5 text-sm pr-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-slate-700" onchange="runAnalysis()">
                                 <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
                             </div>
                         </div>
@@ -542,27 +552,36 @@
                                 <input type="number" id="param_fx_vol" value="8.43" step="0.01" class="w-full bg-white border border-slate-200 rounded px-3 py-1.5 text-xs pr-7 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-semibold text-slate-700 disabled:bg-slate-100 disabled:text-slate-400" onchange="runAnalysis()">
                                 <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
                             </div>
-                            <p class="text-[9px] text-slate-500 leading-relaxed">
-                                * 최근 3개년(2023-2026) 원/달러 환율 변동 범위(최저 1,250원 ~ 최고 1,450원)의 연간 평균 통계 표준편차는 <strong>8.43%</strong> 입니다. 체크 시 이 수치가 시뮬레이션 충격 폭에 자동 연동됩니다.
-                            </p>
                         </div>
                     </div>
 
-                    <!-- Working Capital Cycles (Mini) -->
-                    <div class="bg-indigo-50/40 p-3 rounded-lg border border-indigo-100">
-                        <span class="text-xs font-bold text-indigo-800">운전자본 회전주기</span>
-                        <div class="grid grid-cols-3 gap-2 mt-1.5">
+                    <!-- 세분화된 운전자본 및 기타 자산/부채 비율 -->
+                    <div class="bg-slate-100/60 p-3 rounded-lg border border-slate-200">
+                        <span class="text-[11px] font-bold text-slate-800 block mb-2 border-b border-slate-200 pb-1">운전자본 회전주기 및 자산/부채 연동</span>
+                        <div class="grid grid-cols-3 gap-2 mb-3">
                             <div>
-                                <label class="block text-[9px] text-slate-500">매출채권 (60일)</label>
+                                <label class="block text-[9px] text-slate-500">매출채권 (일)</label>
                                 <input type="number" id="wc_ar" value="60" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center" onchange="runAnalysis();">
                             </div>
                             <div>
-                                <label class="block text-[9px] text-slate-500">매입채무 (3일)</label>
-                                <input type="number" id="wc_ap" value="3" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center" onchange="runAnalysis();">
+                                <label class="block text-[9px] text-slate-500">매입채무 (일)</label>
+                                <input type="number" id="wc_ap" value="30" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center" onchange="runAnalysis();">
                             </div>
                             <div>
-                                <label class="block text-[9px] text-slate-500">재고자산 (60일)</label>
+                                <label class="block text-[9px] text-slate-500">재고자산 (일)</label>
                                 <input type="number" id="wc_inv" value="60" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center" onchange="runAnalysis();">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2 border-t border-slate-200 pt-3">
+                            <div>
+                                <label class="block text-[9px] text-slate-500 font-medium">기타 유동자산 (매출액 %)</label>
+                                <input type="number" id="wc_other_ca" value="1.5" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
+                                <p class="text-[8px] text-slate-400 mt-0.5">선급금, 미수수익 등 (현금유출)</p>
+                            </div>
+                            <div>
+                                <label class="block text-[9px] text-slate-500 font-medium">기타 유동부채 (비용합계 %)</label>
+                                <input type="number" id="wc_other_cl" value="2.0" step="0.1" class="w-full bg-white border border-slate-200 rounded p-1 text-xs text-center text-slate-700" onchange="runAnalysis();">
+                                <p class="text-[8px] text-slate-400 mt-0.5">미지급비용, 선수금 등 (현금유입)</p>
                             </div>
                         </div>
                     </div>
@@ -572,12 +591,8 @@
                     <input type="hidden" id="param_depYears" value="5">
                     <input type="hidden" id="param_amortization" value="10">
                     <input type="hidden" id="staff_prod" value="3">
-                    <input type="hidden" id="staff_sales" value="2">
-                    <input type="hidden" id="staff_admin" value="1">
-                    <input type="hidden" id="staff_hr" value="1">
+                    <input type="hidden" id="staff_sga" value="4">
                     <input type="hidden" id="param_avgSalary" value="40">
-                    <input type="hidden" id="param_rentArea" value="100">
-                    <input type="hidden" id="param_rentPerPyung" value="0.5">
                 </div>
             </div>
         </aside>
@@ -588,31 +603,27 @@
             <!-- CAPA & Performance Overview -->
             <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-md border border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shrink-0">
                 <div>
-                    <span class="bg-indigo-500/20 text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/30">CAPA 및 설비 자산 관리 대시보드</span>
+                    <span class="bg-indigo-500/20 text-indigo-300 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/30">설비 투자 및 CAPA 현황 대시보드</span>
                     <h2 class="text-xl font-bold mt-1.5 flex items-center gap-2">
-                        <i data-lucide="factory" class="w-5.5 h-5.5 text-indigo-400"></i> 연간 최대 설계 생산능력 (CAPA): <span id="dash_capa_vol" class="text-emerald-400">-</span> L 
+                        <i data-lucide="factory" class="w-5.5 h-5.5 text-indigo-400"></i> 최종 5년차 누적 생산능력 (CAPA): <span id="dash_capa_vol" class="text-emerald-400">-</span> L 
                         <span class="text-sm font-medium text-slate-300">(약 <span id="dash_capa_bottles" class="text-emerald-300">-</span> 병)</span>
                     </h2>
-                    <p class="text-xs text-slate-400 mt-1">등록된 초기 설비 투자 내역에 근거한 상각비와 수율을 바탕으로 계산을 자동 갱신합니다.</p>
+                    <p class="text-xs text-slate-400 mt-1">수요 증가로 임계치 돌파 시 자동 설비 증설 로직이 발동되어 투자 비용이 추가 반영됩니다.</p>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <div class="bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl text-center">
-                        <span class="text-[10px] text-slate-400 block uppercase font-medium">1년차 생산량 및 개수</span>
-                        <span id="dash_vol_y1" class="text-sm font-bold text-emerald-300">- L / - 병</span>
-                    </div>
-                    <div class="bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl text-center">
-                        <span class="text-[10px] text-slate-400 block uppercase font-medium">5년차 생산량 및 개수</span>
-                        <span id="dash_vol_y5" class="text-sm font-bold text-emerald-300">- L / - 병</span>
+                    <div class="bg-white/5 border border-white/10 px-4 py-2.5 rounded-xl text-center">
+                        <span class="text-[10px] text-slate-400 block uppercase font-medium">누적 총 CAPEX (초기+확장)</span>
+                        <span id="dash_total_capex" class="text-lg font-bold text-amber-300">- 백만원</span>
                     </div>
                 </div>
             </div>
 
-            <!-- KPI Top Cards Grid (Modified to FCFE metrics) -->
+            <!-- KPI Top Cards Grid -->
             <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">주주 순현재가치 (Equity NPV)</span>
+                            <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase">주주 순현재가치 (Equity NPV)</span>
                             <h3 id="kpi_npv" class="text-2xl font-bold text-slate-900 mt-1">-</h3>
                         </div>
                         <div class="bg-indigo-50 p-2 rounded-lg text-indigo-600">
@@ -627,7 +638,7 @@
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">자기자본 내부수익률 (Equity IRR)</span>
+                            <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase">자기자본 수익률 (Equity IRR)</span>
                             <h3 id="kpi_irr" class="text-2xl font-bold text-slate-900 mt-1">-</h3>
                         </div>
                         <div class="bg-emerald-50 p-2 rounded-lg text-emerald-600">
@@ -635,14 +646,14 @@
                         </div>
                     </div>
                     <div class="mt-4 flex items-center text-xs">
-                        <span id="kpi_irr_status" class="font-medium">자기자본비용(Cost of Equity) 대비 비교</span>
+                        <span id="kpi_irr_status" class="font-medium text-slate-500">자기자본비용(Ke) 대비 초과율 검증</span>
                     </div>
                 </div>
 
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">자기자본 회수기간</span>
+                            <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase">순수 자본 회수기간</span>
                             <h3 id="kpi_payback" class="text-2xl font-bold text-slate-900 mt-1">-</h3>
                         </div>
                         <div class="bg-amber-50 p-2 rounded-lg text-amber-600">
@@ -650,14 +661,14 @@
                         </div>
                     </div>
                     <div class="mt-4 flex items-center text-xs text-slate-500 leading-tight">
-                        <span>순수 자기자본 투자액 <span id="kpi_payback_capex_display">-</span> 백만원 상쇄 시점</span>
+                        <span>자기자본 투입액 <span id="kpi_payback_capex_display" class="font-bold">-</span> 백만 회수</span>
                     </div>
                 </div>
 
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-xs font-semibold text-slate-400 tracking-wider uppercase">주주가치 타당성 확률 (Monte-Carlo)</span>
+                            <span class="text-[11px] font-bold text-slate-400 tracking-wider uppercase">환율충격 성공 확률</span>
                             <h3 id="kpi_sim_prob" class="text-2xl font-bold text-slate-900 mt-1">-</h3>
                         </div>
                         <div class="bg-purple-50 p-2 rounded-lg text-purple-600">
@@ -665,7 +676,7 @@
                         </div>
                     </div>
                     <div class="mt-4 flex items-center text-xs">
-                        <span id="kpi_sim_status" class="font-medium text-slate-500">주주 NPV > 0 이 도출될 확률</span>
+                        <span id="kpi_sim_status" class="font-medium text-slate-500">주주 NPV > 0 달성도 (Monte-Carlo)</span>
                     </div>
                 </div>
             </section>
@@ -673,16 +684,16 @@
             <!-- [✨ AI 신규 기능] AI Business Consulting Card -->
             <section class="bg-gradient-to-r from-indigo-900 via-indigo-950 to-purple-950 text-white p-6 rounded-2xl shadow-lg border border-indigo-800 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="space-y-1.5 max-w-2xl">
-                    <span class="bg-indigo-500/30 text-indigo-200 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/20">✨ AI 정밀 경영 진단 및 보고서</span>
+                    <span class="bg-indigo-500/30 text-indigo-200 text-xs font-semibold px-2.5 py-1 rounded-md border border-indigo-500/20">✨ AI CFO 정밀 경영 진단 및 대화형 리포트</span>
                     <h3 class="text-lg font-bold flex items-center gap-2">
-                        <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400 animate-pulse"></i> 현 금융 조건 기준 ✨ AI 사업 타당성 종합 리포트 생성
+                        <i data-lucide="sparkles" class="w-5 h-5 text-indigo-400 animate-pulse"></i> 현재 파라미터 기준 종합 비즈니스 타당성 리포트 생성
                     </h3>
                     <p class="text-xs text-slate-300 leading-relaxed">
-                        부채 비율(LTV), 5개년 FCFE 흐름, 레버리지 위험도(DFL, DTL), 몬테카를로 환율 변동 성공률 등 패키징된 정밀 재무 데이터를 기반으로 CFO 관점의 심층 컨설팅 보고서를 자동 생성합니다.
+                        부채 비율(LTV), 5개년 FCFE 흐름, 레버리지 위험도, 자산/부채 및 운전자본 증감, 설비 자동 확장 내역을 분석하여 CFO 관점의 심층 컨설팅 보고서를 생성하고 대화합니다.
                     </p>
                 </div>
                 <button onclick="generateAiViabilityReport()" class="bg-white text-indigo-950 hover:bg-indigo-50 font-extrabold text-sm px-6 py-3 rounded-xl transition shadow-md flex items-center gap-2 shrink-0">
-                    <i data-lucide="file-text" class="w-4.5 h-4.5 text-indigo-600"></i> ✨ AI 컨설팅 리포트 생성
+                    <i data-lucide="file-text" class="w-4.5 h-4.5 text-indigo-600"></i> ✨ 리포트 생성 & Q&A
                 </button>
             </section>
 
@@ -702,7 +713,7 @@
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
                     <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
                         <h4 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i data-lucide="activity" class="w-5 h-5 text-purple-600"></i> 주주 NPV 충격 시뮬레이션 결과 분포 (N=1,000)
+                            <i data-lucide="activity" class="w-5 h-5 text-purple-600"></i> 환율충격 주주 NPV 시뮬레이션 분포도 (N=1,000)
                         </h4>
                     </div>
                     <div class="h-64 relative">
@@ -716,27 +727,27 @@
                 <div class="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-wrap justify-between items-center gap-2">
                     <div>
                         <h4 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i data-lucide="sheet" class="w-5 h-5 text-emerald-600"></i> 5개년 주주 귀속 추정 재무제표 (FCFE 통합 정산서)
+                            <i data-lucide="sheet" class="w-5 h-5 text-emerald-600"></i> 5개년 주주 귀속 FCFE 추정 재무제표 (고정비/변동비 완전 분리)
                         </h4>
-                        <p class="text-xs text-slate-500 mt-0.5">이자비용과 차입금 원금 상환 흐름을 완벽히 정합하고, 주주 할인율에 따른 현재가치를 계산합니다.</p>
+                        <p class="text-[11px] text-slate-500 mt-1">자산/부채 증감 및 증설 투자를 완벽히 반영한 FCFE 간접법 산출 상세입니다.</p>
                     </div>
-                    <div class="text-xs font-semibold text-slate-500 flex items-center gap-3">
-                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-100 inline-block"></span> 아코디언 행 (클릭 시 토글)</span>
+                    <div class="text-[10px] font-semibold text-slate-500 flex items-center gap-3">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-100 inline-block"></span> 그룹 행 (클릭 시 토글)</span>
                         <span>(단위: 백만원)</span>
                     </div>
                 </div>
                 
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm border-collapse min-w-[1050px]">
+                    <table class="w-full text-left text-sm border-collapse min-w-[1100px]">
                         <thead>
-                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
-                                <th class="py-3 px-4 w-[34%]">영업/재무활동 및 주주 가치 계정 분류</th>
-                                <th class="py-3 px-4 text-right">0년차 (투자기)</th>
-                                <th class="py-3 px-4 text-right">1년차</th>
-                                <th class="py-3 px-4 text-right">2년차</th>
-                                <th class="py-3 px-4 text-right">3년차</th>
-                                <th class="py-3 px-4 text-right">4년차</th>
-                                <th class="py-3 px-4 text-right">5년차</th>
+                            <tr class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 text-xs">
+                                <th class="py-3 px-4 w-[36%]">영업/재무활동 및 주주 가치 계정 분류</th>
+                                <th class="py-3 px-3 text-right">0년차 (투자기)</th>
+                                <th class="py-3 px-3 text-right">1년차</th>
+                                <th class="py-3 px-3 text-right">2년차</th>
+                                <th class="py-3 px-3 text-right">3년차</th>
+                                <th class="py-3 px-3 text-right">4년차</th>
+                                <th class="py-3 px-3 text-right">5년차 (청산)</th>
                             </tr>
                         </thead>
                         <tbody id="financialTableBody">
@@ -750,8 +761,8 @@
             <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Cost Breakdown Chart list -->
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <h4 class="font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-3">
-                        <i data-lucide="pie-chart" class="w-5 h-5 text-indigo-600"></i> 1년차 비용(제조+판관+이자) 통합 세부 배분 분석
+                    <h4 class="font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-3 text-sm">
+                        <i data-lucide="pie-chart" class="w-5 h-5 text-indigo-600"></i> 1년차 발생 비용(제조+판관+이자) 세부 배분 구조
                     </h4>
                     <div class="space-y-3" id="cost_breakdown_list"></div>
                 </div>
@@ -759,8 +770,8 @@
                 <!-- Combined Leverage Table with DOL, DFL, DTL -->
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
                     <div>
-                        <h4 class="font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-3">
-                            <i data-lucide="scale" class="w-5 h-5 text-amber-600"></i> 연도별 BEP 매출액 및 레버리지 종합 분석 (DOL, DFL, DTL)
+                        <h4 class="font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3 mb-3 text-sm">
+                            <i data-lucide="scale" class="w-5 h-5 text-amber-600"></i> 연도별 BEP 매출액 및 기업 레버리지 진단 (DOL, DFL, DTL)
                         </h4>
                         <div class="overflow-x-auto">
                             <table class="w-full text-[11px] text-left">
@@ -768,7 +779,7 @@
                                     <tr class="border-b border-slate-200 text-slate-500 font-semibold">
                                         <th class="py-2 text-left">연도</th>
                                         <th class="py-2 text-right">고정비율 (A)</th>
-                                        <th class="py-2 text-right font-bold text-indigo-600">BEP 매출액</th>
+                                        <th class="py-2 text-right font-bold text-indigo-600">손익분기(BEP) 매출</th>
                                         <th class="py-2 text-right font-bold text-emerald-600">영업레버리지 (DOL)</th>
                                         <th class="py-2 text-right font-bold text-blue-600">재무레버리지 (DFL)</th>
                                         <th class="py-2 text-right font-bold text-purple-600">결합레버리지 (DTL)</th>
@@ -778,12 +789,12 @@
                             </table>
                         </div>
                     </div>
-                    <div class="mt-4 p-3 bg-amber-50 rounded border border-amber-100 text-xs text-amber-800 leading-relaxed">
+                    <div class="mt-4 p-3 bg-amber-50 rounded border border-amber-100 text-[11px] text-amber-800 leading-relaxed">
                         <i data-lucide="info" class="inline-block w-3.5 h-3.5 mr-1 align-text-top"></i>
                         <strong>레버리지(Leverage) 지표 가이드:</strong><br>
-                        - <strong>DOL (영업레버리지)</strong>: 매출 변동에 따른 영업이익(EBIT)의 민감도입니다.<br>
-                        - <strong>DFL (재무레버리지)</strong>: 타인자본(부채) 사용에 따른 영업이익 대비 당기순이익의 민감도이며 이자비용이 가중될수록 상승합니다.<br>
-                        - <strong>DTL (결합레버리지)</strong>: DOL과 DFL의 승수($DOL \times DFL$)로 주주의 통합적 이익 위험률을 나타냅니다. (적자 및 이자 부담 초과 구간은 N/A로 정제처리됨)
+                        - <strong>DOL (영업레버리지)</strong>: 매출 변동에 따른 영업이익(EBIT)의 민감도. (고정비가 클수록 높음)<br>
+                        - <strong>DFL (재무레버리지)</strong>: 부채 이자비용 지출에 따른 순이익 민감도.<br>
+                        - <strong>DTL (결합레버리지)</strong>: DOL과 DFL의 승수($DOL \times DFL$). 주주의 통합적 위험.
                     </div>
                 </div>
             </section>
@@ -792,7 +803,7 @@
 
     <!-- [✨ AI 신규 기능] Full-screen Interactive CFO Report Modal -->
     <div id="ai_report_modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[80] overflow-y-auto p-4 md:p-6">
-        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-4xl w-full flex flex-col max-h-[90vh] overflow-hidden">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-5xl w-full flex flex-col max-h-[95vh] overflow-hidden">
             
             <!-- Modal Header -->
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
@@ -801,7 +812,7 @@
                         <i data-lucide="sparkles" class="w-5 h-5 animate-spin"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold">✨ BizEval AI 비즈니스 타당성 종합 진단 보고서</h3>
+                        <h3 class="text-base font-bold">✨ BizEval AI 비즈니스 타당성 종합 진단 및 전략 회의</h3>
                         <p class="text-[10px] text-slate-300">CFO 및 Venture Capital 시각의 전문 재무 피드백</p>
                     </div>
                 </div>
@@ -814,7 +825,7 @@
             <div class="flex-1 overflow-y-auto p-6 md:p-8 space-y-6 custom-scrollbar" id="ai_modal_scroll_container">
                 
                 <!-- Loading State Container -->
-                <div id="ai_loading_container" class="space-y-6 py-12 text-center hidden">
+                <div id="ai_loading_container" class="space-y-6 py-16 text-center hidden">
                     <div class="relative w-24 h-24 mx-auto">
                         <div class="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
                         <div class="absolute inset-0 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
@@ -823,8 +834,8 @@
                         </div>
                     </div>
                     <div class="space-y-2">
-                        <h4 class="font-bold text-slate-800 text-sm">✨ 정밀 시뮬레이션 데이터를 해부하고 있습니다...</h4>
-                        <p class="text-xs text-slate-400 max-w-sm mx-auto" id="ai_loading_status">
+                        <h4 class="font-bold text-slate-800 text-base">✨ 정밀 시뮬레이션 데이터를 해부하고 있습니다...</h4>
+                        <p class="text-xs text-slate-500 max-w-sm mx-auto" id="ai_loading_status">
                             [1/3] 5개년 주주 가치 재무 데이터 구조 패키징 중
                         </p>
                     </div>
@@ -837,21 +848,23 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 text-center">
                         <div>
                             <span class="text-[10px] text-slate-400 font-bold block">주주 가치 (Equity NPV)</span>
-                            <span class="text-sm font-extrabold text-indigo-950" id="ai_summary_npv">-</span>
+                            <span class="text-base font-extrabold text-indigo-950" id="ai_summary_npv">-</span>
                         </div>
                         <div class="border-t sm:border-t-0 sm:border-x border-indigo-100 py-2 sm:py-0">
                             <span class="text-[10px] text-slate-400 font-bold block">자기자본 수익률 (Equity IRR)</span>
-                            <span class="text-sm font-extrabold text-indigo-950" id="ai_summary_irr">-</span>
+                            <span class="text-base font-extrabold text-indigo-950" id="ai_summary_irr">-</span>
                         </div>
                         <div>
-                            <span class="text-[10px] text-slate-400 font-bold block">사업 타당성 확률 (Monte-Carlo)</span>
-                            <span class="text-sm font-extrabold text-indigo-950" id="ai_summary_prob">-</span>
+                            <span class="text-[10px] text-slate-400 font-bold block">사업 성공 타당성 (Monte-Carlo)</span>
+                            <span class="text-base font-extrabold text-indigo-950" id="ai_summary_prob">-</span>
                         </div>
                     </div>
 
                     <!-- Rendered AI Report (Beautiful Custom styled markdown) -->
-                    <div class="prose prose-slate prose-xs max-w-none border-b border-slate-100 pb-6" id="ai_report_html_body">
-                        <!-- AI Generated Content -->
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <div class="prose prose-slate prose-sm max-w-none" id="ai_report_html_body">
+                            <!-- AI Generated Content -->
+                        </div>
                     </div>
 
                     <!-- Action panel for report -->
@@ -862,27 +875,27 @@
                     </div>
 
                     <!-- CFO Follow-up Interactive Chat Area -->
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <div class="flex items-center gap-2 border-b border-slate-200 pb-2">
-                            <div class="p-1 bg-indigo-100 rounded text-indigo-700">
-                                <i data-lucide="message-square" class="w-4 h-4"></i>
+                    <div class="bg-indigo-50/40 p-5 rounded-xl border border-indigo-100 space-y-4">
+                        <div class="flex items-center gap-2 border-b border-indigo-100 pb-3">
+                            <div class="p-1.5 bg-indigo-100 rounded-lg text-indigo-700">
+                                <i data-lucide="message-square" class="w-5 h-5"></i>
                             </div>
-                            <h4 class="text-xs font-bold text-slate-800">✨ AI 금융 컨설턴트 1:1 심층 전략 심화 질의응답</h4>
+                            <div>
+                                <h4 class="text-sm font-bold text-indigo-950">✨ AI 금융 컨설턴트 1:1 심층 전략 회의</h4>
+                                <p class="text-[10px] text-indigo-700/70">리포트에 관해 궁금한 점이나 시나리오 최적화 방안을 자유롭게 물어보세요.</p>
+                            </div>
                         </div>
                         
                         <!-- Chat message log -->
-                        <div id="ai_chat_log_container" class="flex flex-col gap-3 max-h-[300px] overflow-y-auto p-4 border border-slate-100 bg-white rounded-lg custom-scrollbar">
-                            <div class="bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 leading-relaxed">
-                                안녕하세요! 생성된 종합 타당성 보고서를 바탕으로 전략 수립을 돕는 전담 CFO 비즈니스 파트너입니다.<br>
-                                <strong>"초기 운전자본 회수 시점을 조율하면 현금흐름이 어떻게 개선될까요?"</strong> 나 <strong>"이익률 개선을 위한 샴푸와 트리트먼트 가격 최적화 방안은?"</strong> 같이 궁금한 점을 편하게 질문해 주십시오!
-                            </div>
+                        <div id="ai_chat_log_container" class="flex flex-col gap-3 max-h-[350px] overflow-y-auto p-4 border border-indigo-50 bg-white rounded-lg shadow-inner custom-scrollbar">
+                            <!-- Chat bubbles appended here -->
                         </div>
 
                         <!-- Chat input bar -->
-                        <div class="flex gap-2">
-                            <input type="text" id="ai_chat_input" placeholder="AI 컨설턴트에게 이 시나리오에 대해 추가적인 질문을 던져보세요..." class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-none text-slate-700" onkeydown="if(event.key==='Enter') sendAiConsultantMessage()">
-                            <button id="ai_chat_send_btn" onclick="sendAiConsultantMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1 shrink-0">
-                                <i data-lucide="send" class="w-3.5 h-3.5"></i> ✨ 질문 전송
+                        <div class="flex gap-2 pt-2">
+                            <input type="text" id="ai_chat_input" placeholder="이 모델에서 운전자본 회전율을 개선하면 NPV가 얼마나 오를까요? 등 자유롭게 질문..." class="flex-1 bg-white border border-indigo-200 shadow-sm rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-700" onkeydown="if(event.key==='Enter') sendAiConsultantMessage()">
+                            <button id="ai_chat_send_btn" onclick="sendAiConsultantMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-3 rounded-xl transition shadow-md flex items-center gap-1.5 shrink-0">
+                                <i data-lucide="send" class="w-4 h-4"></i> 질문 전송
                             </button>
                         </div>
                     </div>
@@ -890,15 +903,22 @@
                 </div>
 
             </div>
+        </div>
+    </div>
 
-            <!-- Modal Footer -->
-            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center shrink-0">
-                <span class="text-[10px] text-slate-400">BizEval™ Professional v3.5 & Gemini Flash-0925 Powered</span>
-                <button onclick="closeAiReportModal()" class="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg transition">
-                    닫기
-                </button>
+    <!-- Alert 대체 알림 모달 -->
+    <div id="notice-modal-container" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100]">
+        <div class="bg-white rounded-2xl p-6 shadow-xl border border-slate-200 max-w-sm w-full mx-4 text-center space-y-4">
+            <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
             </div>
-
+            <div class="space-y-1">
+                <h4 class="font-bold text-slate-900">알림</h4>
+                <p id="notice-modal-text" class="text-xs text-slate-500">-</p>
+            </div>
+            <button onclick="document.getElementById('notice-modal-container').classList.add('hidden')" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-lg transition">
+                확인
+            </button>
         </div>
     </div>
 
@@ -906,16 +926,12 @@
     <script>
         // Collapsible Row Group Memory (Multi-level toggle control)
         const rowGroupsState = {
-            'cash-in': true,
-            'cash-out': true,
-            'cogs-group': false,  
-            'material': false,
-            'shampoo-mat': false,
-            'treatment-mat': false,
-            'direct-mfg': false,
-            'sga-group': false,   
-            'debt-schedule': true, 
-            'net-income-group': false 
+            'cogs-var-group': false,
+            'cogs-fix-group': false,
+            'sga-var-group': false,
+            'sga-fix-group': false,
+            'fcf-calc-group': true,
+            'debt-schedule': false
         };
 
         // Standard Global Chart Instances
@@ -924,14 +940,14 @@
 
         // 초기 설비 리스트 데이터 메모리 저장소
         let equipmentData = [
-            { name: '초고속 교반 및 혼합설비', cost: 250 },
-            { name: '원액 고정밀 충진설비', cost: 150 },
-            { name: '자동 포장 및 인라인 라벨러', cost: 100 }
+            { name: '초고속 교반/혼합설비', cost: 250 },
+            { name: '고정밀 충진설비', cost: 150 },
+            { name: '자동 포장/라벨러', cost: 100 }
         ];
 
         // 글로벌 금융 데이터 캐싱 객체 (AI 전송용)
         let latestFinancialCache = {};
-        let chatHistory = []; // CFO Multi-turn Conversation logs
+        let chatHistory = []; 
 
         // AI 시나리오 프리셋 정의
         const AI_PRESETS = {
@@ -967,20 +983,24 @@
             document.getElementById('param_mfg_fuel').value = 500;
 
             document.getElementById('mfg_indirect_fixed').value = 40;
-            document.getElementById('sga_dir_var').value = 3;
-            document.getElementById('sga_ind_var').value = 2;
+            document.getElementById('param_rentTotal').value = 50;
             document.getElementById('sga_dir_fix').value = 20;
             document.getElementById('sga_ind_fix').value = 30;
+            
+            document.getElementById('sga_dir_var').value = 3;
+            document.getElementById('sga_ind_var').value = 2;
 
             document.getElementById('wc_ar').value = 60;
-            document.getElementById('wc_ap').value = 3;
+            document.getElementById('wc_ap').value = 30;
             document.getElementById('wc_inv').value = 60;
+            document.getElementById('wc_other_ca').value = 1.5;
+            document.getElementById('wc_other_cl').value = 2.0;
 
             document.getElementById('util_y1').value = 50;
             document.getElementById('util_y2').value = 70;
             document.getElementById('util_y3').value = 85;
-            document.getElementById('util_y4').value = 90;
-            document.getElementById('util_y5').value = 90;
+            document.getElementById('util_y4').value = 95;
+            document.getElementById('util_y5').value = 105;
 
             document.getElementById('param_init_wc_material').value = 50;
             document.getElementById('param_init_wc_labor').value = 30;
@@ -990,12 +1010,20 @@
             document.getElementById('param_debt_rate').value = 5.5;
             document.getElementById('param_debt_repayment_method').value = 'bullet';
             document.getElementById('param_wacc').value = 10.5;
+            document.getElementById('param_taxRate').value = 20;
+            document.getElementById('param_inflation').value = 3.5;
+
+            document.getElementById('param_auto_expansion').checked = true;
+            document.getElementById('param_expansion_threshold').value = 95;
+            document.getElementById('param_expansion_cost').value = 150;
+            document.getElementById('param_expansion_capa').value = 150000;
 
             equipmentData = [
-                { name: '초고속 교반 및 혼합설비', cost: 250 },
-                { name: '원액 고정밀 충진설비', cost: 150 },
-                { name: '자동 포장 및 인라인 라벨러', cost: 100 }
+                { name: '초고속 교반/혼합설비', cost: 250 },
+                { name: '고정밀 충진설비', cost: 150 },
+                { name: '자동 포장/라벨러', cost: 100 }
             ];
+
             document.getElementById('use_historical_vol').checked = true;
             document.getElementById('param_fx_vol').value = 8.43;
             toggleFxVolatilityInput();
@@ -1010,7 +1038,6 @@
             runAnalysis();
         }
 
-        // 설비 리스트 렌더링
         function renderEquipments() {
             const tbody = document.getElementById('equipment_list_body');
             let html = '';
@@ -1019,9 +1046,9 @@
             equipmentData.forEach((eq, index) => {
                 total += eq.cost;
                 html += `
-                <tr class="hover:bg-slate-50">
+                <tr class="hover:bg-slate-50 transition">
                     <td class="py-1.5 px-3 font-medium text-slate-700">${eq.name}</td>
-                    <td class="py-1.5 px-3 text-right font-bold text-slate-900">${eq.cost.toLocaleString()} 백만</td>
+                    <td class="py-1.5 px-3 text-right font-bold text-slate-900">${eq.cost.toLocaleString()}</td>
                     <td class="py-1.5 px-3 text-center">
                         <button type="button" onclick="deleteEquipment(${index})" class="text-rose-500 hover:text-rose-700 transition">
                             <i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i>
@@ -1031,54 +1058,36 @@
             });
 
             if (equipmentData.length === 0) {
-                html = `
-                <tr>
-                    <td colspan="3" class="py-4 text-center text-slate-400 italic">등록된 설비 투자금액이 없습니다.</td>
-                </tr>`;
+                html = `<tr><td colspan="3" class="py-4 text-center text-slate-400 italic">등록된 설비 투자금액이 없습니다.</td></tr>`;
             }
 
             tbody.innerHTML = html;
             document.getElementById('total_capex_display').innerText = `${total.toLocaleString()} 백만원`;
             document.getElementById('param_capex').value = total;
-            
             lucide.createIcons();
         }
 
-        // 설비 추가 등록 기능
         function addEquipment() {
-            const nameInput = document.getElementById('new_eq_name');
-            const costInput = document.getElementById('new_eq_cost');
+            const name = document.getElementById('new_eq_name').value.trim();
+            const cost = parseFloat(document.getElementById('new_eq_cost').value);
 
-            const name = nameInput.value.trim();
-            const cost = parseFloat(costInput.value);
-
-            if (!name) {
-                showNoticeModal('설비명을 입력해 주세요.');
-                return;
-            }
-            if (isNaN(cost) || cost <= 0) {
-                showNoticeModal('올바른 투자금액(백만원)을 입력해 주세요.');
-                return;
-            }
+            if (!name) return showNoticeModal('설비명을 입력해 주세요.');
+            if (isNaN(cost) || cost <= 0) return showNoticeModal('올바른 투자금액을 입력해 주세요.');
 
             equipmentData.push({ name, cost });
-            nameInput.value = '';
-            costInput.value = '';
+            document.getElementById('new_eq_name').value = '';
+            document.getElementById('new_eq_cost').value = '';
 
             renderEquipments();
-            updateFundingSplitLabels();
             runAnalysis();
         }
 
-        // 설비 삭제 기능
         function deleteEquipment(index) {
             equipmentData.splice(index, 1);
             renderEquipments();
-            updateFundingSplitLabels();
             runAnalysis();
         }
 
-        // 환율 체크박스 핸들러
         function toggleFxVolatilityInput() {
             const checkbox = document.getElementById('use_historical_vol');
             const fxInput = document.getElementById('param_fx_vol');
@@ -1091,39 +1100,16 @@
             runAnalysis();
         }
 
-        // Alert 대체 알림 모달 창 띄우기 함수
         function showNoticeModal(message) {
-            let container = document.getElementById('notice-modal-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'notice-modal-container';
-                container.className = 'fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100]';
-                document.body.appendChild(container);
-            }
-            container.innerHTML = `
-                <div class="bg-white rounded-2xl p-6 shadow-xl border border-slate-200 max-w-sm w-full mx-4 text-center space-y-4">
-                    <div class="w-12 h-12 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center mx-auto">
-                        <i data-lucide="alert-circle" class="w-6 h-6"></i>
-                    </div>
-                    <div class="space-y-1">
-                        <h4 class="font-bold text-slate-900">알림</h4>
-                        <p class="text-xs text-slate-500">${message}</p>
-                    </div>
-                    <button onclick="document.getElementById('notice-modal-container').remove()" class="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold py-2 rounded-lg transition">
-                        확인
-                    </button>
-                </div>
-            `;
-            lucide.createIcons();
+            document.getElementById('notice-modal-text').innerText = message;
+            document.getElementById('notice-modal-container').classList.remove('hidden');
         }
 
-        // Toggle Expandable Rows dynamically and cascadingly
         function toggleRowGroup(groupId) {
             rowGroupsState[groupId] = !rowGroupsState[groupId];
             updateTableVisibility();
         }
 
-        // Update the visibility state of each tr based on cascaded states
         function updateTableVisibility() {
             const rows = document.querySelectorAll('#financialTableBody tr');
             rows.forEach(r => {
@@ -1131,1680 +1117,675 @@
                 if (!group) return; 
 
                 let visible = true;
+                if (group === 'cogs-var-child') visible = rowGroupsState['cogs-var-group'];
+                else if (group === 'cogs-fix-child') visible = rowGroupsState['cogs-fix-group'];
+                else if (group === 'sga-var-child') visible = rowGroupsState['sga-var-group'];
+                else if (group === 'sga-fix-child') visible = rowGroupsState['sga-fix-group'];
+                else if (group === 'fcf-calc-child') visible = rowGroupsState['fcf-calc-group'];
+                else if (group === 'debt-schedule-child') visible = rowGroupsState['debt-schedule'];
 
-                // 1단계 계층: Cash-In 하위 계정들
-                if (group === 'cash-in-child') {
-                    visible = rowGroupsState['cash-in'];
-                } 
-                // 1단계 계층: Cash-Out 하위의 대그룹들 (제조원가 대분류, 판관비 대분류, 법인세 등)
-                else if (group === 'cogs-group-child') {
-                    visible = rowGroupsState['cash-out'] && rowGroupsState['cogs-group'];
-                }
-                else if (group === 'sga-group-child') {
-                    visible = rowGroupsState['cash-out'] && rowGroupsState['sga-group'];
-                }
-                else if (group === 'cash-out-direct') {
-                    visible = rowGroupsState['cash-out'];
-                }
-                // 2단계 계층: 제조원가 하위의 원재료 및 직접제조경비 분류
-                else if (group === 'material-child') {
-                    visible = rowGroupsState['cash-out'] && rowGroupsState['cogs-group'] && rowGroupsState['material'];
-                }
-                else if (group === 'direct-mfg-child') {
-                    visible = rowGroupsState['cash-out'] && rowGroupsState['cogs-group'] && rowGroupsState['direct-mfg'];
-                }
-                // 3단계 계층: 원재료비 하위의 샴푸/트리트먼트 세부
-                else if (group === 'shampoo-mat-child') {
-                    visible = rowGroupsState['cash-out'] && rowGroupsState['cogs-group'] && rowGroupsState['material'] && rowGroupsState['shampoo-mat'];
-                }
-                else if (group === 'treatment-mat-child') {
-                    visible = rowGroupsState['cash-out'] && rowGroupsState['cogs-group'] && rowGroupsState['material'] && rowGroupsState['treatment-mat'];
-                }
-                // FCFE 전용 계층: 차입금 관련 부채상환 스케줄 연동
-                else if (group === 'debt-schedule-child') {
-                    visible = rowGroupsState['debt-schedule'];
-                }
-                // 당기순이익 세부 항목 연동
-                else if (group === 'net-income-child') {
-                    visible = rowGroupsState['net-income-group'];
-                }
-
-                if (visible) {
-                    r.classList.remove('hidden');
-                } else {
-                    r.classList.add('hidden');
-                }
+                if (visible) r.classList.remove('hidden'); 
+                else r.classList.add('hidden');
             });
 
-            // Sync toggle indicator icons
+            // Sync Icons
             const syncIcon = (id) => {
                 const iconEl = document.getElementById(`toggle-icon-${id}`);
-                if (iconEl) {
-                    iconEl.setAttribute('data-lucide', rowGroupsState[id] ? 'chevron-down' : 'chevron-right');
-                }
+                if (iconEl) iconEl.setAttribute('data-lucide', rowGroupsState[id] ? 'chevron-down' : 'chevron-right');
             };
-            ['cash-in', 'cash-out', 'cogs-group', 'material', 'shampoo-mat', 'treatment-mat', 'direct-mfg', 'sga-group', 'debt-schedule', 'net-income-group'].forEach(syncIcon);
+            Object.keys(rowGroupsState).forEach(syncIcon);
             lucide.createIcons();
         }
 
-        // Box-Muller Transform for Monte Carlo Simulation
         function randomNormal(mean = 0, stdDev = 1) {
-            let u1 = Math.random();
-            let u2 = Math.random();
+            let u1 = Math.random(); let u2 = Math.random();
             while(u1 <= 0.0000001) u1 = Math.random();
-            let randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
-            return mean + stdDev * randStdNormal;
+            return mean + stdDev * (Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2));
         }
 
-        // IRR Calculator using Secant Method
         function calculateIRR(cf) {
-            const maxIteration = 1000;
-            const precision = 0.00001;
-            let r0 = 0.05; 
-            let r1 = 0.15; 
-            
-            const npv = (rate) => {
-                return cf.reduce((acc, val, t) => acc + val / Math.pow(1 + rate, t), 0);
-            };
+            let r0 = 0.05, r1 = 0.15; 
+            const npv = (rate) => cf.reduce((acc, val, t) => acc + val / Math.pow(1 + rate, t), 0);
+            let f0 = npv(r0), f1 = npv(r1);
 
-            let f0 = npv(r0);
-            let f1 = npv(r1);
-
-            for (let i = 0; i < maxIteration; i++) {
+            for (let i = 0; i < 1000; i++) {
                 if (Math.abs(f1 - f0) < 1e-12) break;
                 let rNext = r1 - f1 * (r1 - r0) / (f1 - f0);
                 if (isNaN(rNext) || !isFinite(rNext)) return null;
-                
-                r0 = r1;
-                r1 = rNext;
-                f0 = f1;
-                f1 = npv(r1);
-
-                if (Math.abs(f1) < precision) {
-                    return r1 * 100;
-                }
+                r0 = r1; r1 = rNext; f0 = f1; f1 = npv(r1);
+                if (Math.abs(f1) < 0.00001) return r1 * 100;
             }
             return null; 
         }
 
-        function fmt(value) {
-            return Math.round(value).toLocaleString();
-        }
+        function fmt(value) { return Math.round(value).toLocaleString(); }
 
-        // Realtime update parameters breakdown ratios under input boxes
         function updateParameterLabels() {
-            // 1. Shampoo Mix %
             const sMix = parseFloat(document.getElementById('param_shampoo_mix').value);
             document.getElementById('lbl_shampoo_mix').innerText = `${sMix}% (트리트먼트 ${100 - sMix}%)`;
             
-            // 2. Shampoo Materials Split
-            const sActive = parseFloat(document.getElementById('param_shampoo_active').value);
-            const sPkg = parseFloat(document.getElementById('param_shampoo_pkg').value);
-            const sBox = parseFloat(document.getElementById('param_shampoo_box').value);
-            const sTotal = sActive + sPkg + sBox;
-            document.getElementById('lbl_shampoo_total').innerText = `총 L당 원재료비: ${sTotal.toLocaleString()}원`;
-            document.getElementById('lbl_shampoo_active_pct').innerText = sTotal > 0 ? `(${((sActive/sTotal)*100).toFixed(0)}%)` : '(0%)';
-            document.getElementById('lbl_shampoo_pkg_pct').innerText = sTotal > 0 ? `(${((sPkg/sTotal)*100).toFixed(0)}%)` : '(0%)';
-            document.getElementById('lbl_shampoo_box_pct').innerText = sTotal > 0 ? `(${((sBox/sTotal)*100).toFixed(0)}%)` : '(0%)';
+            const calcPct = (a,p,b, el1, el2, el3, elTotal) => {
+                let tot = a+p+b;
+                document.getElementById(elTotal).innerText = `총 L당: ${tot.toLocaleString()}원`;
+                document.getElementById(el1).innerText = tot>0?`(${((a/tot)*100).toFixed(0)}%)`:'(0%)';
+                document.getElementById(el2).innerText = tot>0?`(${((p/tot)*100).toFixed(0)}%)`:'(0%)';
+                document.getElementById(el3).innerText = tot>0?`(${((b/tot)*100).toFixed(0)}%)`:'(0%)';
+            };
 
-            // 3. Treatment Materials Split
-            const tActive = parseFloat(document.getElementById('param_treatment_active').value);
-            const tPkg = parseFloat(document.getElementById('param_treatment_pkg').value);
-            const tBox = parseFloat(document.getElementById('param_treatment_box').value);
-            const tTotal = tActive + tPkg + tBox;
-            document.getElementById('lbl_treatment_total').innerText = `총 L당 원재료비: ${tTotal.toLocaleString()}원`;
-            document.getElementById('lbl_treatment_active_pct').innerText = tTotal > 0 ? `(${((tActive/tTotal)*100).toFixed(0)}%)` : '(0%)';
-            document.getElementById('lbl_treatment_pkg_pct').innerText = tTotal > 0 ? `(${((tPkg/tTotal)*100).toFixed(0)}%)` : '(0%)';
-            document.getElementById('lbl_treatment_box_pct').innerText = tTotal > 0 ? `(${((tBox/tTotal)*100).toFixed(0)}%)` : '(0%)';
-
-            // 4. Direct MFG Expenses Split
-            const mElec = parseFloat(document.getElementById('param_mfg_elec').value);
-            const mWater = parseFloat(document.getElementById('param_mfg_water').value);
-            const mFuel = parseFloat(document.getElementById('param_mfg_fuel').value);
-            const mTotal = mElec + mWater + mFuel;
-            document.getElementById('lbl_mfg_total').innerText = `총 L당 직접경비: ${mTotal.toLocaleString()}원`;
-            document.getElementById('lbl_mfg_elec_pct').innerText = mTotal > 0 ? `(${((mElec/mTotal)*100).toFixed(0)}%)` : '(0%)';
-            document.getElementById('lbl_mfg_water_pct').innerText = mTotal > 0 ? `(${((mWater/mTotal)*100).toFixed(0)}%)` : '(0%)';
-            document.getElementById('lbl_mfg_fuel_pct').innerText = mTotal > 0 ? `(${((mFuel/mTotal)*100).toFixed(0)}%)` : '(0%)';
+            calcPct(parseFloat(document.getElementById('param_shampoo_active').value), parseFloat(document.getElementById('param_shampoo_pkg').value), parseFloat(document.getElementById('param_shampoo_box').value), 'lbl_shampoo_active_pct', 'lbl_shampoo_pkg_pct', 'lbl_shampoo_box_pct', 'lbl_shampoo_total');
+            calcPct(parseFloat(document.getElementById('param_treatment_active').value), parseFloat(document.getElementById('param_treatment_pkg').value), parseFloat(document.getElementById('param_treatment_box').value), 'lbl_treatment_active_pct', 'lbl_treatment_pkg_pct', 'lbl_treatment_box_pct', 'lbl_treatment_total');
+            calcPct(parseFloat(document.getElementById('param_mfg_elec').value), parseFloat(document.getElementById('param_mfg_water').value), parseFloat(document.getElementById('param_mfg_fuel').value), 'lbl_mfg_elec_pct', 'lbl_mfg_water_pct', 'lbl_mfg_fuel_pct', 'lbl_mfg_total');
         }
 
-        // Realtime update Funding split Labels
         function updateFundingSplitLabels() {
-            const debtRatio = parseFloat(document.getElementById('param_debt_ratio').value) / 100;
-            document.getElementById('lbl_debt_ratio').innerText = `${Math.round(debtRatio * 100)}% (자기자본 ${Math.round((1 - debtRatio) * 100)}%)`;
-
+            const ratio = parseFloat(document.getElementById('param_debt_ratio').value) / 100;
             const capex = parseFloat(document.getElementById('param_capex').value) || 0;
-            const initWcMat = parseFloat(document.getElementById('param_init_wc_material').value) || 0;
-            const initWcLab = parseFloat(document.getElementById('param_init_wc_labor').value) || 0;
-            const initWcCont = parseFloat(document.getElementById('param_init_wc_contingency').value) || 0;
-            const totalInitWc = initWcMat + initWcLab + initWcCont;
-
-            const totalReq = capex + totalInitWc;
-            const debtVal = totalReq * debtRatio;
-            const equityVal = totalReq - debtVal;
-
-            document.getElementById('lbl_equity_funding_val').innerText = `${fmt(equityVal)} 백만원`;
-            document.getElementById('lbl_debt_funding_val').innerText = `${fmt(debtVal)} 백만원`;
+            const wc = (parseFloat(document.getElementById('param_init_wc_material').value)||0) + (parseFloat(document.getElementById('param_init_wc_labor').value)||0) + (parseFloat(document.getElementById('param_init_wc_contingency').value)||0);
+            
+            const req = capex + wc;
+            document.getElementById('lbl_equity_funding_val').innerText = `${fmt(req * (1 - ratio))} 백만`;
+            document.getElementById('lbl_debt_funding_val').innerText = `${fmt(req * ratio)} 백만`;
+            document.getElementById('lbl_debt_ratio').innerText = `${(ratio*100)}%`;
         }
 
-        // Primary DCF Engine & Financial Computation
+        // ==========================================
+        // MAIN DCF & ANALYSIS ENGINE
+        // ==========================================
         function runAnalysis() {
-            // Read UI inputs
-            const costOfEquity = parseFloat(document.getElementById('param_wacc').value) / 100;
-            const growth = parseFloat(document.getElementById('param_growth').value) / 100;
+            updateFundingSplitLabels();
+            const WACC = parseFloat(document.getElementById('param_wacc').value) / 100;
             const inflation = parseFloat(document.getElementById('param_inflation').value) / 100;
             const taxRate = parseFloat(document.getElementById('param_taxRate').value) / 100;
             
-            const capex = parseFloat(document.getElementById('param_capex').value);
+            const initCapex = parseFloat(document.getElementById('param_capex').value);
             const depYears = parseInt(document.getElementById('param_depYears').value);
             const amortization = parseFloat(document.getElementById('param_amortization').value);
-
-            // 초기 운전자본 세부항목 및 합계 집계
-            const initWcMat = parseFloat(document.getElementById('param_init_wc_material').value) || 0;
-            const initWcLab = parseFloat(document.getElementById('param_init_wc_labor').value) || 0;
-            const initWcCont = parseFloat(document.getElementById('param_init_wc_contingency').value) || 0;
-            const totalInitWc = initWcMat + initWcLab + initWcCont;
-
-            // UI Label Update
-            document.getElementById('total_init_wc_display').innerText = `${totalInitWc.toLocaleString()} 백만원`;
-            const totalInitialInvestment = capex + totalInitWc;
-
-            // [FCFE 핵심 자본 조달 가중치 변수]
-            const debtRatio = parseFloat(document.getElementById('param_debt_ratio').value) / 100;
-            const debtInterestRate = parseFloat(document.getElementById('param_debt_rate').value) / 100;
-            const repaymentMethod = document.getElementById('param_debt_repayment_method').value;
-
-            const totalDebtFunded = totalInitialInvestment * debtRatio;
-            const totalEquityFunded = totalInitialInvestment - totalDebtFunded;
-
-            // 자기자본 투자금 KPI 바인딩
-            document.getElementById('kpi_payback_capex_display').innerText = totalEquityFunded.toLocaleString();
-            updateFundingSplitLabels();
-
-            // CAPA & Production Operators
-            const capaSize = parseFloat(document.getElementById('param_capa_size').value);
-            const bottleSize = parseFloat(document.getElementById('param_bottle_size').value); 
-            const capaTime = parseFloat(document.getElementById('param_capa_time').value);
-            const capaDays = parseFloat(document.getElementById('param_capa_days').value);
-            const shifts = parseInt(document.getElementById('param_capa_shifts').value);
-            const capaYield = parseFloat(document.getElementById('param_capa_yield').value) / 100;
-
-            const utils = [
-                parseFloat(document.getElementById('util_y1').value) / 100,
-                parseFloat(document.getElementById('util_y2').value) / 100,
-                parseFloat(document.getElementById('util_y3').value) / 100,
-                parseFloat(document.getElementById('util_y4').value) / 100,
-                parseFloat(document.getElementById('util_y5').value) / 100
-            ];
-
-            // Product Dualization Mix & Pricing
-            const shampooMix = parseFloat(document.getElementById('param_shampoo_mix').value) / 100;
-            const tPriceShampoo = parseFloat(document.getElementById('param_price_shampoo').value);
-            const tPriceTreatment = parseFloat(document.getElementById('param_price_treatment').value);
-
-            // Detailed Costs
-            const sActive = parseFloat(document.getElementById('param_shampoo_active').value);
-            const sPkg = parseFloat(document.getElementById('param_shampoo_pkg').value);
-            const sBox = parseFloat(document.getElementById('param_shampoo_box').value);
-
-            const tActive = parseFloat(document.getElementById('param_treatment_active').value);
-            const tPkg = parseFloat(document.getElementById('param_treatment_pkg').value);
-            const tBox = parseFloat(document.getElementById('param_treatment_box').value);
-
-            // Direct MFG Costs Detail
-            const mElec = parseFloat(document.getElementById('param_mfg_elec').value);
-            const mWater = parseFloat(document.getElementById('param_mfg_water').value);
-            const mFuel = parseFloat(document.getElementById('param_mfg_fuel').value);
-
-            const staff_prod = parseInt(document.getElementById('staff_prod').value);
-            const staff_sales = parseInt(document.getElementById('staff_sales').value);
-            const staff_admin = parseInt(document.getElementById('staff_admin').value);
-            const staff_hr = parseInt(document.getElementById('staff_hr').value);
-            const avgSalary = parseFloat(document.getElementById('param_avgSalary').value);
-
-            const rentArea = parseFloat(document.getElementById('param_rentArea').value);
-            const rentPerPyung = parseFloat(document.getElementById('param_rentPerPyung').value);
-
-            const mfg_indirect_fixed = parseFloat(document.getElementById('mfg_indirect_fixed').value);
-
-            const sga_dir_var = parseFloat(document.getElementById('sga_dir_var').value) / 100;
-            const sga_ind_var = parseFloat(document.getElementById('sga_ind_var').value) / 100;
-            const sga_dir_fix = parseFloat(document.getElementById('sga_dir_fix').value);
-            const sga_ind_fix = parseFloat(document.getElementById('sga_ind_fix').value);
 
             const wc_ar_days = parseFloat(document.getElementById('wc_ar').value);
             const wc_ap_days = parseFloat(document.getElementById('wc_ap').value);
             const wc_inv_days = parseFloat(document.getElementById('wc_inv').value);
+            const wc_other_ca_pct = parseFloat(document.getElementById('wc_other_ca').value) / 100;
+            const wc_other_cl_pct = parseFloat(document.getElementById('wc_other_cl').value) / 100;
 
-            const fx_volatility = parseFloat(document.getElementById('param_fx_vol').value) / 100;
+            const initWc = parseFloat(document.getElementById('param_init_wc_material').value) + 
+                           parseFloat(document.getElementById('param_init_wc_labor').value) + 
+                           parseFloat(document.getElementById('param_init_wc_contingency').value);
+            document.getElementById('total_init_wc_display').innerText = `${initWc} 백만원`;
+            const totalInitInvestment = initCapex + initWc;
 
-            const batchesPerDay = (shifts * 8) / capaTime;
-            const maxAnnualProductionCapa = (batchesPerDay * capaDays * capaSize) * capaYield;
-            const maxAnnualProductionBottles = maxAnnualProductionCapa / bottleSize;
+            const debtRatio = parseFloat(document.getElementById('param_debt_ratio').value) / 100;
+            const debtRate = parseFloat(document.getElementById('param_debt_rate').value) / 100;
+            const repayment = document.getElementById('param_debt_repayment_method').value;
+            
+            const initDebt = totalInitInvestment * debtRatio;
+            const initEquity = totalInitInvestment - initDebt;
+            document.getElementById('kpi_payback_capex_display').innerText = fmt(initEquity);
 
-            document.getElementById('dash_capa_vol').innerText = Math.round(maxAnnualProductionCapa).toLocaleString();
-            document.getElementById('dash_capa_bottles').innerText = Math.round(maxAnnualProductionBottles).toLocaleString();
+            // Expansion Options
+            const autoExp = document.getElementById('param_auto_expansion').checked;
+            const expThreshold = parseFloat(document.getElementById('param_expansion_threshold').value) / 100;
+            const expCost = parseFloat(document.getElementById('param_expansion_cost').value);
+            const expCapaIncrease = parseFloat(document.getElementById('param_expansion_capa').value);
 
-            let begDebt = Array(6).fill(0);
-            let debtIssued = Array(6).fill(0);
-            let debtRepayment = Array(6).fill(0);
-            let endDebt = Array(6).fill(0);
-            let interestExpense = Array(6).fill(0);
+            let baseCapa = parseFloat(document.getElementById('param_capa_size').value) * (parseInt(document.getElementById('param_capa_shifts').value) * 8 / parseFloat(document.getElementById('param_capa_time').value)) * parseFloat(document.getElementById('param_capa_days').value) * (parseFloat(document.getElementById('param_capa_yield').value) / 100);
+            let currentCapa = baseCapa;
+            const bottleSize = parseFloat(document.getElementById('param_bottle_size').value);
 
-            debtIssued[0] = totalDebtFunded;
-            endDebt[0] = totalDebtFunded;
-
-            for (let t = 1; t <= 5; t++) {
-                begDebt[t] = endDebt[t-1];
-                interestExpense[t] = begDebt[t] * debtInterestRate;
-
-                if (repaymentMethod === 'bullet') {
-                    debtRepayment[t] = (t === 5) ? totalDebtFunded : 0;
-                } else {
-                    debtRepayment[t] = totalDebtFunded / 5;
-                }
-                endDebt[t] = begDebt[t] - debtRepayment[t];
-            }
-
-            let fin = {
-                capa: Array(6).fill(maxAnnualProductionCapa),
-                capa_bottles: Array(6).fill(maxAnnualProductionBottles),
-                util: [0, ...utils],
-                qty: [0, 0, 0, 0, 0, 0], 
-                qty_bottles: [0, 0, 0, 0, 0, 0],
-                qty_shampoo: [0, 0, 0, 0, 0, 0],
-                qty_shampoo_bottles: [0, 0, 0, 0, 0, 0],
-                qty_treatment: [0, 0, 0, 0, 0, 0],
-                qty_treatment_bottles: [0, 0, 0, 0, 0, 0],
-                avg_unit_price: [0, 0, 0, 0, 0, 0],
-                avg_bottle_price: [0, 0, 0, 0, 0, 0],
+            let f = {
+                capa: [0,0,0,0,0,0], capa_bottles: [0,0,0,0,0,0],
+                qty: [0,0,0,0,0,0], qty_bottles: [0,0,0,0,0,0], util: [0,0,0,0,0,0],
                 
-                revenue: [0, 0, 0, 0, 0, 0],
-                revenue_shampoo: [0, 0, 0, 0, 0, 0],
-                revenue_treatment: [0, 0, 0, 0, 0, 0],
-
-                cogs_material: [0, 0, 0, 0, 0, 0], 
-                shampoo_mat_total: [0, 0, 0, 0, 0, 0],
-                shampoo_mat_active: [0, 0, 0, 0, 0, 0],
-                shampoo_mat_pkg: [0, 0, 0, 0, 0, 0],
-                shampoo_mat_box: [0, 0, 0, 0, 0, 0],
-
-                treatment_mat_total: [0, 0, 0, 0, 0, 0],
-                treatment_mat_active: [0, 0, 0, 0, 0, 0],
-                treatment_mat_pkg: [0, 0, 0, 0, 0, 0],
-                treatment_mat_box: [0, 0, 0, 0, 0, 0],
-
-                cogs_direct_exp: [0, 0, 0, 0, 0, 0], 
-                direct_mfg_elec: [0, 0, 0, 0, 0, 0],
-                direct_mfg_water: [0, 0, 0, 0, 0, 0],
-                direct_mfg_fuel: [0, 0, 0, 0, 0, 0],
-
-                cogs_labor: [0, 0, 0, 0, 0, 0],
-                cogs_indirect_exp: [0, 0, 0, 0, 0, 0],
-                cogs: [0, 0, 0, 0, 0, 0],
-
-                grossProfit: [0, 0, 0, 0, 0, 0],
-
-                sga_labor: [0, 0, 0, 0, 0, 0],
-                sga_rent: [0, 0, 0, 0, 0, 0],
-                sga_dir_var: [0, 0, 0, 0, 0, 0],
-                sga_ind_var: [0, 0, 0, 0, 0, 0],
-                sga_dir_fix: [0, 0, 0, 0, 0, 0],
-                sga_ind_fix: [0, 0, 0, 0, 0, 0],
-                sga: [0, 0, 0, 0, 0, 0],
-
-                ebitda: [0, 0, 0, 0, 0, 0],
-                depreciation: [0, 0, 0, 0, 0, 0],
-                amortization: [0, 0, 0, 0, 0, 0],
-                ebit: [0, 0, 0, 0, 0, 0],
-
-                interest_expense: interestExpense,
-                ebt: [0, 0, 0, 0, 0, 0],
-                tax: [0, 0, 0, 0, 0, 0],
-                net_income: [0, 0, 0, 0, 0, 0],
-
-                ar: [0, 0, 0, 0, 0, 0],
-                ap: [0, 0, 0, 0, 0, 0],
-                inv: [0, 0, 0, 0, 0, 0],
-                nwc: [0, 0, 0, 0, 0, 0],
-                ar_change: [0, 0, 0, 0, 0, 0],
-                ap_change: [0, 0, 0, 0, 0, 0],
-                inv_change: [0, 0, 0, 0, 0, 0],
-                nwc_change: [0, 0, 0, 0, 0, 0],
-
-                cash_in_sales: [0, 0, 0, 0, 0, 0],
-                total_cash_in: [0, 0, 0, 0, 0, 0],
-
-                cash_out_cogs_group: [0, 0, 0, 0, 0, 0],
-                cash_out_sga_group: [0, 0, 0, 0, 0, 0],
-
-                cash_out_material: [0, 0, 0, 0, 0, 0],
-                cash_out_direct_mfg: [0, 0, 0, 0, 0, 0],
-                cash_out_labor_mfg: [0, 0, 0, 0, 0, 0],
-                cash_out_fixed_mfg: [0, 0, 0, 0, 0, 0],
-                cash_out_labor_sga: [0, 0, 0, 0, 0, 0],
-                cash_out_rent: [0, 0, 0, 0, 0, 0],
-                cash_out_dir_var_sga: [0, 0, 0, 0, 0, 0],
-                cash_out_ind_var_sga: [0, 0, 0, 0, 0, 0],
-                cash_out_dir_fix_sga: [0, 0, 0, 0, 0, 0],
-                cash_out_ind_fix_sga: [0, 0, 0, 0, 0, 0],
-                cash_out_tax: [0, 0, 0, 0, 0, 0],
-                total_cash_out: [0, 0, 0, 0, 0, 0],
-
-                net_operating_cf: [0, 0, 0, 0, 0, 0],
-
-                capex: [-capex, 0, 0, 0, 0, 0],
-                init_wc_data: [-totalInitWc, 0, 0, 0, 0, 0],
-
-                beg_debt: begDebt,
-                new_debt_issued: debtIssued,
-                debt_repayment: debtRepayment,
-                end_debt: endDebt,
-
-                fcfe: [-totalEquityFunded, 0, 0, 0, 0, 0],
-                discountedFCFE: [-totalEquityFunded, 0, 0, 0, 0, 0],
-                cumFCFE: [-totalEquityFunded, 0, 0, 0, 0, 0]
+                revenue: [0,0,0,0,0,0], 
+                
+                // 분리된 제조원가
+                cogs_var_mat: [0,0,0,0,0,0], cogs_var_util: [0,0,0,0,0,0], cogs_var_total: [0,0,0,0,0,0],
+                cogs_fix_labor: [0,0,0,0,0,0], cogs_fix_indirect: [0,0,0,0,0,0], cogs_fix_total: [0,0,0,0,0,0],
+                
+                // 분리된 판관비
+                sga_var_dir: [0,0,0,0,0,0], sga_var_ind: [0,0,0,0,0,0], sga_var_total: [0,0,0,0,0,0],
+                sga_fix_labor: [0,0,0,0,0,0], sga_fix_rent: [0,0,0,0,0,0], sga_fix_dir: [0,0,0,0,0,0], sga_fix_ind: [0,0,0,0,0,0], sga_fix_total: [0,0,0,0,0,0],
+                
+                ebitda: [0,0,0,0,0,0], dep_amort: [0,0,0,0,0,0], ebit: [0,0,0,0,0,0],
+                
+                // Debt schedule
+                beg_debt: [initDebt,0,0,0,0,0], new_debt: [initDebt,0,0,0,0,0], debt_repayment: [0,0,0,0,0,0], end_debt: [initDebt,0,0,0,0,0], interest: [0,0,0,0,0,0], 
+                
+                ebt: [0,0,0,0,0,0], tax: [0,0,0,0,0,0], net_income: [0,0,0,0,0,0],
+                
+                // Working capital & Assets/Liabilities
+                ar: [0,0,0,0,0,0], ap: [0,0,0,0,0,0], inv: [0,0,0,0,0,0], other_ca: [0,0,0,0,0,0], other_cl: [0,0,0,0,0,0], nwc: [initWc,0,0,0,0,0], nwc_change: [0,0,0,0,0,0],
+                
+                capex_total: [-initCapex,0,0,0,0,0], net_debt_flow: [initDebt,0,0,0,0,0], fcfe: [-initEquity,0,0,0,0,0], cum_fcfe: [-initEquity,0,0,0,0,0], dfcfe: [-initEquity,0,0,0,0,0]
             };
 
-            fin.ar[0] = 0;
-            fin.ap[0] = 0;
-            fin.inv[0] = initWcMat; 
-            fin.nwc[0] = totalInitWc; 
+            const utils = [0, parseFloat(document.getElementById('util_y1').value)/100, parseFloat(document.getElementById('util_y2').value)/100, parseFloat(document.getElementById('util_y3').value)/100, parseFloat(document.getElementById('util_y4').value)/100, parseFloat(document.getElementById('util_y5').value)/100];
+            
+            const shampooMix = parseFloat(document.getElementById('param_shampoo_mix').value)/100;
+            const pShampoo = parseFloat(document.getElementById('param_price_shampoo').value);
+            const pTreatment = parseFloat(document.getElementById('param_price_treatment').value);
+            
+            const var_mat_s = parseFloat(document.getElementById('param_shampoo_active').value) + parseFloat(document.getElementById('param_shampoo_pkg').value) + parseFloat(document.getElementById('param_shampoo_box').value);
+            const var_mat_t = parseFloat(document.getElementById('param_treatment_active').value) + parseFloat(document.getElementById('param_treatment_pkg').value) + parseFloat(document.getElementById('param_treatment_box').value);
+            const var_util = parseFloat(document.getElementById('param_mfg_elec').value) + parseFloat(document.getElementById('param_mfg_water').value) + parseFloat(document.getElementById('param_mfg_fuel').value);
 
-            for (let t = 1; t <= 5; t++) {
-                let inflationFactor = Math.pow(1 + inflation, t - 1);
+            const fix_mfg_indirect = parseFloat(document.getElementById('mfg_indirect_fixed').value);
+            const fix_mfg_labor = parseInt(document.getElementById('staff_prod').value) * parseFloat(document.getElementById('param_avgSalary').value);
+            
+            const fix_sga_rent = parseFloat(document.getElementById('param_rentTotal').value);
+            const fix_sga_labor = parseInt(document.getElementById('staff_sga').value) * parseFloat(document.getElementById('param_avgSalary').value);
+            const fix_sga_dir = parseFloat(document.getElementById('sga_dir_fix').value);
+            const fix_sga_ind = parseFloat(document.getElementById('sga_ind_fix').value);
+            
+            const var_sga_dir_pct = parseFloat(document.getElementById('sga_dir_var').value)/100;
+            const var_sga_ind_pct = parseFloat(document.getElementById('sga_ind_var').value)/100;
 
-                fin.qty[t] = maxAnnualProductionCapa * fin.util[t];
-                fin.qty_bottles[t] = fin.qty[t] / bottleSize;
+            let depSchedules = [{ year: 0, cost: initCapex, years: depYears }];
+            let totalAccCapex = initCapex;
 
-                fin.qty_shampoo[t] = fin.qty[t] * shampooMix;
-                fin.qty_shampoo_bottles[t] = fin.qty_shampoo[t] / bottleSize;
-
-                fin.qty_treatment[t] = fin.qty[t] * (1 - shampooMix);
-                fin.qty_treatment_bottles[t] = fin.qty_treatment[t] / bottleSize;
-
-                const inflPriceShampoo = tPriceShampoo * inflationFactor;
-                const inflPriceTreatment = tPriceTreatment * inflationFactor;
-
-                fin.revenue_shampoo[t] = (fin.qty_shampoo[t] * inflPriceShampoo) / 1000000;
-                fin.revenue_treatment[t] = (fin.qty_treatment[t] * inflPriceTreatment) / 1000000;
-                fin.revenue[t] = fin.revenue_shampoo[t] + fin.revenue_treatment[t];
-
-                fin.avg_unit_price[t] = fin.qty[t] > 0 ? (fin.revenue[t] * 1000000) / fin.qty[t] : 0;
-                fin.avg_bottle_price[t] = fin.qty_bottles[t] > 0 ? (fin.revenue[t] * 1000000) / fin.qty_bottles[t] : 0;
-
-                fin.shampoo_mat_active[t] = (fin.qty_shampoo[t] * sActive * inflationFactor) / 1000000;
-                fin.shampoo_mat_pkg[t] = (fin.qty_shampoo[t] * sPkg * inflationFactor) / 1000000;
-                fin.shampoo_mat_box[t] = (fin.qty_shampoo[t] * sBox * inflationFactor) / 1000000;
-                fin.shampoo_mat_total[t] = fin.shampoo_mat_active[t] + fin.shampoo_mat_pkg[t] + fin.shampoo_mat_box[t];
-
-                fin.treatment_mat_active[t] = (fin.qty_treatment[t] * tActive * inflationFactor) / 1000000;
-                fin.treatment_mat_pkg[t] = (fin.qty_treatment[t] * tPkg * inflationFactor) / 1000000;
-                fin.treatment_mat_box[t] = (fin.qty_treatment[t] * tBox * inflationFactor) / 1000000;
-                fin.treatment_mat_total[t] = fin.treatment_mat_active[t] + fin.treatment_mat_pkg[t] + fin.treatment_mat_box[t];
-
-                fin.cogs_material[t] = fin.shampoo_mat_total[t] + fin.treatment_mat_total[t];
-
-                fin.direct_mfg_elec[t] = (fin.qty[t] * mElec * inflationFactor) / 1000000;
-                fin.direct_mfg_water[t] = (fin.qty[t] * mWater * inflationFactor) / 1000000;
-                fin.direct_mfg_fuel[t] = (fin.qty[t] * mFuel * inflationFactor) / 1000000;
-                fin.cogs_direct_exp[t] = fin.direct_mfg_elec[t] + fin.direct_mfg_water[t] + fin.direct_mfg_fuel[t];
-
-                fin.cogs_labor[t] = (staff_prod * avgSalary) * inflationFactor;
-                fin.cogs_indirect_exp[t] = mfg_indirect_fixed * inflationFactor;
-                fin.cogs[t] = fin.cogs_material[t] + fin.cogs_labor[t] + fin.cogs_direct_exp[t] + fin.cogs_indirect_exp[t];
-
-                fin.grossProfit[t] = fin.revenue[t] - fin.cogs[t];
-
-                fin.sga_labor[t] = ((staff_sales + staff_admin + staff_hr) * avgSalary) * inflationFactor;
-                fin.sga_rent[t] = (rentArea * rentPerPyung) * inflationFactor;
-                fin.sga_dir_var[t] = fin.revenue[t] * sga_dir_var;
-                fin.sga_ind_var[t] = fin.revenue[t] * sga_ind_var;
-                fin.sga_dir_fix[t] = sga_dir_fix * inflationFactor;
-                fin.sga_ind_fix[t] = sga_ind_fix * inflationFactor;
-                fin.sga[t] = fin.sga_labor[t] + fin.sga_rent[t] + fin.sga_dir_var[t] + fin.sga_ind_var[t] + fin.sga_dir_fix[t] + fin.sga_ind_fix[t];
-
-                fin.ebitda[t] = fin.grossProfit[t] - fin.sga[t];
-                fin.depreciation[t] = t <= depYears ? (capex / depYears) : 0;
-                fin.amortization[t] = amortization;
-                fin.ebit[t] = fin.ebitda[t] - fin.depreciation[t] - fin.amortization[t];
-
-                fin.ebt[t] = fin.ebit[t] - fin.interest_expense[t];
-                fin.tax[t] = fin.ebt[t] > 0 ? (fin.ebit[t] * taxRate) : 0;
-                fin.net_income[t] = fin.ebt[t] - fin.tax[t];
-
-                if (t < 5) {
-                    fin.ar[t] = (fin.revenue[t] / 365) * wc_ar_days;
-                    fin.ap[t] = (fin.cogs_material[t] / 365) * wc_ap_days;
-                    fin.inv[t] = (fin.cogs_material[t] / 365) * wc_inv_days;
-                    fin.nwc[t] = fin.ar[t] + fin.inv[t] - fin.ap[t];
-                } else {
-                    fin.ar[5] = 0;
-                    fin.ap[5] = 0;
-                    fin.inv[5] = 0;
-                    fin.nwc[5] = 0; 
-                }
-
-                fin.ar_change[t] = fin.ar[t] - fin.ar[t-1];
-                fin.ap_change[t] = fin.ap[t] - fin.ap[t-1];
-                fin.inv_change[t] = fin.inv[t] - fin.inv[t-1];
-                fin.nwc_change[t] = fin.nwc[t] - fin.nwc[t-1];
-
-                fin.cash_in_sales[t] = fin.revenue[t] - fin.ar_change[t];
-                fin.total_cash_in[t] = fin.cash_in_sales[t];
-
-                fin.cash_out_material[t] = fin.cogs_material[t] + fin.inv_change[t] - fin.ap_change[t];
-                fin.cash_out_direct_mfg[t] = fin.cogs_direct_exp[t];
-                fin.cash_out_labor_mfg[t] = fin.cogs_labor[t];
-                fin.cash_out_fixed_mfg[t] = fin.cogs_indirect_exp[t];
+            for(let t=1; t<=5; t++) {
+                let inf = Math.pow(1 + inflation, t-1);
                 
-                fin.cash_out_labor_sga[t] = fin.sga_labor[t];
-                fin.cash_out_rent[t] = fin.sga_rent[t];
-                fin.cash_out_dir_var_sga[t] = fin.sga_dir_var[t];
-                fin.cash_out_ind_var_sga[t] = fin.sga_ind_var[t];
-                fin.cash_out_dir_fix_sga[t] = fin.sga_dir_fix[t];
-                fin.cash_out_ind_fix_sga[t] = fin.sga_ind_fix[t];
-                fin.cash_out_tax[t] = fin.tax[t];
+                // Auto Expansion Logic
+                let demandQty = currentCapa * utils[t];
+                if(autoExp && (demandQty / currentCapa) >= expThreshold && t < 5) {
+                    f.capex_total[t] = -expCost;
+                    currentCapa += expCapaIncrease;
+                    totalAccCapex += expCost;
+                    depSchedules.push({ year: t, cost: expCost, years: depYears });
+                }
+                
+                f.capa[t] = currentCapa;
+                f.capa_bottles[t] = currentCapa / bottleSize;
+                
+                f.qty[t] = Math.min(demandQty, currentCapa);
+                f.qty_bottles[t] = f.qty[t] / bottleSize;
+                f.util[t] = f.qty[t] / f.capa[t];
 
-                fin.cash_out_cogs_group[t] = 
-                    fin.cash_out_material[t] + 
-                    fin.cash_out_direct_mfg[t] + 
-                    fin.cash_out_labor_mfg[t] + 
-                    fin.cash_out_fixed_mfg[t];
+                let qS = f.qty[t] * shampooMix;
+                let qT = f.qty[t] * (1 - shampooMix);
+                
+                f.revenue[t] = ((qS * pShampoo * inf) + (qT * pTreatment * inf)) / 1000000;
+                
+                f.cogs_var_mat[t] = ((qS * var_mat_s * inf) + (qT * var_mat_t * inf)) / 1000000;
+                f.cogs_var_util[t] = (f.qty[t] * var_util * inf) / 1000000;
+                f.cogs_var_total[t] = f.cogs_var_mat[t] + f.cogs_var_util[t];
+                
+                f.cogs_fix_labor[t] = fix_mfg_labor * inf;
+                f.cogs_fix_indirect[t] = fix_mfg_indirect * inf;
+                f.cogs_fix_total[t] = f.cogs_fix_labor[t] + f.cogs_fix_indirect[t];
+                
+                f.sga_var_dir[t] = f.revenue[t] * var_sga_dir_pct;
+                f.sga_var_ind[t] = f.revenue[t] * var_sga_ind_pct;
+                f.sga_var_total[t] = f.sga_var_dir[t] + f.sga_var_ind[t];
 
-                fin.cash_out_sga_group[t] = 
-                    fin.cash_out_labor_sga[t] + 
-                    fin.cash_out_rent[t] + 
-                    fin.cash_out_dir_var_sga[t] + 
-                    fin.cash_out_ind_var_sga[t] + 
-                    fin.cash_out_dir_fix_sga[t] + 
-                    fin.cash_out_ind_fix_sga[t];
+                f.sga_fix_labor[t] = fix_sga_labor * inf;
+                f.sga_fix_rent[t] = fix_sga_rent * inf;
+                f.sga_fix_dir[t] = fix_sga_dir * inf;
+                f.sga_fix_ind[t] = fix_sga_ind * inf;
+                f.sga_fix_total[t] = f.sga_fix_labor[t] + f.sga_fix_rent[t] + f.sga_fix_dir[t] + f.sga_fix_ind[t];
+                
+                f.ebitda[t] = f.revenue[t] - (f.cogs_var_total[t] + f.cogs_fix_total[t] + f.sga_var_total[t] + f.sga_fix_total[t]);
+                
+                f.dep_amort[t] = amortization;
+                depSchedules.forEach(sch => {
+                    if (t > sch.year && t <= sch.year + sch.years) f.dep_amort[t] += (sch.cost / sch.years);
+                });
 
-                fin.total_cash_out[t] = fin.cash_out_cogs_group[t] + fin.cash_out_sga_group[t] + fin.cash_out_tax[t];
-                fin.net_operating_cf[t] = fin.total_cash_in[t] - fin.total_cash_out[t];
+                f.ebit[t] = f.ebitda[t] - f.dep_amort[t];
+                
+                // Debt Repayment schedule
+                f.beg_debt[t] = f.end_debt[t-1];
+                f.interest[t] = f.beg_debt[t] * debtRate;
+                f.ebt[t] = f.ebit[t] - f.interest[t];
+                f.tax[t] = f.ebt[t] > 0 ? f.ebt[t] * taxRate : 0;
+                f.net_income[t] = f.ebt[t] - f.tax[t];
 
-                fin.fcfe[t] = fin.net_income[t] + fin.depreciation[t] + fin.amortization[t] - fin.nwc_change[t] - fin.debt_repayment[t];
-                fin.discountedFCFE[t] = fin.fcfe[t] / Math.pow(1 + costOfEquity, t);
+                f.debt_repayment[t] = (repayment === 'bullet') ? (t === 5 ? initDebt : 0) : (initDebt / 5);
+                f.end_debt[t] = f.beg_debt[t] - f.debt_repayment[t];
+                f.net_debt_flow[t] = -f.debt_repayment[t];
+
+                // Advanced NWC & Other Assets/Liabilities
+                if (t < 5) {
+                    f.ar[t] = (f.revenue[t]/365) * wc_ar_days;
+                    f.inv[t] = (f.cogs_var_mat[t]/365) * wc_inv_days;
+                    f.ap[t] = (f.cogs_var_mat[t]/365) * wc_ap_days;
+                    f.other_ca[t] = f.revenue[t] * wc_other_ca_pct;
+                    let totalOpCost = f.cogs_var_total[t] + f.cogs_fix_total[t] + f.sga_var_total[t] + f.sga_fix_total[t];
+                    f.other_cl[t] = totalOpCost * wc_other_cl_pct;
+                    
+                    f.nwc[t] = f.ar[t] + f.inv[t] + f.other_ca[t] - f.ap[t] - f.other_cl[t];
+                } else {
+                    f.nwc[t] = 0; // 5년차 환수
+                }
+
+                f.nwc_change[t] = f.nwc[t] - f.nwc[t-1];
+                
+                // FCFE Indirect Method
+                f.fcfe[t] = f.net_income[t] + f.dep_amort[t] - f.nwc_change[t] + f.capex_total[t] + f.net_debt_flow[t];
+                f.dfcfe[t] = f.fcfe[t] / Math.pow(1 + WACC, t);
+                f.cum_fcfe[t] = f.cum_fcfe[t-1] + f.fcfe[t];
             }
 
-            fin.cumFCFE[0] = -totalEquityFunded;
-            for (let t = 1; t <= 5; t++) {
-                fin.cumFCFE[t] = fin.cumFCFE[t-1] + fin.fcfe[t];
-            }
+            document.getElementById('dash_capa_vol').innerText = Math.round(f.capa[5]).toLocaleString();
+            document.getElementById('dash_capa_bottles').innerText = Math.round(f.capa_bottles[5]).toLocaleString();
+            document.getElementById('dash_total_capex').innerText = totalAccCapex.toLocaleString() + " 백만원";
 
-            // Sync Header Qty displays
-            document.getElementById('dash_vol_y1').innerText = `${Math.round(fin.qty[1]).toLocaleString()} L / ${Math.round(fin.qty_bottles[1]).toLocaleString()} 병`;
-            document.getElementById('dash_vol_y5').innerText = `${Math.round(fin.qty[5]).toLocaleString()} L / ${Math.round(fin.qty_bottles[5]).toLocaleString()} 병`;
-
-            // FCFE 가치평가 산출
-            let npvVal = fin.discountedFCFE.reduce((acc, val) => acc + val, 0);
-            let irrInputCf = [-totalEquityFunded, fin.fcfe[1], fin.fcfe[2], fin.fcfe[3], fin.fcfe[4], fin.fcfe[5]];
-            let irrVal = calculateIRR(irrInputCf);
-
-            let paybackPeriod = null;
-            for (let t = 1; t <= 5; t++) {
-                if (fin.cumFCFE[t-1] < 0 && fin.cumFCFE[t] >= 0) {
-                    let fraction = (-fin.cumFCFE[t-1]) / fin.fcfe[t];
-                    paybackPeriod = (t - 1) + fraction;
-                    break;
+            let npv = f.dfcfe.reduce((a,b)=>a+b, 0);
+            let irr = calculateIRR([-initEquity, f.fcfe[1], f.fcfe[2], f.fcfe[3], f.fcfe[4], f.fcfe[5]]);
+            
+            let payback = null;
+            for(let t=1; t<=5; t++) {
+                if(f.cum_fcfe[t-1] < 0 && f.cum_fcfe[t] >= 0) {
+                    payback = (t-1) + ((-f.cum_fcfe[t-1]) / f.fcfe[t]); break;
                 }
             }
 
-            // Sync Card values
+            // Sync Cards
             const npvEl = document.getElementById('kpi_npv');
-            const npvStatusEl = document.getElementById('kpi_npv_status');
-            npvEl.innerText = `${fmt(npvVal)} 백만원`;
-            if (npvVal > 0) {
+            npvEl.innerText = `${fmt(npv)} 백만`;
+            if (npv > 0) {
                 npvEl.className = "text-2xl font-bold text-emerald-600 mt-1";
-                npvStatusEl.innerHTML = `<span class="text-emerald-500 flex items-center gap-1"><i data-lucide="check-circle-2" class="w-4 h-4"></i> 주주타당성 확보 (Equity NPV > 0)</span>`;
+                document.getElementById('kpi_npv_status').innerHTML = `<span class="text-emerald-500 flex items-center gap-1"><i data-lucide="check-circle-2" class="w-4 h-4"></i> 타당성 확보</span>`;
             } else {
                 npvEl.className = "text-2xl font-bold text-rose-600 mt-1";
-                npvStatusEl.innerHTML = `<span class="text-rose-500 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-4 h-4"></i> 주주회수 미달 (Equity NPV < 0)</span>`;
+                document.getElementById('kpi_npv_status').innerHTML = `<span class="text-rose-500 flex items-center gap-1"><i data-lucide="alert-triangle" class="w-4 h-4"></i> 회수 미달</span>`;
             }
 
             const irrEl = document.getElementById('kpi_irr');
-            if (irrVal !== null) {
-                irrEl.innerText = `${irrVal.toFixed(2)} %`;
-                irrEl.className = irrVal > (costOfEquity*100) ? "text-2xl font-bold text-emerald-600 mt-1" : "text-2xl font-bold text-rose-600 mt-1";
-            } else {
-                irrEl.innerText = "N/A";
-                irrEl.className = "text-2xl font-bold text-slate-400 mt-1";
-            }
+            if(irr) {
+                irrEl.innerText = `${irr.toFixed(2)} %`;
+                irrEl.className = irr > (WACC*100) ? "text-2xl font-bold text-emerald-600 mt-1" : "text-2xl font-bold text-rose-600 mt-1";
+            } else irrEl.innerText = "N/A";
 
             const paybackEl = document.getElementById('kpi_payback');
-            if (paybackPeriod !== null) {
-                let y = Math.floor(paybackPeriod);
-                let m = Math.round((paybackPeriod - y) * 12);
-                paybackEl.innerHTML = `${y}년 <span class="text-sm font-medium text-slate-500">${m}개월</span>`;
-            } else {
-                paybackEl.innerText = "5년 초과";
-                paybackEl.className = "text-2xl font-bold text-rose-500 mt-1";
-            }
+            if(payback) paybackEl.innerHTML = `${Math.floor(payback)}년 <span class="text-sm text-slate-500">${Math.round((payback-Math.floor(payback))*12)}개월</span>`;
+            else { paybackEl.innerText = "초과"; paybackEl.className = "text-2xl font-bold text-rose-500 mt-1"; }
 
-            // Populate table and charts
-            renderFinancialTable(fin, totalEquityFunded, totalDebtFunded);
-            renderCostBreakdown(fin);
-            renderBEP(fin);
+            // Monte Carlo Call (Simplified for integration)
+            let simProb = runMonteCarlo(f, totalInitInvestment, initDebt, initEquity, WACC, WACC, WACC);
 
-            // MONTE CARLO STOCHASTIC SIMULATION (FCFE 기반)
-            let simSuccessProb = runMonteCarloSimulation(costOfEquity, capex, depYears, amortization, taxRate, inflation, growth,
-                maxAnnualProductionCapa, utils, shampooMix, tPriceShampoo, tPriceTreatment,
-                sActive, sPkg, sBox, tActive, tPkg, tBox, mElec, mWater, mFuel,
-                staff_prod, staff_sales, staff_admin, staff_hr, avgSalary, rentArea, rentPerPyung,
-                sga_dir_var, sga_ind_var, sga_dir_fix, sga_ind_fix,
-                wc_ar_days, wc_ap_days, wc_inv_days, fx_volatility, bottleSize, debtRatio, debtInterestRate, repaymentMethod);
-
-            // AI 컨설팅 데이터 캐싱용
-            latestFinancialCache = {
-                metrics: {
-                    npv: npvVal,
-                    irr: irrVal,
-                    payback: paybackPeriod,
-                    successProbability: simSuccessProb,
-                    totalEquityFunded: totalEquityFunded,
-                    totalDebtFunded: totalDebtFunded,
-                    wacc: costOfEquity * 100,
-                    inflation: inflation * 100,
-                    taxRate: taxRate * 100,
-                    debtInterestRate: debtInterestRate * 100,
-                    repaymentMethod: repaymentMethod
-                },
-                capex: equipmentData,
-                utilization: utils.map(x => x * 100),
-                revenue: fin.revenue.slice(1),
-                netIncome: fin.net_income.slice(1),
-                fcfe: fin.fcfe.slice(1),
-                leverages: {
-                    dflY1: fin.ebit[1] / (fin.ebt[1] || 1),
-                    dtlY1: (fin.revenue[1] - (fin.cogs_material[1] + fin.cogs_direct_exp[1] + fin.sga_dir_var[1] + fin.sga_ind_var[1])) / (fin.ebt[1] || 1)
-                }
-            };
-
-            renderFcfChart(fin);
+            renderTable(f, initEquity);
+            renderCharts(f);
+            renderCostBreakdown(f);
+            renderBEP(f);
             updateTableVisibility();
+            
+            latestFinancialCache = { metrics: { npv, irr, payback, simProb, initEquity, initDebt, wacc:WACC*100 }, f: f };
         }
 
-        // Render Collapsible Horizontal Table
-        function renderFinancialTable(f, equityFund, debtFund) {
-            const body = document.getElementById('financialTableBody');
+        // Simplified Monte Carlo using generated FCFE base shocks
+        function runMonteCarlo(baseF, totInv, debt, equity, Ke, etc, etc2) {
+            const num = 1000; let positive = 0; let results = [];
+            const vol = parseFloat(document.getElementById('param_fx_vol').value)/100;
             
-            const tableSchema = [
-                // 1. CAPA & Yield Assumptions
-                { id: 'meta_capa', name: '가정: 연간 설계 생산용량 (CAPA L)', data: f.capa, type: 'info' },
-                { id: 'meta_capa_bottles', name: '가정: 연간 설계 생산개수 (Bottles 병)', data: f.capa_bottles, type: 'info' },
-                { id: 'meta_util', name: '가정: 연차별 설비 가동률 (%)', data: f.util.map(x=>x*100), type: 'pct' },
-                { id: 'meta_qty', name: '가정: 연간 실제 총 가동량 (L)', data: f.qty, type: 'info' },
-                { id: 'meta_qty_bottles', name: '가정: 연간 실제 총 생산개수 (Bottles 병)', data: f.qty_bottles, type: 'info' },
+            for(let i=0; i<num; i++) {
+                let simNPV = -equity;
+                let shock = Math.exp(randomNormal(0, vol));
+                for(let t=1; t<=5; t++) {
+                    let revShock = 1 + (shock-1)*0.4;
+                    let costShock = 1 + (shock-1)*0.6;
+                    
+                    let simRev = baseF.revenue[t] * revShock;
+                    let simMat = baseF.cogs_var_mat[t] * costShock;
+                    
+                    let ebitda = simRev - (simMat + baseF.cogs_var_util[t] + baseF.cogs_fix_total[t] + baseF.sga_var_total[t] + baseF.sga_fix_total[t]);
+                    let ebt = (ebitda - baseF.dep_amort[t]) - baseF.interest[t];
+                    let ni = ebt - (ebt>0?ebt*0.2:0);
+                    
+                    let nwc = baseF.nwc_change[t]; 
+                    
+                    let fcfe = ni + baseF.dep_amort[t] - nwc + baseF.capex_total[t] + baseF.net_debt_flow[t];
+                    simNPV += fcfe / Math.pow(1+Ke, t);
+                }
+                results.push(simNPV);
+                if(simNPV > 0) positive++;
+            }
+            
+            let prob = (positive/num)*100;
+            const probEl = document.getElementById('kpi_sim_prob');
+            probEl.innerText = `${prob.toFixed(1)} %`;
+            probEl.className = prob>=70?"text-2xl font-bold text-emerald-600 mt-1":prob>=40?"text-2xl font-bold text-amber-500 mt-1":"text-2xl font-bold text-rose-600 mt-1";
+            
+            renderMonteCarloChart(results);
+            return prob;
+        }
+
+        function renderTable(f, initEq) {
+            const body = document.getElementById('financialTableBody');
+            const sc = [
+                { id:'m1', n:'설계 생산능력 (CAPA L)', d:f.capa, t:'info' },
+                { id:'m2', n:'시장 가동 수량 (L)', d:f.qty, t:'info' },
+                { id:'m3', n:'연차별 가동률 (%)', d:f.util.map(x=>x*100), t:'pct' },
+
+                { id:'h1', n:'매출액 (Revenues)', d:f.revenue, t:'header' },
+
+                // 제조원가 (고정/변동 분리)
+                { id:'cv_h', n:'제조 변동비 계', d:f.cogs_var_total, t:'h-sub', p:true, g:'cogs-var-group', cg:'cash-out-child' },
+                { id:'cv_m', n:'└─ 원재료비 (연동)', d:f.cogs_var_mat, t:'det', cg:'cogs-var-child' },
+                { id:'cv_u', n:'└─ 직접제조경비 (유틸)', d:f.cogs_var_util, t:'det', cg:'cogs-var-child' },
                 
-                { id: 'meta_qty_shampoo', name: '└ 샴푸 가동량 (L)', data: f.qty_shampoo, type: 'sub-info' },
-                { id: 'meta_qty_shampoo_bottles', name: '└ 샴푸 생산개수 (병)', data: f.qty_shampoo_bottles, type: 'sub-info' },
-                
-                { id: 'meta_qty_treatment', name: '└ 트리트먼트 가동량 (L)', data: f.qty_treatment, type: 'sub-info' },
-                { id: 'meta_qty_treatment_bottles', name: '└ 트리트먼트 생산개수 (병)', data: f.qty_treatment_bottles, type: 'sub-info' },
-                
-                { id: 'meta_avg_price', name: '└ 가중 평균 리터 단가 (원/L)', data: f.avg_unit_price, type: 'sub-info_price' },
-                { id: 'meta_avg_bottle_price', name: '└ 가중 평균 용기 단가 (원/개)', data: f.avg_bottle_price, type: 'sub-info_price' },
+                { id:'cf_h', n:'제조 고정비 계', d:f.cogs_fix_total, t:'h-sub', p:true, g:'cogs-fix-group', cg:'cash-out-child' },
+                { id:'cf_l', n:'└─ 노무비 (고정급)', d:f.cogs_fix_labor, t:'det', cg:'cogs-fix-child' },
+                { id:'cf_i', n:'└─ 제조 간접고정비', d:f.cogs_fix_indirect, t:'det', cg:'cogs-fix-child' },
 
-                // 2. CASH-IN Header
-                { 
-                    id: 'cash-in-header', 
-                    name: '총 영업활동 현금 유입 (Cash-In)', 
-                    data: f.total_cash_in, 
-                    type: 'header', 
-                    isParent: true, 
-                    groupId: 'cash-in',
-                    highlight: 'bg-emerald-50 text-emerald-950 font-bold border-y border-emerald-100 cursor-pointer hover:bg-emerald-100/70' 
-                },
-                { id: 'sales_collect', name: '매출 수금액 (Sales Receipts)', data: f.cash_in_sales, type: 'detail', groupId: 'cash-in-child' },
-                { id: 'rev_shampoo', name: '└ 샴푸 매출액 (Revenues)', data: f.revenue_shampoo, type: 'sub-detail', groupId: 'cash-in-child' },
-                { id: 'rev_treatment', name: '└ 트리트먼트 매출액 (Revenues)', data: f.revenue_treatment, type: 'sub-detail', groupId: 'cash-in-child' },
-                { id: 'ar_adj', name: '└ 매출채권 조정액 및 5년차 회수액 (-ΔAR)', data: f.ar_change.map(v => -v), type: 'sub-detail', groupId: 'cash-in-child' },
+                // 판관비 (고정/변동 분리)
+                { id:'sv_h', n:'판관 변동비 계', d:f.sga_var_total, t:'h-sub', p:true, g:'sga-var-group', cg:'cash-out-child' },
+                { id:'sv_d', n:'└─ 판관 직접변동 (수수료)', d:f.sga_var_dir, t:'det', cg:'sga-var-child' },
+                { id:'sv_i', n:'└─ 판관 간접변동 (마케팅)', d:f.sga_var_ind, t:'det', cg:'sga-var-child' },
 
-                // 3. CASH-OUT Header
-                { 
-                    id: 'cash-out-header', 
-                    name: '총 영업활동 현금 유출 (Cash-Out)', 
-                    data: f.total_cash_out, 
-                    type: 'header', 
-                    isParent: true, 
-                    groupId: 'cash-out',
-                    highlight: 'bg-rose-50 text-rose-950 font-bold border-y border-rose-100 cursor-pointer hover:bg-rose-100/70' 
-                },
-                
-                // === 제조원가 대분류 ===
-                {
-                    id: 'cogs-group-header',
-                    name: '제조원가 (COGS) 지급액 계',
-                    data: f.cash_out_cogs_group,
-                    type: 'header-sub',
-                    isParent: true,
-                    groupId: 'cogs-group',
-                    highlight: 'bg-slate-100 text-slate-900 font-semibold border-b border-slate-200 cursor-pointer hover:bg-slate-200/50',
-                    dataGroup: 'cash-out-child'
-                },
-                { id: 'out_material', name: '원재료 대금 지급액', data: f.cash_out_material, type: 'detail', isParent: true, groupId: 'material', dataGroup: 'cogs-group-child' },
-                { id: 'shampoo_mat_total', name: '└ 샴푸 원재료비 합산', data: f.shampoo_mat_total, type: 'detail-sub', isParent: true, groupId: 'shampoo-mat', dataGroup: 'material-child' },
-                { id: 'shampoo_mat_active', name: '└─ 샴푸 원액 원료비', data: f.shampoo_mat_active, type: 'detail-sub-leaf', dataGroup: 'shampoo-mat-child' },
-                { id: 'shampoo_mat_pkg', name: '└─ 샴푸 용기/부자재비', data: f.shampoo_mat_pkg, type: 'detail-sub-leaf', dataGroup: 'shampoo-mat-child' },
-                { id: 'shampoo_mat_box', name: '└─ 샴푸 포장 상자비', data: f.shampoo_mat_box, type: 'detail-sub-leaf', dataGroup: 'shampoo-mat-child' },
-                { id: 'treatment_mat_total', name: '└ 트리트먼트 원재료비 합산', data: f.treatment_mat_total, type: 'detail-sub', isParent: true, groupId: 'treatment-mat', dataGroup: 'material-child' },
-                { id: 'treatment_mat_active', name: '└─ 트리트먼트 원액 원료비', data: f.treatment_mat_active, type: 'detail-sub-leaf', dataGroup: 'treatment-mat-child' },
-                { id: 'treatment_mat_pkg', name: '└─ 트리트먼트 용기/부자재비', data: f.treatment_mat_pkg, type: 'detail-sub-leaf', dataGroup: 'treatment-mat-child' },
-                { id: 'treatment_mat_box', name: '└─ 트리트먼트 포장 상자비', data: f.treatment_mat_box, type: 'detail-sub-leaf', dataGroup: 'treatment-mat-child' },
-                { id: 'out_inv_adj', name: '└ 재고 증감 조정 및 5년차 소진액 (+ΔInv)', data: f.inv_change, type: 'detail-sub-leaf', dataGroup: 'material-child' },
-                { id: 'out_ap_adj', name: '└ 매입채무 조정 및 5년차 상환액 (-ΔAP)', data: f.ap_change.map(v => -v), type: 'detail-sub-leaf', dataGroup: 'material-child' },
+                { id:'sf_h', n:'판관 고정비 계', d:f.sga_fix_total, t:'h-sub', p:true, g:'sga-fix-group', cg:'cash-out-child' },
+                { id:'sf_l', n:'└─ 판관 인건비', d:f.sga_fix_labor, t:'det', cg:'sga-fix-child' },
+                { id:'sf_r', n:'└─ 임차료', d:f.sga_fix_rent, t:'det', cg:'sga-fix-child' },
+                { id:'sf_d', n:'└─ 기타 고정경비', d:f.sga_fix_dir, t:'det', cg:'sga-fix-child' },
 
-                { id: 'out_direct_mfg', name: '직접제조경비 지급액 (유틸리티)', data: f.cash_out_direct_mfg, type: 'detail', isParent: true, groupId: 'direct-mfg', dataGroup: 'cogs-group-child' },
-                { id: 'mfg_elec', name: '└─ 전력 광열비', data: f.direct_mfg_elec, type: 'detail-sub-leaf', dataGroup: 'direct-mfg-child' },
-                { id: 'mfg_water', name: '└─ 공업용수/용수비', data: f.direct_mfg_water, type: 'detail-sub-leaf', dataGroup: 'direct-mfg-child' },
-                { id: 'mfg_fuel', name: '└─ 가마 가동 연료비', data: f.direct_mfg_fuel, type: 'detail-sub-leaf', dataGroup: 'direct-mfg-child' },
+                // 부채 스케줄
+                { id:'dbt_h', n:'차입금 재무 스케줄', d:f.end_debt, t:'h-sub', p:true, g:'debt-schedule', hl:'bg-blue-50/50' },
+                { id:'dbt_b', n:'└─ 기초 차입금', d:f.beg_debt, t:'det', cg:'debt-schedule-child' },
+                { id:'dbt_i', n:'└─ 이자비용 지출', d:f.interest.map(x=>-x), t:'det', cg:'debt-schedule-child', hl:'text-rose-500' },
+                { id:'dbt_r', n:'└─ 원금 상환액', d:f.debt_repayment.map(x=>-x), t:'det', cg:'debt-schedule-child', hl:'text-rose-500' },
 
-                { id: 'out_labor_mfg', name: '생산인력 직접노무비 급여', data: f.cash_out_labor_mfg, type: 'detail', dataGroup: 'cogs-group-child' },
-                { id: 'out_fixed_mfg', name: '제조간접고정경비 (설비유지비 등)', data: f.cash_out_fixed_mfg, type: 'detail', dataGroup: 'cogs-group-child' },
+                // FCFE 간접법 산출구조 시각화
+                { id:'fcf_h', n:'주주 현금흐름 (FCFE) 산출 상세', d:Array(6).fill(''), t:'h-sub', p:true, g:'fcf-calc-group', hl:'bg-indigo-50/70 border-y border-indigo-100' },
+                { id:'f_ni', n:'└─ 1. 당기순이익 (+)', d:f.net_income, t:'det', cg:'fcf-calc-child' },
+                { id:'f_da', n:'└─ 2. 감가상각 가산 (+)', d:f.dep_amort, t:'det', cg:'fcf-calc-child' },
+                { id:'f_nw', n:'└─ 3. 운전자본/자산부채 증감 (-)', d:f.nwc_change, t:'det', cg:'fcf-calc-child', hl:'text-amber-600' },
+                { id:'f_cp', n:'└─ 4. 초기/증설 CAPEX 지출 (-)', d:f.capex_total, t:'det', cg:'fcf-calc-child', hl:'text-rose-600' },
+                { id:'f_nd', n:'└─ 5. 차입 조달(+) 및 상환(-)', d:f.net_debt_flow, t:'det', cg:'fcf-calc-child', hl:'text-blue-600' },
 
-                // === 판관비 대분류 ===
-                {
-                    id: 'sga-group-header',
-                    name: '판매비와관리비 (SG&A) 지급액 계',
-                    data: f.cash_out_sga_group,
-                    type: 'header-sub',
-                    isParent: true,
-                    groupId: 'sga-group',
-                    highlight: 'bg-slate-100 text-slate-900 font-semibold border-b border-slate-200 cursor-pointer hover:bg-slate-200/50',
-                    dataGroup: 'cash-out-child'
-                },
-                { id: 'out_labor_sga', name: '관리/영업직 고정인건비', data: f.cash_out_labor_sga, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_rent', name: '공동 사업실/토지 임차료', data: f.cash_out_rent, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_dir_fix_sga', name: '판관 고정직접경비 (영업경비)', data: f.cash_out_dir_fix_sga, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_ind_fix_sga', name: '판관 고정간접경비 (일반운영비)', data: f.cash_out_ind_fix_sga, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_dir_var_sga', name: '판관 직접변동비 (매출연동)', data: f.cash_out_dir_var_sga, type: 'detail', dataGroup: 'sga-group-child' },
-                { id: 'out_ind_var_sga', name: '판관 간접변동비 (운영연동)', data: f.cash_out_ind_var_sga, type: 'detail', dataGroup: 'sga-group-child' },
-
-                // 영업 외 손익 및 당기순이익 산출상세 (이자비용 차감)
-                { id: 'net-income-group-header', name: '당기순이익 (Net Income) 산출 상세', data: f.net_income, type: 'header-sub', isParent: true, groupId: 'net-income-group', highlight: 'bg-indigo-50/70 border-b border-indigo-100 cursor-pointer hover:bg-indigo-100/40 text-indigo-900 font-semibold' },
-                { id: 'ni_ebit', name: '└─ 영업이익 (EBIT)', data: f.ebit, type: 'detail', dataGroup: 'net-income-child' },
-                { id: 'ni_interest', name: '└─ 이자비용 (Interest Expense)', data: f.interest_expense.map(x=>-x), type: 'detail', dataGroup: 'net-income-child', highlight: 'text-rose-500' },
-                { id: 'ni_ebt', name: '└─ 세전이익 (EBT)', data: f.ebt, type: 'detail', dataGroup: 'net-income-child' },
-                { id: 'ni_tax', name: '└─ 법인세 비용 (Taxes)', data: f.tax.map(x=>-x), type: 'detail', dataGroup: 'net-income-child', highlight: 'text-rose-500' },
-
-                // 영업 외 현금흐름 요약
-                { id: 'net_operating_cf_row', name: '순 영업활동 현금흐름 (A)', data: f.net_operating_cf, type: 'summary', highlight: 'bg-slate-100/80 font-bold text-slate-800 border-y border-slate-200' },
-                
-                // [부채 조달 스케줄 상세 추가]
-                { 
-                    id: 'debt_schedule_header', 
-                    name: '재무활동 차입/상환 스케줄', 
-                    data: f.end_debt, 
-                    type: 'header-sub', 
-                    isParent: true, 
-                    groupId: 'debt-schedule', 
-                    highlight: 'bg-blue-50/50 border-b border-blue-100 text-blue-900 font-semibold cursor-pointer' 
-                },
-                { id: 'debt_beg', name: '└─ 기초 차입금 잔액', data: f.beg_debt, type: 'detail', dataGroup: 'debt-schedule-child' },
-                { id: 'debt_new', name: '└─ 신규 차입금 유입 (Year 0)', data: f.new_debt_issued, type: 'detail', dataGroup: 'debt-schedule-child', highlight: 'text-emerald-600' },
-                { id: 'debt_rep', name: '└─ 원금 상환액 지급', data: f.debt_repayment.map(x=>-x), type: 'detail', dataGroup: 'debt-schedule-child', highlight: 'text-rose-600 font-semibold' },
-                { id: 'debt_end', name: '└─ 기말 차입금 잔액', data: f.end_debt, type: 'detail', dataGroup: 'debt-schedule-child' },
-
-                // 주주 배분 핵심 지표 분할
-                { id: 'capex_row', name: '설비 자본투자지출 (CAPEX) (B)', data: f.capex, type: 'summary', highlight: 'text-rose-600 font-semibold' },
-                { id: 'init_wc_row', name: '초기 운전자본 투자액 (C) (예비비 버퍼)', data: f.init_wc_data, type: 'summary', highlight: 'text-amber-600 font-semibold' },
-                { id: 'equity_inject_row', name: '차입 자금 조달 유입 (D) (Debt Flow)', data: f.new_debt_issued, type: 'summary', highlight: 'text-emerald-600 font-bold border-b' },
-                
-                // FCFE 최종 라인
-                { id: 'fcfe_row', name: '자기자본 잉여현금흐름 (FCFE = 당기순이익 + D&A - ΔNWC - CAPEX - 원금상환)', data: f.fcfe, type: 'summary', highlight: 'bg-slate-900 text-emerald-400 font-extrabold text-base border-y-2 border-emerald-500' },
-                { id: 'dfcf_row', name: '할인된 FCFE 현재가치 (PV) (Ke=' + (f.fcfe[0] !== 0 ? (document.getElementById('param_wacc').value + '%') : '') + ')', data: f.discountedFCFE, type: 'summary', highlight: 'text-indigo-600 font-semibold' },
-                { id: 'cum_row', name: '누적 주주 현금흐름 (Cumulative FCFE)', data: f.cumFCFE, type: 'summary', highlight: 'bg-slate-100 font-bold border-t' }
+                { id:'fin', n:'최종 자기자본 잉여현금흐름 (FCFE)', d:f.fcfe, t:'header', hl:'bg-slate-900 text-emerald-400 font-bold border-y-2 border-emerald-500' },
+                { id:'cum', n:'누적 주주 현금흐름', d:f.cum_fcfe, t:'summary', hl:'bg-slate-100 font-bold' }
             ];
 
             let html = '';
-            tableSchema.forEach(row => {
-                let rowGroupClass = '';
-                let clickEvent = '';
-                let indentStyle = 'pl-4';
-
-                if (row.dataGroup) {
-                    rowGroupClass = `data-group="${row.dataGroup}"`;
-                }
-                if (row.isParent) {
-                    clickEvent = `onclick="toggleRowGroup('${row.groupId}')"`;
-                }
-
-                if (row.type === 'sub-info' || row.type === 'sub-info_price') indentStyle = 'pl-8 text-xs text-slate-500 bg-slate-50/20';
-                if (row.type === 'header-sub') indentStyle = 'pl-6 cursor-pointer';
-                if (row.type === 'detail') indentStyle = 'pl-10 cursor-pointer hover:text-indigo-600 text-xs';
-                if (row.type === 'detail-sub') indentStyle = 'pl-12 cursor-pointer hover:text-emerald-600 text-xs';
-                if (row.type === 'detail-sub-leaf') indentStyle = 'pl-16 text-[11px] italic text-slate-400 bg-slate-50/10';
-                if (row.type === 'sub-detail') indentStyle = 'pl-14 text-[11px] italic text-slate-400 bg-slate-50/10';
-
-                let trClass = 'transition-all hover:bg-slate-50 ';
-                if (row.highlight) {
-                    trClass += ` ${row.highlight}`;
-                } else if (row.type === 'info' || row.type === 'pct') {
-                    trClass += ' text-slate-500 bg-slate-50/40 text-xs font-semibold';
-                } else if (row.type === 'header-sub') {
-                    trClass += ' text-slate-900 font-semibold';
-                } else {
-                    trClass += ' text-slate-700';
-                }
-
-                html += `<tr class="${trClass}" ${rowGroupClass} ${clickEvent}>`;
-                html += `<td class="py-2.5 px-4 font-medium border-r border-slate-200 ${indentStyle} flex items-center gap-2">`;
+            sc.forEach(r => {
+                let cl = 'transition hover:bg-slate-50 ';
+                let ind = 'pl-4';
+                if(r.t==='info' || r.t==='pct') cl += 'bg-slate-50/50 text-slate-500 text-xs font-semibold';
+                else if(r.t==='header') cl += 'bg-slate-100 text-slate-800 font-bold';
+                else if(r.t==='h-sub') { cl += 'text-slate-900 font-semibold cursor-pointer'; ind = 'pl-6'; }
+                else if(r.t==='det') { cl += 'text-slate-700 text-xs cursor-pointer'; ind = 'pl-10'; }
+                else if(r.t==='summary') cl += 'text-slate-800';
                 
-                if (row.isParent) {
-                    const iconId = `toggle-icon-${row.groupId}`;
-                    html += `<i id="${iconId}" data-lucide="chevron-right" class="w-4 h-4 text-slate-500 inline-block shrink-0"></i>`;
-                }
-                html += `${row.name}</td>`;
+                if(r.hl) cl += ' ' + r.hl;
+                
+                let icon = r.p ? `<i id="toggle-icon-${r.g}" data-lucide="chevron-down" class="w-4 h-4 text-slate-400 inline-block shrink-0 mr-1"></i>` : '';
+                
+                html += `<tr class="${cl}" ${r.cg?`data-group="${r.cg}"`:''} ${r.p?`onclick="toggleRowGroup('${r.g}')"`:''}>
+                <td class="py-2 px-3 border-r ${ind} flex items-center">${icon}${r.n}</td>`;
+                
+                for(let t=0; t<=5; t++) {
+                    let v = r.d[t];
+                    if(r.id==='fin' && t===0) v = -initEq;
+                    if(r.id==='cum' && t===0) v = -initEq;
 
-                for(let t = 0; t <= 5; t++) {
-                    let val = row.data[t];
-                    if (t === 0) {
-                        if (row.id === 'capex_row' || row.id === 'init_wc_row' || row.id === 'equity_inject_row' || row.id === 'fcfe_row' || row.id === 'dfcf_row' || row.id === 'cum_row' || row.id === 'debt_new' || row.id === 'debt_end') {
-                            
-                            let printVal = val;
-                            if (row.id === 'fcfe_row' || row.id === 'dfcf_row' || row.id === 'cum_row') {
-                                printVal = -equityFund; 
-                            }
-                            if (row.id === 'debt_end') {
-                                printVal = debtFund;
-                            }
-                            
-                            let color = printVal < 0 ? 'text-rose-600 font-bold' : 'text-emerald-600 font-bold';
-                            html += `<td class="py-2.5 px-4 text-right border-r border-slate-100 ${color}">${fmt(printVal)}</td>`;
-                        } else {
-                            html += `<td class="py-2.5 px-4 text-right border-r border-slate-100 text-slate-300">-</td>`;
-                        }
+                    if(t===0 && r.t!=='header' && r.t!=='summary' && r.id!=='f_nd' && r.id!=='f_cp' && r.id!=='dbt_b' && r.id!=='dbt_h') {
+                        html += `<td class="py-2 px-3 text-right text-slate-300">-</td>`;
                     } else {
-                        let fmtStr = fmt(val);
-                        if (row.type === 'pct') fmtStr = `${val.toFixed(1)}%`;
-                        if (row.id.includes('qty_shampoo_bottles') || row.id.includes('qty_treatment_bottles') || row.id === 'meta_qty_bottles' || row.id === 'meta_capa_bottles') {
-                            fmtStr = Math.round(val).toLocaleString() + ' 병';
-                        } else if (row.id.includes('qty') || row.id.includes('capa')) {
-                            fmtStr = Math.round(val).toLocaleString() + ' L';
-                        }
-                        if (row.type === 'sub-info_price') fmtStr = Math.round(val).toLocaleString() + ' 원';
-                        
-                        let colorClass = val < 0 ? 'text-rose-600 font-semibold' : '';
-                        if (row.highlight) colorClass = ''; 
-                        html += `<td class="py-2.5 px-4 text-right border-r border-slate-100 ${colorClass}">${fmtStr}</td>`;
+                        let txt = (r.t==='pct') ? `${v.toFixed(1)}%` : fmt(v);
+                        if(v==='') txt='-';
+                        html += `<td class="py-2 px-3 text-right ${v<0?'text-rose-600':''}">${txt}</td>`;
                     }
                 }
                 html += `</tr>`;
             });
-
             body.innerHTML = html;
         }
 
-        // Render Pie Breakdowns for cost structures
-        function renderCostBreakdown(f) {
-            const list = document.getElementById('cost_breakdown_list');
-            
-            const mat = f.cogs_material[1];
-            const lab_prod = f.cogs_labor[1];
-            const dir_mfg_exp = f.cogs_direct_exp[1];
-            const ind_mfg_exp = f.cogs_indirect_exp[1];
-            
-            const lab_sga = f.sga_labor[1];
-            const rent = f.sga_rent[1];
-            const var_dir_sga = f.sga_dir_var[1];
-            const var_ind_sga = f.sga_ind_var[1];
-            const fix_dir_sga = f.sga_dir_fix[1];
-            const fix_ind_sga = f.sga_ind_fix[1];
-
-            const int_exp = f.interest_expense[1];
-
-            const total = mat + lab_prod + dir_mfg_exp + ind_mfg_exp + lab_sga + rent + var_dir_sga + var_ind_sga + fix_dir_sga + fix_ind_sga + int_exp;
-
-            const items = [
-                { name: '재료비 (원자재 대금)', val: mat, color: 'bg-emerald-500' },
-                { name: '노무비 (직접 제조급여)', val: lab_prod, color: 'bg-blue-500' },
-                { name: '직접제조경비 (유틸리티 등)', val: dir_mfg_exp, color: 'bg-teal-400' },
-                { name: '제조간접고정경비', val: ind_mfg_exp, color: 'bg-amber-400' },
-                { name: '판관인건비 (관리/영업직 급여)', val: lab_sga, color: 'bg-indigo-500' },
-                { name: '임차료 (공동 평당 임차비)', val: rent, color: 'bg-violet-400' },
-                { name: '판관 고정직접경비', val: fix_dir_sga, color: 'bg-slate-500' },
-                { name: '판관 고정간접경비', val: fix_ind_sga, color: 'bg-slate-400' },
-                { name: '판관 직접변동비 (수수료 등)', val: var_dir_sga, color: 'bg-pink-400' },
-                { name: '판관 간접변동비 (마케팅 등)', val: var_ind_sga, color: 'bg-rose-400' },
-                { name: '금융 활동 이자비용 (타인자본 이자)', val: int_exp, color: 'bg-red-500' }
-            ];
-
-            items.sort((a,b) => b.val - a.val);
-
-            let html = '';
-            items.forEach(item => {
-                let pct = total > 0 ? (item.val / total) * 100 : 0;
-                if(pct > 0.1) {
-                    html += `
-                    <div>
-                        <div class="flex justify-between text-xs mb-1">
-                            <span class="font-medium text-slate-700 flex items-center gap-1.5">
-                                <span class="w-2.5 h-2.5 rounded-full ${item.color} inline-block"></span>
-                                ${item.name}
-                            </span>
-                            <span class="font-semibold text-slate-950">${fmt(item.val)} 백만원 (${pct.toFixed(1)}%)</span>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5">
-                            <div class="${item.color} h-1.5 rounded-full" style="width: ${pct}%"></div>
-                        </div>
-                    </div>`;
-                }
-            });
-            list.innerHTML = html;
-        }
-
-        // Render BEP & DOL, DFL, DTL Leverages
-        function renderBEP(f) {
-            const tbody = document.getElementById('bep_table_body');
-            let html = '';
-
-            for(let t = 1; t <= 5; t++) {
-                let mfg_fixed = f.cogs_labor[t] + f.cogs_indirect_exp[t];
-                let sga_fixed = f.sga_labor[t] + f.sga_rent[t] + f.sga_dir_fix[t] + f.sga_ind_fix[t];
-                let da_fixed = f.depreciation[t] + f.amortization[t];
-                let total_fixed = mfg_fixed + sga_fixed + da_fixed;
-
-                let total_var = f.cogs_material[t] + f.cogs_direct_exp[t] + f.sga_dir_var[t] + f.sga_ind_var[t];
-                
-                let var_ratio = f.revenue[t] > 0 ? (total_var / f.revenue[t]) : 0;
-                let fixed_ratio = f.revenue[t] > 0 ? (total_fixed / f.revenue[t]) : 0;
-                
-                let bep_sales = var_ratio < 1 ? (total_fixed / (1 - var_ratio)) : 0;
-
-                let contribution_margin = f.revenue[t] - total_var;
-                let ebit = f.ebit[t];
-                let dol = 0;
-                let dol_str = "N/A";
-
-                if (ebit > 0) {
-                    dol = contribution_margin / ebit;
-                    dol_str = dol > 0 && dol < 100 ? `${dol.toFixed(2)}배` : "초과";
-                }
-
-                let ebt = f.ebt[t];
-                let dfl = 0;
-                let dfl_str = "N/A";
-
-                if (ebit > 0 && ebt > 0) {
-                    dfl = ebit / ebt;
-                    dfl_str = dfl > 0 && dfl < 100 ? `${dfl.toFixed(2)}배` : "초과";
-                } else if (f.interest_expense[t] === 0) {
-                    dfl_str = "1.00배 (무부채)";
-                    dfl = 1.0;
-                }
-
-                let dtl_str = "N/A";
-                if (ebit > 0 && ebt > 0 && dol > 0 && dfl > 0) {
-                    let dtl = dol * dfl;
-                    dtl_str = dtl > 0 && dtl < 100 ? `${dtl.toFixed(2)}배` : "초과";
-                }
-
-                html += `
-                <tr class="border-b border-slate-100 hover:bg-slate-50 text-xs">
-                    <td class="py-2.5 font-semibold text-slate-700">${t}년차</td>
-                    <td class="py-2.5 text-right text-indigo-600 font-medium">${(fixed_ratio * 100).toFixed(1)}%</td>
-                    <td class="py-2.5 text-right font-bold text-slate-900">${fmt(bep_sales)} 백만</td>
-                    <td class="py-2.5 text-right font-bold text-emerald-600">${dol_str}</td>
-                    <td class="py-2.5 text-right font-bold text-blue-600">${dfl_str}</td>
-                    <td class="py-2.5 text-right font-bold text-purple-600">${dtl_str}</td>
-                </tr>`;
-            }
-            tbody.innerHTML = html;
-        }
-
-        // Monte Carlo Simulation with full Dual Product Split and FCFE logic
-        function runMonteCarloSimulation(costOfEquity, capex, depYears, amortization, taxRate, inflation, growth, 
-                                        maxAnnualProductionCapa, utils, shampooMix, tPriceShampoo, tPriceTreatment,
-                                        sActive, sPkg, sBox, tActive, tPkg, tBox, mElec, mWater, mFuel,
-                                        staff_prod, staff_sales, staff_admin, staff_hr, avgSalary, rentArea, rentPerPyung,
-                                        sga_dir_var, sga_ind_var, sga_dir_fix, sga_ind_fix,
-                                        wc_ar_days, wc_ap_days, wc_inv_days, fx_volatility, bottleSize,
-                                        debtRatio, debtInterestRate, repaymentMethod) {
-            
-            const numSimulations = 1000;
-            let npvResults = [];
-            let positiveNpvCount = 0;
-
-            const initWcMat = parseFloat(document.getElementById('param_init_wc_material').value) || 0;
-            const initWcLab = parseFloat(document.getElementById('param_init_wc_labor').value) || 0;
-            const initWcCont = parseFloat(document.getElementById('param_init_wc_contingency').value) || 0;
-            const totalInitWc = initWcMat + initWcLab + initWcCont;
-            const totalInitialInvestment = capex + totalInitWc;
-
-            const simDebtFunded = totalInitialInvestment * debtRatio;
-            const simEquityFunded = totalInitialInvestment - simDebtFunded;
-
-            // [참조 오류 해결] 로컬 스코프 내부에서 제조 간접고정경비를 안전하게 가져옵니다.
-            const mfg_indirect_fixed = parseFloat(document.getElementById('mfg_indirect_fixed').value) || 0;
-
-            for (let sim = 0; sim < numSimulations; sim++) {
-                let sim_discountedFCFE = [-simEquityFunded];
-                
-                let sim_nwc_prev = totalInitWc;
-                let sim_begDebt = simDebtFunded;
-
-                for (let t = 1; t <= 5; t++) {
-                    let inflationFactor = Math.pow(1 + inflation, t - 1);
-
-                    let fxFactor = Math.exp(randomNormal(0, fx_volatility));
-                    let revenueFXShock = 0.6 + (0.4 * fxFactor);
-                    let materialFXShock = 0.7 + (0.3 * fxFactor);
-
-                    let sim_qty = maxAnnualProductionCapa * utils[t-1];
-                    let sim_qty_shampoo = sim_qty * shampooMix;
-                    let sim_qty_treatment = sim_qty * (1 - shampooMix);
-
-                    let sim_price_shampoo = tPriceShampoo * inflationFactor * revenueFXShock;
-                    let sim_price_treatment = tPriceTreatment * inflationFactor * revenueFXShock;
-
-                    let sim_revenue = ((sim_qty_shampoo * sim_price_shampoo) + (sim_qty_treatment * sim_price_treatment)) / 1000000;
-
-                    let sim_sMat_unit = (sActive + sPkg + sBox) * inflationFactor * materialFXShock;
-                    let sim_tMat_unit = (tActive + tPkg + tBox) * inflationFactor * materialFXShock;
-
-                    let sim_cogs_material = ((sim_qty_shampoo * sim_sMat_unit) + (sim_qty_treatment * sim_tMat_unit)) / 1000000;
-                    let sim_cogs_direct_exp = (sim_qty * (mElec + mWater + mFuel) * inflationFactor) / 1000000;
-
-                    let sim_cogs_labor = (staff_prod * avgSalary) * inflationFactor;
-                    let sim_cogs_indirect_exp = mfg_indirect_fixed * inflationFactor;
-                    let sim_cogs = sim_cogs_material + sim_cogs_labor + sim_cogs_direct_exp + sim_cogs_indirect_exp;
-
-                    let sim_sga_labor = ((staff_sales + staff_admin + staff_hr) * avgSalary) * inflationFactor;
-                    let sim_sga_rent = (rentArea * rentPerPyung) * inflationFactor;
-                    let sim_sga_dir_var = sim_revenue * sga_dir_var;
-                    let sim_sga_ind_var = sim_revenue * sga_ind_var;
-                    let sim_sga_dir_fix = sga_dir_fix * inflationFactor;
-                    let sim_sga_ind_fix = sga_ind_fix * inflationFactor;
-                    let sim_sga = sim_sga_labor + sim_sga_rent + sim_sga_dir_var + sim_sga_ind_var + sim_sga_dir_fix + sim_sga_ind_fix;
-
-                    let sim_ebitda = sim_revenue - sim_cogs - sim_sga;
-                    let sim_dep = t <= depYears ? (capex / depYears) : 0;
-                    let sim_ebit = sim_ebitda - sim_dep - amortization;
-
-                    let sim_interest = sim_begDebt * debtInterestRate;
-                    let sim_ebt = sim_ebit - sim_interest;
-                    let sim_tax = sim_ebt > 0 ? (sim_ebt * taxRate) : 0;
-                    let sim_netIncome = sim_ebt - sim_tax;
-
-                    let sim_repayment = 0;
-                    if (repaymentMethod === 'bullet') {
-                        sim_repayment = (t === 5) ? simDebtFunded : 0;
-                    } else {
-                        sim_repayment = simDebtFunded / 5;
-                    }
-                    sim_begDebt = sim_begDebt - sim_repayment;
-
-                    let sim_nwc = 0;
-                    if (t < 5) {
-                        let ar = (sim_revenue / 365) * wc_ar_days;
-                        let ap = (sim_cogs_material / 365) * wc_ap_days;
-                        let inv = (sim_cogs_material / 365) * wc_inv_days;
-                        sim_nwc = ar + inv - ap;
-                    } else {
-                        sim_nwc = 0; 
-                    }
-
-                    let sim_nwc_change = sim_nwc - sim_nwc_prev;
-                    sim_nwc_prev = sim_nwc;
-
-                    let sim_fcfe = sim_netIncome + sim_dep + amortization - sim_nwc_change - sim_repayment;
-                    sim_discountedFCFE.push(sim_fcfe / Math.pow(1 + costOfEquity, t));
-                }
-
-                let sim_npv = sim_discountedFCFE.reduce((acc, val) => acc + val, 0);
-                npvResults.push(sim_npv);
-                if (sim_npv > 0) positiveNpvCount++;
-            }
-
-            const successProb = (positiveNpvCount / numSimulations) * 100;
-            const simProbEl = document.getElementById('kpi_sim_prob');
-            simProbEl.innerText = `${successProb.toFixed(1)} %`;
-            
-            if (successProb >= 70) {
-                simProbEl.className = "text-2xl font-bold text-emerald-600 mt-1";
-            } else if (successProb >= 40) {
-                simProbEl.className = "text-2xl font-bold text-amber-500 mt-1";
-            } else {
-                simProbEl.className = "text-2xl font-bold text-rose-600 mt-1";
-            }
-
-            renderMonteCarloChart(npvResults);
-            return successProb;
-        }
-
-        // Render Charts 1 (FCFE Progress)
-        function renderFcfChart(f) {
-            const ctx = document.getElementById('fcfChart').getContext('2d');
-            const labels = ['0년차', '1년차', '2년차', '3년차', '4년차', '5년차'];
-            const fcf_data = f.fcfe;
-            const cum_data = f.cumFCFE;
-
-            if (fcfChartInstance) {
-                fcfChartInstance.destroy();
-            }
-
-            fcfChartInstance = new Chart(ctx, {
+        function renderCharts(f) {
+            if(fcfChartInstance) fcfChartInstance.destroy();
+            fcfChartInstance = new Chart(document.getElementById('fcfChart').getContext('2d'), {
+                type: 'bar',
                 data: {
-                    labels: labels,
+                    labels: ['0년','1년','2년','3년','4년','5년'],
                     datasets: [
-                        {
-                            type: 'bar',
-                            label: '연간 주주 FCFE (백만원)',
-                            data: fcf_data,
-                            backgroundColor: fcf_data.map(v => v >= 0 ? 'rgba(79, 70, 229, 0.75)' : 'rgba(239, 68, 68, 0.75)'),
-                            borderColor: fcf_data.map(v => v >= 0 ? '#4f46e5' : '#ef4444'),
-                            borderWidth: 1,
-                            yAxisID: 'y'
-                        },
-                        {
-                            type: 'line',
-                            label: '누적 주주 현금흐름 (백만원)',
-                            data: cum_data,
-                            borderColor: '#e11d48',
-                            borderWidth: 2.5,
-                            pointBackgroundColor: '#e11d48',
-                            pointHoverRadius: 6,
-                            tension: 0.15,
-                            fill: false,
-                            yAxisID: 'y'
-                        }
+                        { type:'bar', label:'연간 FCFE', data:f.fcfe, backgroundColor:f.fcfe.map(v=>v>0?'rgba(79,70,229,0.8)':'rgba(239,68,68,0.8)') },
+                        { type:'line', label:'누적 현금흐름', data:f.cum_fcfe, borderColor:'#e11d48', borderWidth:2, tension:0.1 }
                     ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: { boxWidth: 12, font: { size: 11 } }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${Math.round(context.raw).toLocaleString()} 백만원`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            type: 'linear',
-                            position: 'left',
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 10 } }
-                        }
-                    }
-                }
+                }, options: { responsive:true, maintainAspectRatio:false }
             });
         }
 
-        // Render Charts 2 (Monte Carlo Histogram)
         function renderMonteCarloChart(results) {
             const ctx = document.getElementById('monteCarloChart').getContext('2d');
-
-            const min = Math.min(...results);
-            const max = Math.max(...results);
-            const binCount = 25;
-            const binSize = (max - min) / binCount;
-
-            let bins = Array(binCount).fill(0);
-            let binLabels = [];
-
-            for (let i = 0; i < binCount; i++) {
-                let floor = min + i * binSize;
-                binLabels.push(`${Math.round(floor)}`);
-            }
-
-            results.forEach(val => {
-                let binIdx = Math.floor((val - min) / binSize);
-                if (binIdx >= binCount) binIdx = binCount - 1;
-                if (binIdx < 0) binIdx = 0;
-                bins[binIdx]++;
+            const min = Math.min(...results); const max = Math.max(...results);
+            const bins = 20; const step = (max-min)/bins;
+            let hist = Array(bins).fill(0); let labels = [];
+            
+            for(let i=0; i<bins; i++) labels.push(Math.round(min + i*step));
+            results.forEach(v => {
+                let idx = Math.floor((v-min)/step);
+                if(idx>=bins) idx=bins-1; if(idx<0) idx=0;
+                hist[idx]++;
             });
 
-            const colors = [];
-            for (let i = 0; i < binCount; i++) {
-                let floor = min + i * binSize;
-                if (floor + binSize / 2 < 0) {
-                    colors.push('rgba(239, 68, 68, 0.6)'); 
-                } else {
-                    colors.push('rgba(16, 185, 129, 0.6)'); 
-                }
-            }
-
-            if (monteCarloChartInstance) {
-                monteCarloChartInstance.destroy();
-            }
-
+            if(monteCarloChartInstance) monteCarloChartInstance.destroy();
             monteCarloChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: binLabels,
-                    datasets: [{
-                        label: '시뮬레이션 빈도 (회)',
-                        data: bins,
-                        backgroundColor: colors,
-                        borderColor: colors.map(c => c.replace('0.6', '1')),
-                        borderWidth: 1,
-                        barPercentage: 1.0,
-                        categoryPercentage: 1.0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                title: function(tooltipItems) {
-                                    return `주주 NPV 구간: ~ ${tooltipItems[0].label} 백만원`;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: { display: true, text: '추정 주주 NPV 범위 (백만원)', font: { size: 10 } },
-                            ticks: { maxRotation: 45, minRotation: 45, font: { size: 9 } }
-                        },
-                        y: {
-                            title: { display: true, text: '빈도 수', font: { size: 10 } },
-                            grid: { color: '#f1f5f9' },
-                            ticks: { font: { size: 10 } }
-                        }
-                    }
-                }
+                    labels: labels,
+                    datasets: [{ label:'빈도', data:hist, backgroundColor:labels.map(l=>parseInt(l)<0?'rgba(239,68,68,0.6)':'rgba(16,185,129,0.6)') }]
+                }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
             });
         }
 
-        // ==========================================
-        // [✨ AI CORE INTEGRATIONS] - Gemini 2.5 Flash API
-        // ==========================================
+        function renderCostBreakdown(f) {
+            const list = document.getElementById('cost_breakdown_list');
+            const total = f.cogs_var_total[1] + f.cogs_fix_total[1] + f.sga_var_total[1] + f.sga_fix_total[1] + f.interest[1];
+            
+            const items = [
+                { n: '원재료비 (변동)', v: f.cogs_var_mat[1], c: 'bg-emerald-500' },
+                { n: '직접경비 (유틸)', v: f.cogs_var_util[1], c: 'bg-teal-400' },
+                { n: '제조 고정인건비', v: f.cogs_fix_labor[1], c: 'bg-blue-500' },
+                { n: '제조 고정간접비', v: f.cogs_fix_indirect[1], c: 'bg-amber-400' },
+                { n: '판관 직접변동비', v: f.sga_var_dir[1], c: 'bg-pink-400' },
+                { n: '판관 간접변동비', v: f.sga_var_ind[1], c: 'bg-rose-400' },
+                { n: '판관 고정인건비', v: f.sga_fix_labor[1], c: 'bg-indigo-500' },
+                { n: '판관 임차료/고정비', v: f.sga_fix_rent[1]+f.sga_fix_dir[1]+f.sga_fix_ind[1], c: 'bg-slate-500' },
+                { n: '금융 이자비용', v: f.interest[1], c: 'bg-red-500' }
+            ].sort((a,b)=>b.v-a.v);
 
-        let aiRecommendedParams = null; // AI 시나리오 반영 대기용 데이터
-
-        // Gemini API 호출 래퍼 함수 (Exponential Backoff 적용 및 에러 헨들링 구현)
-        async function callGemini(promptText, systemInstructionText = null, isJson = false, jsonSchema = null) {
-            const apiKey = ""; // Runtime 환경에서 주입됨
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-            
-            const payload = {
-                contents: [{ parts: [{ text: promptText }] }]
-            };
-            
-            if (systemInstructionText) {
-                payload.systemInstruction = { parts: [{ text: systemInstructionText }] };
-            }
-            
-            if (isJson) {
-                payload.generationConfig = {
-                    responseMimeType: "application/json"
-                };
-                if (jsonSchema) {
-                    payload.generationConfig.responseSchema = jsonSchema;
-                }
-            }
-            
-            // Retry 딜레이 정의: 1s, 2s, 4s, 8s, 16s
-            const backoffDelays = [1000, 2000, 4000, 8000, 16000];
-            let lastError = null;
-            
-            for (let attempt = 0; attempt < 5; attempt++) {
-                try {
-                    const response = await fetch(url, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-                    if (response.ok) {
-                        const result = await response.json();
-                        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (text) {
-                            return text;
-                        }
-                    } else {
-                        lastError = new Error(`HTTP 에러 발생 (코드: ${response.status})`);
-                    }
-                } catch (err) {
-                    lastError = err;
-                }
-                // 실패 시 백오프 대기 (콘솔 기록 없음)
-                if (attempt < 4) {
-                    await new Promise(resolve => setTimeout(resolve, backoffDelays[attempt]));
-                }
-            }
-            
-            throw lastError || new Error("Gemini API 서버에 일시적 연결 실패가 발생했습니다.");
+            let h='';
+            items.forEach(i=>{
+                let p = total>0 ? (i.v/total)*100 : 0;
+                if(p>0.1) h+=`
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${i.c}"></span>${i.n}</span>
+                        <span class="font-bold">${fmt(i.v)} (${p.toFixed(1)}%)</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5"><div class="${i.c} h-1.5 rounded-full" style="width:${p}%"></div></div>
+                </div>`;
+            });
+            list.innerHTML = h;
         }
 
-        // Preset Scenario select controller
-        function onAiPresetChange() {
-            const presetVal = document.getElementById('ai_scenario_preset').value;
-            const customContainer = document.getElementById('ai_custom_request_container');
-            if (presetVal === 'custom') {
-                customContainer.classList.remove('hidden');
-                document.getElementById('ai_custom_request').focus();
-            } else {
-                customContainer.classList.add('hidden');
+        function renderBEP(f) {
+            const body = document.getElementById('bep_table_body');
+            let h='';
+            for(let t=1; t<=5; t++) {
+                let fix = f.cogs_fix_total[t] + f.sga_fix_total[t] + f.dep_amort[t];
+                let varTot = f.cogs_var_total[t] + f.sga_var_total[t];
+                let vRatio = f.revenue[t]>0 ? varTot/f.revenue[t] : 0;
+                let bep = vRatio<1 ? fix/(1-vRatio) : 0;
+                
+                let ebit = f.ebit[t]; let cm = f.revenue[t] - varTot;
+                let dol = ebit>0 ? cm/ebit : 0;
+                
+                let ebt = f.ebt[t];
+                let dfl = (ebit>0 && ebt>0) ? ebit/ebt : (f.interest[t]===0?1:0);
+                let dtl = (dol>0 && dfl>0) ? dol*dfl : 0;
+
+                h+=`
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="py-2">${t}년차</td>
+                    <td class="py-2 text-right">${f.revenue[t]>0?((fix/f.revenue[t])*100).toFixed(1):0}%</td>
+                    <td class="py-2 text-right font-bold">${fmt(bep)}</td>
+                    <td class="py-2 text-right">${dol>0&&dol<100?dol.toFixed(2)+'배':'N/A'}</td>
+                    <td class="py-2 text-right">${dfl>0&&dfl<100?dfl.toFixed(2)+'배':'N/A'}</td>
+                    <td class="py-2 text-right">${dtl>0&&dtl<100?dtl.toFixed(2)+'배':'N/A'}</td>
+                </tr>`;
             }
+            body.innerHTML = h;
         }
 
-        // ✨ AI 스마트 시나리오 제안 실행 함수
+        // ==========================================
+        // AI CONSULTING INTEGRATION
+        // ==========================================
+
         async function generateAiScenario() {
             const btn = document.getElementById('ai_scenario_btn');
-            const presetVal = document.getElementById('ai_scenario_preset').value;
-            let targetRequest = "";
-            
-            if (presetVal === 'custom') {
-                targetRequest = document.getElementById('ai_custom_request').value.trim();
-                if (!targetRequest) {
-                    showNoticeModal("커스텀 시나리오 조건을 텍스트박스에 구체적으로 입력해주세요.");
-                    return;
-                }
-            } else {
-                targetRequest = AI_PRESETS[presetVal];
-            }
+            const preset = document.getElementById('ai_scenario_preset').value;
+            let req = preset === 'custom' ? document.getElementById('ai_custom_request').value.trim() : AI_PRESETS[preset];
+            if(!req) return showNoticeModal("조건을 입력해주세요.");
 
-            // UI Loading state
-            btn.disabled = true;
-            btn.innerHTML = `<span class="flex items-center gap-1.5"><i data-lucide="sparkles" class="w-3.5 h-3.5 animate-spin"></i> AI 시나리오 추산 중...</span>`;
-            lucide.createIcons();
+            btn.disabled=true; btn.innerHTML=`<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> 분석 중...`; lucide.createIcons();
 
-            const systemPrompt = `당신은 거시경제 지표 및 화장품 제조업 가치사슬 원가 분석가입니다. 
-사용자가 제시한 특정 경영 위기/기회/친환경 규제 등의 상황 설명을 정밀 해부한 뒤, 시뮬레이터에 적용 가능한 8가지 변수의 조정 추천 수치를 JSON으로 반환해야 합니다.
-반드시 제공된 스키마 구조를 100% 준수하고, 분석 근거(rationale)는 한국어로 전문적이고 신뢰도 높은 경제 용어를 활용해 정교하게 기술하십시오.`;
-
+            const prompt = `당신은 재무 모델링 파라미터 제안 AI입니다. 다음 상황에 맞게 8개 변수를 JSON으로 추천하세요.\n상황: ${req}`;
             const schema = {
-                type: "OBJECT",
-                properties: {
-                    scenario_title: { type: "STRING" },
-                    rationale: { type: "STRING" },
-                    updates: {
-                        type: "OBJECT",
-                        properties: {
-                            param_wacc: { type: "NUMBER", description: "자기자본비용(%) 추천 범위 5 ~ 20" },
-                            param_inflation: { type: "NUMBER", description: "물가상승률(%) 추천 범위 0 ~ 15" },
-                            param_shampoo_mix: { type: "NUMBER", description: "샴푸 판매비중(%) 추천 범위 10 ~ 90" },
-                            param_price_shampoo: { type: "NUMBER", description: "샴푸 L당 판매가(원) 추천 범위 25000 ~ 90000" },
-                            param_price_treatment: { type: "NUMBER", description: "트리트먼트 L당 판매가(원) 추천 범위 30000 ~ 100000" },
-                            param_shampoo_active: { type: "NUMBER", description: "샴푸 L당 원액료(원) 추천 범위 5000 ~ 25000" },
-                            param_treatment_active: { type: "NUMBER", description: "트리트먼트 L당 원액료(원) 추천 범위 7000 ~ 30000" },
-                            param_fx_vol: { type: "NUMBER", description: "원달러환율변동성(%) 추천 범위 3 ~ 20" }
-                        },
-                        required: ["param_wacc", "param_inflation", "param_shampoo_mix", "param_price_shampoo", "param_price_treatment", "param_shampoo_active", "param_treatment_active", "param_fx_vol"]
-                    }
-                },
-                required: ["scenario_title", "rationale", "updates"]
+                type:"OBJECT", properties:{
+                    title:{type:"STRING"}, rationale:{type:"STRING"},
+                    updates:{ type:"OBJECT", properties:{ param_wacc:{type:"NUMBER"}, param_inflation:{type:"NUMBER"}, param_shampoo_mix:{type:"NUMBER"}, param_price_shampoo:{type:"NUMBER"}, param_price_treatment:{type:"NUMBER"}, param_shampoo_active:{type:"NUMBER"}, param_treatment_active:{type:"NUMBER"}, param_fx_vol:{type:"NUMBER"} }, required:["param_wacc","param_inflation","param_shampoo_mix","param_price_shampoo","param_price_treatment","param_shampoo_active","param_treatment_active","param_fx_vol"] }
+                }, required:["title","rationale","updates"]
             };
 
             try {
-                const responseText = await callGemini(targetRequest, systemPrompt, true, schema);
-                const data = JSON.parse(responseText);
+                const res = await callGemini(prompt, null, true, schema);
+                const data = JSON.parse(res);
+                window.aiRecParams = data.updates;
 
-                aiRecommendedParams = data.updates;
-
-                // Render Results to UI Panel
-                document.getElementById('ai_res_title').innerText = data.scenario_title;
+                document.getElementById('ai_res_title').innerText = data.title;
                 document.getElementById('ai_res_rationale').innerText = data.rationale;
-
-                // Create parameter comparison list
-                const paramListContainer = document.getElementById('ai_res_param_list');
-                let paramHtml = '';
-
-                const compareMap = [
-                    { label: "자기자본비용 (Ke)", key: "param_wacc", currentId: "param_wacc", unit: "%" },
-                    { label: "물가상승률", key: "param_inflation", currentId: "param_inflation", unit: "%" },
-                    { label: "샴푸 판매 믹스", key: "param_shampoo_mix", currentId: "param_shampoo_mix", unit: "%" },
-                    { label: "샴푸 리터 단가", key: "param_price_shampoo", currentId: "param_price_shampoo", unit: "원" },
-                    { label: "트리트먼트 단가", key: "param_price_treatment", currentId: "param_price_treatment", unit: "원" },
-                    { label: "샴푸 원액 원료비", key: "param_shampoo_active", currentId: "param_shampoo_active", unit: "원" },
-                    { label: "트리트먼트 원액 원료비", key: "param_treatment_active", currentId: "param_treatment_active", unit: "원" },
-                    { label: "원달러 환율 변동성", key: "param_fx_vol", currentId: "param_fx_vol", unit: "%" }
-                ];
-
-                compareMap.forEach(item => {
-                    let currentVal = parseFloat(document.getElementById(item.currentId).value);
-                    let recommendedVal = data.updates[item.key];
-                    
-                    let diff = recommendedVal - currentVal;
-                    let diffStr = diff === 0 ? "동일" : (diff > 0 ? `+${diff.toLocaleString()}` : `${diff.toLocaleString()}`);
-                    let diffColor = diff === 0 ? "text-slate-400" : (diff > 0 ? "text-emerald-600 font-bold" : "text-rose-600 font-bold");
-
-                    paramHtml += `
-                    <div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-b-0">
-                        <span class="text-slate-600 font-medium">${item.label}</span>
-                        <div class="space-x-1">
-                            <span class="text-slate-400 line-through">${currentVal.toLocaleString()}${item.unit}</span>
-                            <span class="text-indigo-950 font-bold">→ ${recommendedVal.toLocaleString()}${item.unit}</span>
-                            <span class="text-[9px] ${diffColor}">(${diffStr})</span>
-                        </div>
-                    </div>`;
+                
+                let h='';
+                Object.entries({ 'Ke':['param_wacc','%'], '물가':['param_inflation','%'], '샴푸비중':['param_shampoo_mix','%'], '샴푸단가':['param_price_shampoo','원'], '트리트단가':['param_price_treatment','원'], '샴푸원재료':['param_shampoo_active','원'], '트리트원재료':['param_treatment_active','원'], '환율변동성':['param_fx_vol','%'] }).forEach(([label, [id, unit]]) => {
+                    let cur = parseFloat(document.getElementById(id).value);
+                    let rec = data.updates[id];
+                    let diff = rec-cur;
+                    h+=`<div class="flex justify-between border-b border-slate-100 py-1"><span class="text-slate-600">${label}</span><span><span class="line-through text-slate-400 mr-1">${cur}${unit}</span> <span class="font-bold text-indigo-900">${rec}${unit}</span> <span class="text-[9px] ${diff>0?'text-rose-500':'text-emerald-500'}">(${diff>0?'+':''}${diff})</span></span></div>`;
                 });
-
-                paramListContainer.innerHTML = paramHtml;
+                document.getElementById('ai_res_param_list').innerHTML = h;
                 document.getElementById('ai_scenario_results').classList.remove('hidden');
-
-            } catch (err) {
-                showNoticeModal(`AI 변수 생성 실패: ${err.message}`);
+            } catch(e) {
+                showNoticeModal("생성 실패: "+e.message);
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i data-lucide="sparkles" class="w-3.5 h-3.5"></i> ✨ AI 파라미터 추천 실행`;
-                lucide.createIcons();
+                btn.disabled=false; btn.innerHTML=`<i data-lucide="sparkles" class="w-4 h-4"></i> 추천 실행`; lucide.createIcons();
             }
         }
 
-        // 추천 시나리오 변수 시뮬레이터 적용 적용 처리 함수
         function applyAiParams() {
-            if (!aiRecommendedParams) return;
-            
-            // Apply variables
-            document.getElementById('param_wacc').value = aiRecommendedParams.param_wacc;
-            document.getElementById('param_inflation').value = aiRecommendedParams.param_inflation;
-            document.getElementById('param_shampoo_mix').value = aiRecommendedParams.param_shampoo_mix;
-            document.getElementById('param_price_shampoo').value = aiRecommendedParams.param_price_shampoo;
-            document.getElementById('param_price_treatment').value = aiRecommendedParams.param_price_treatment;
-            document.getElementById('param_shampoo_active').value = aiRecommendedParams.param_shampoo_active;
-            document.getElementById('param_treatment_active').value = aiRecommendedParams.param_treatment_active;
-            
-            // Checkbox and FX Volatility synchronizer
-            const fxVolVal = aiRecommendedParams.param_fx_vol;
-            document.getElementById('use_historical_vol').checked = false;
-            document.getElementById('param_fx_vol').disabled = false;
-            document.getElementById('param_fx_vol').value = fxVolVal;
-
-            // Hide recommended panel with a success message
+            if(!window.aiRecParams) return;
+            Object.keys(window.aiRecParams).forEach(k => {
+                let el = document.getElementById(k);
+                if(el) el.value = window.aiRecParams[k];
+            });
+            document.getElementById('use_historical_vol').checked=false;
+            document.getElementById('param_fx_vol').disabled=false;
             document.getElementById('ai_scenario_results').classList.add('hidden');
-            
-            // Refresh simulation
-            updateParameterLabels();
             runAnalysis();
+            showNoticeModal("적용 완료!");
+        }
+
+        function onAiPresetChange() {
+            document.getElementById('ai_custom_request_container').classList.toggle('hidden', document.getElementById('ai_scenario_preset').value !== 'custom');
+        }
+
+        function openAiReportModal() { document.getElementById('ai_report_modal').classList.remove('hidden'); document.body.classList.add('overflow-hidden'); }
+        function closeAiReportModal() { document.getElementById('ai_report_modal').classList.add('hidden'); document.body.classList.remove('overflow-hidden'); }
+
+        async function callGemini(prompt, sys=null, isJson=false, schema=null) {
+            const key = ""; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`;
+            let payload = { contents:[{parts:[{text:prompt}]}] };
+            if(sys) payload.systemInstruction = {parts:[{text:sys}]};
+            if(isJson) { payload.generationConfig = {responseMimeType:"application/json"}; if(schema) payload.generationConfig.responseSchema=schema; }
             
-            showNoticeModal("✨ AI 추천 시나리오 매개변수가 시뮬레이션 모델에 완벽히 주입되었습니다!");
+            const delays = [1000,2000,4000];
+            for(let i=0; i<3; i++) {
+                try {
+                    let res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+                    if(res.ok) { let j=await res.json(); return j.candidates[0].content.parts[0].text; }
+                } catch(e) {}
+                await new Promise(r=>setTimeout(r, delays[i]));
+            }
+            throw new Error("API 통신 실패");
         }
 
-        // Modal Controls
-        function openAiReportModal() {
-            document.getElementById('ai_report_modal').classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        }
-
-        function closeAiReportModal() {
-            document.getElementById('ai_report_modal').classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        // ✨ AI 사업 타당성 종합 리포트 생성 및 전문가 컨설팅 트리거 함수
         async function generateAiViabilityReport() {
             openAiReportModal();
-            
-            const loadingContainer = document.getElementById('ai_loading_container');
-            const reportContainer = document.getElementById('ai_report_content_container');
-            const loadingStatus = document.getElementById('ai_loading_status');
+            document.getElementById('ai_loading_container').classList.remove('hidden');
+            document.getElementById('ai_report_content_container').classList.add('hidden');
 
-            loadingContainer.classList.remove('hidden');
-            reportContainer.classList.add('hidden');
-
-            // Step 1 status
-            loadingStatus.innerText = "[1/3] 5개년 주주 가치 재무 데이터 패키징 중...";
-
-            // Context packaging
-            const promptData = {
-                contextTitle: "신규 제조 사업장(헤어 뷰티 라인) FCFE 주주가치 모델 데이터",
-                macroVariables: {
-                    discountRate_Ke: `${latestFinancialCache.metrics.wacc}% (자기자본비용)`,
-                    inflationRate: `${latestFinancialCache.metrics.inflation}%`,
-                    taxRate: `${latestFinancialCache.metrics.taxRate}%`,
-                    initialDebtRate: `${latestFinancialCache.metrics.debtInterestRate}%`,
-                    repaymentStructure: latestFinancialCache.metrics.repaymentMethod === 'bullet' ? '5년 만기 일시 상환' : '5년 매년 균등 원금 분할 상환'
-                },
-                fundingStructure: {
-                    totalRequiredFunding: `${(latestFinancialCache.metrics.totalEquityFunded + latestFinancialCache.metrics.totalDebtFunded).toLocaleString()} 백만원`,
-                    equityContribution: `${latestFinancialCache.metrics.totalEquityFunded.toLocaleString()} 백만원`,
-                    debtContribution: `${latestFinancialCache.metrics.totalDebtFunded.toLocaleString()} 백만원`
-                },
-                kpiResults: {
-                    shareholderNPV: `${latestFinancialCache.metrics.npv.toLocaleString()} 백만원`,
-                    shareholderIRR: latestFinancialCache.metrics.irr ? `${latestFinancialCache.metrics.irr.toFixed(2)}%` : "산출 불가",
-                    stochasticSuccessProbability: `${latestFinancialCache.metrics.successProbability.toFixed(1)}% (Monte-Carlo 환율 변동성 충격 시나리오 기준)`,
-                    paybackPeriod: latestFinancialCache.metrics.payback ? `${latestFinancialCache.metrics.payback.toFixed(1)}년` : "5개년 초과"
-                },
-                fiveYearForecast: {
-                    revenue: latestFinancialCache.revenue,
-                    netIncome: latestFinancialCache.netIncome,
-                    fcfe: latestFinancialCache.fcfe,
-                    utilization: latestFinancialCache.utilization
-                },
-                leverageRatios: {
-                    financialLeverageDegree_DFL_Y1: latestFinancialCache.leverages.dflY1 ? latestFinancialCache.leverages.dflY1.toFixed(2) : "산출 불가",
-                    combinedLeverageDegree_DTL_Y1: latestFinancialCache.leverages.dtlY1 ? latestFinancialCache.leverages.dtlY1.toFixed(2) : "산출 불가"
-                }
+            const pData = {
+                metrics: latestFinancialCache.metrics,
+                leverage: { DOL_Y2: document.getElementById('bep_table_body').children[1].children[3].innerText },
+                nwc_change: latestFinancialCache.f.nwc_change.slice(1),
+                expansion_capex_triggered: latestFinancialCache.f.capex_total.slice(1).some(v=>v<0)
             };
 
-            await new Promise(r => setTimeout(r, 1000));
-            loadingStatus.innerText = "[2/3] Gemini 2.5 LLM 컨설팅 추론 엔진 분석 중...";
-
-            const systemInstruction = `당신은 최고 경영자(CEO) 및 벤처 캐피탈(VC) 심사역 시각에서 사업의 미래가치를 진단하는 수석 CFO이자 전문 금융 컨설턴트입니다.
-제시된 '5개년 신규 사업 주주 가치 모델 분석 데이터'를 기반으로 주주 환원 관점에서 타당성을 매우 날카롭게 진단하는 '✨ AI 비즈니스 타당성 종합 리포트'를 한국어로 격식 있게 작성해야 합니다.
-보고서는 구조화된 마크다운 형식으로 작성하며 다음 사항을 풍부한 텍스트로 녹여내어 구성하십시오:
-1. **주주 순현재가치(Equity NPV)** 및 **자기자본 내부수익률(Equity IRR)** 가 주주 가치를 훼손하지 않고 기회비용을 초과하는지 여부에 대한 전문적 최종 선고 (재무적 성공 확률 점수 제시)
-2. **타인자본 조달 비율 및 상환 방식**이 가져오는 주주 레버리지 효과(DFL, DTL) 분석 (부채 사용으로 주주 이익이 극대화되는지, 아니면 도리어 파산 리스크를 높이는지 위험 진단)
-3. 몬테카를로 환율 변동 충격 시뮬레이션 결과에 기초하여 해외 원재료 도입 단가 및 물가 급변 시 발생할 수 있는 시장 민감도 극복 방안 제시
-4. 생산 규격 설계, 연차별 가동 수준 제어, 이익률 개선을 위한 샴푸 및 트리트먼트 제품의 이익 믹스 고도화 전략
-5. 구체적이고 즉각적인 재무 건전성 및 이익 극대화를 위한 단계별 실행 로드맵 (Actionable Recommendation)
-
-수치적인 팩트에 강력하게 근거하되 가독성을 높여서 격조 높은 최고경영자(CFO) 어조를 유지하여 작성하십시오.`;
-
             try {
-                const reportResponseText = await callGemini(JSON.stringify(promptData), systemInstruction);
+                let sys = "CFO로서 제공된 재무 모델 지표(NPV, 고정비/변동비 레버리지, NWC 증감, 자동 증설 여부)를 분석하여 주주 타당성 심층 리포트를 마크다운으로 작성하라.";
+                let res = await callGemini(JSON.stringify(pData), sys);
                 
-                await new Promise(r => setTimeout(r, 800));
-                loadingStatus.innerText = "[3/3] 경영 보고서 렌더링 및 통계 모니터 통합 중...";
-
-                // Render Top Summary Bar Indicators
-                document.getElementById('ai_summary_npv').innerText = `${fmt(latestFinancialCache.metrics.npv)} 백만원`;
-                document.getElementById('ai_summary_irr').innerText = latestFinancialCache.metrics.irr ? `${latestFinancialCache.metrics.irr.toFixed(2)} %` : "N/A";
-                document.getElementById('ai_summary_prob').innerText = `${latestFinancialCache.metrics.successProbability.toFixed(1)} %`;
-
-                // Render Report Content HTML
-                document.getElementById('ai_report_html_body').innerHTML = renderMarkdownToHtml(reportResponseText);
-
-                // Setup initial Multi-turn Conversation Logs
-                chatHistory = [
-                    { role: "user", parts: [{ text: "여기에 내 5개년 비즈니스 재무 시뮬레이션 결과와 요구 조건이 있어: " + JSON.stringify(promptData) + " 이 조건 하에서 주주 가치 타당성 리포트를 상세하게 생성해줘." }] },
-                    { role: "model", parts: [{ text: reportResponseText }] }
-                ];
-
-                // Clear previous chats from chat logger except initial welcome message
-                const chatContainer = document.getElementById('ai_chat_log_container');
-                chatContainer.innerHTML = `
-                <div class="bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 leading-relaxed">
-                    안녕하세요! 생성된 종합 타당성 보고서를 바탕으로 전략 수립을 돕는 전담 CFO 비즈니스 파트너입니다.<br>
-                    <strong>"초기 운전자본 회수 시점을 조율하면 현금흐름이 어떻게 개선될까요?"</strong> 나 <strong>"이익률 개선을 위한 샴푸와 트리트먼트 가격 최적화 방안은?"</strong> 같이 궁금한 점을 편하게 질문해 주십시오!
-                </div>`;
-
-                loadingContainer.classList.add('hidden');
-                reportContainer.classList.remove('hidden');
-
-                // Smooth scroll to top of modal container
-                document.getElementById('ai_modal_scroll_container').scrollTop = 0;
-
-            } catch (err) {
-                loadingContainer.classList.add('hidden');
-                showNoticeModal(`AI 리포트 생성 중 문제가 발생했습니다: ${err.message}`);
-                closeAiReportModal();
-            } finally {
-                lucide.createIcons();
+                document.getElementById('ai_summary_npv').innerText = fmt(latestFinancialCache.metrics.npv);
+                document.getElementById('ai_summary_irr').innerText = latestFinancialCache.metrics.irr?latestFinancialCache.metrics.irr.toFixed(1)+'%':'N/A';
+                document.getElementById('ai_summary_prob').innerText = latestFinancialCache.metrics.simProb.toFixed(1)+'%';
+                
+                document.getElementById('ai_report_html_body').innerHTML = renderMarkdown(res);
+                
+                chatHistory = [{role:"user", parts:[{text:JSON.stringify(pData)}]}, {role:"model", parts:[{text:res}]}];
+                document.getElementById('ai_chat_log_container').innerHTML = `<div class="bg-indigo-50 text-indigo-900 p-3 rounded-lg max-w-[85%] text-xs shadow-sm border border-indigo-100">안녕하세요! 컨설턴트입니다. 증설이나 운전자본 관련 궁금한 점을 남겨주세요.</div>`;
+                
+                document.getElementById('ai_loading_container').classList.add('hidden');
+                document.getElementById('ai_report_content_container').classList.remove('hidden');
+            } catch(e) {
+                closeAiReportModal(); showNoticeModal(e.message);
             }
         }
 
-        // 복잡하지 않은 수준에서 마크다운을 미려한 Tailwind 스타일 HTML로 파싱하는 커스텀 마크다운 렌더러
-        function renderMarkdownToHtml(md) {
-            if (!md) return "";
-            let html = md;
-            
-            // XSS 예방 및 HTML 이스케이프 처리
-            html = html
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-                
-            // Headers
-            html = html.replace(/^### (.*?)$/gm, '<h5 class="text-xs font-bold text-indigo-950 mt-5 mb-1.5 flex items-center gap-1.5 border-l-4 border-indigo-500 pl-2">$1</h5>');
-            html = html.replace(/^## (.*?)$/gm, '<h4 class="text-sm font-bold text-indigo-900 mt-6 mb-2.5 border-b border-indigo-100 pb-1 flex items-center gap-2"><i data-lucide="bar-chart" class="w-4 h-4 text-indigo-500"></i> $1</h4>');
-            html = html.replace(/^# (.*?)$/gm, '<h3 class="text-base font-extrabold text-slate-900 mt-8 mb-4 border-b-2 border-indigo-200 pb-1.5">$1</h3>');
-            
-            // Bold
-            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-slate-950 bg-indigo-50/40 px-1 rounded">$1</strong>');
-            
-            // Bullet points
-            html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li class="ml-4 list-disc text-[11px] text-slate-600 mb-1 leading-relaxed">$1</li>');
-            // Numbered list
-            html = html.replace(/^\s*(\d+)\.\s+(.*?)$/gm, '<li class="ml-4 list-decimal text-[11px] text-slate-600 mb-1 leading-relaxed">$2</li>');
-            
-            // Paragraphs
-            const paragraphs = html.split(/\n\n+/);
-            html = paragraphs.map(p => {
-                if (p.trim().startsWith('<h') || p.trim().startsWith('<li') || p.trim().startsWith('<ul') || p.trim().startsWith('<ol')) {
-                    return p;
-                }
-                return `<p class="text-[11px] text-slate-600 leading-relaxed mb-2.5">${p}</p>`;
-            }).join('\n');
-            
-            html = html.replace(/\n/g, '<br>');
-            
-            return html;
+        function renderMarkdown(md) {
+            let html = md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+            html = html.replace(/^### (.*?)$/gm, '<h5 class="text-sm font-bold text-indigo-800 mt-4 mb-2">$1</h5>');
+            html = html.replace(/^## (.*?)$/gm, '<h4 class="text-base font-bold text-slate-900 mt-5 mb-2 border-b pb-1">$1</h4>');
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-indigo-900 bg-indigo-50 px-1">$1</strong>');
+            html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li class="ml-4 list-disc text-slate-600 mb-1">$1</li>');
+            return html.replace(/\n\n/g, '<br><br>');
         }
 
-        // FCFE AI Report Copy function
         function copyReportToClipboard() {
-            // Get raw text from the html container (extract text representation)
-            const reportEl = document.getElementById('ai_report_html_body');
-            
-            // Create temporary textarea per strict iFrame guardrail rules
-            const tempTextarea = document.createElement('textarea');
-            tempTextarea.value = reportEl.innerText;
-            document.body.appendChild(tempTextarea);
-            tempTextarea.select();
-            
-            try {
-                document.execCommand('copy');
-                showNoticeModal("✨ AI 사업 타당성 보고서 텍스트가 클립보드에 성공적으로 복사되었습니다!");
-            } catch (err) {
-                showNoticeModal("클립보드 복사 중 오류가 발생했습니다.");
-            } finally {
-                document.body.removeChild(tempTextarea);
-            }
+            const ta = document.createElement('textarea');
+            ta.value = document.getElementById('ai_report_html_body').innerText;
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy'); document.body.removeChild(ta);
+            showNoticeModal("클립보드에 복사되었습니다.");
         }
 
-        // Chat helper to append user or model messages visually
-        function appendChatBubble(role, text, isLoading = false) {
-            const container = document.getElementById('ai_chat_log_container');
-            const bubble = document.createElement('div');
-            
-            if (role === 'user') {
-                bubble.className = "bg-indigo-600 text-white p-3 rounded-lg max-w-[85%] self-end text-xs shadow-sm font-medium";
-                bubble.innerText = text;
-            } else {
-                bubble.className = "bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 leading-relaxed";
-                if (isLoading) {
-                    bubble.id = "ai_chat_loading_bubble";
-                    bubble.innerHTML = `<span class="flex items-center gap-1.5"><i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> ${text}</span>`;
-                } else {
-                    bubble.innerHTML = renderMarkdownToHtml(text);
-                }
-            }
-            
-            container.appendChild(bubble);
-            container.scrollTop = container.scrollHeight;
-            lucide.createIcons();
-        }
-
-        // Remove loading bubble
-        function removeLoadingBubble() {
-            const loadingBubble = document.getElementById('ai_chat_loading_bubble');
-            if (loadingBubble) {
-                loadingBubble.remove();
-            }
-        }
-
-        // ✨ 1:1 대화형 AI 금융 컨설턴트 챗방 메시지 전송 로직
         async function sendAiConsultantMessage() {
-            const inputEl = document.getElementById('ai_chat_input');
-            const userText = inputEl.value.trim();
-            if (!userText) return;
+            const inp = document.getElementById('ai_chat_input');
+            const msg = inp.value.trim(); if(!msg) return;
+            inp.value=''; inp.disabled=true;
             
-            // Disable inputs while query fires
-            inputEl.value = "";
-            inputEl.disabled = true;
-            document.getElementById('ai_chat_send_btn').disabled = true;
+            const log = document.getElementById('ai_chat_log_container');
+            log.innerHTML += `<div class="bg-indigo-600 text-white p-3 rounded-lg max-w-[85%] self-end text-xs shadow-sm ml-auto mt-3">${msg}</div>`;
+            log.innerHTML += `<div id="loading_bubble" class="bg-slate-100 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm mt-3"><i data-lucide="loader" class="w-3 h-3 animate-spin inline"></i> 답변 생성 중...</div>`;
+            log.scrollTop = log.scrollHeight; lucide.createIcons();
             
-            appendChatBubble('user', userText);
-            appendChatBubble('model', 'CFO AI가 데이터를 재점검하고 있습니다. 잠시만 기다려 주십시오... ☕', true);
-            
-            // Add to conversation history
-            chatHistory.push({ role: "user", parts: [{ text: userText }] });
-            
+            chatHistory.push({role:"user", parts:[{text:msg}]});
             try {
-                const apiKey = "";
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const key = "";
+                let res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({contents:chatHistory})});
+                let j = await res.json(); let reply = j.candidates[0].content.parts[0].text;
                 
-                const payload = {
-                    contents: chatHistory,
-                    systemInstruction: { parts: [{ text: `당신은 방금 생성된 '✨ AI 사업 타당성 종합 보고서'를 기반으로 의뢰인과 1:1 심층 재무 전략 상담을 진행하는 전문 CFO 비즈니스 파트너이자 경영 컨설턴트입니다. 반드시 제시되었던 보고서 데이터와 시뮬레이션 컨텍스트를 완벽히 숙지하여, 주주의 관점에서 매우 정밀하고 가치 있는 현실적인 재무 및 마케팅 조언을 제공하세요. 답변은 친절하고 정중한 한국어로 작성하고, 필요시 구조화된 가독성 좋은 마크다운을 활용해 가치 지표를 명확히 짚어주세요.` }] }
-                };
-                
-                const backoffDelays = [1000, 2000, 4000, 8000, 16000];
-                let lastError = null;
-                let responseText = "";
-                
-                for (let attempt = 0; attempt < 5; attempt++) {
-                    try {
-                        const response = await fetch(url, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload)
-                        });
-                        if (response.ok) {
-                            const result = await response.json();
-                            responseText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                            if (responseText) break;
-                        } else {
-                            lastError = new Error(`HTTP 에러 발생 (코드: ${response.status})`);
-                        }
-                    } catch (err) {
-                        lastError = err;
-                    }
-                    if (attempt < 4) await new Promise(r => setTimeout(r, backoffDelays[attempt]));
-                }
-                
-                if (!responseText) {
-                    throw lastError || new Error("CFO AI와 일시적인 통신 실패가 일어났습니다.");
-                }
-                
-                removeLoadingBubble();
-                appendChatBubble('model', responseText);
-                
-                // Save model turn to history
-                chatHistory.push({ role: "model", parts: [{ text: responseText }] });
-                
-            } catch (err) {
-                removeLoadingBubble();
-                appendChatBubble('model', `죄송합니다. 오류가 발생했습니다: ${err.message}. 잠시 후 다시 질문해 주세요.`);
+                document.getElementById('loading_bubble').remove();
+                log.innerHTML += `<div class="bg-slate-100 text-slate-800 p-3 rounded-lg max-w-[85%] self-start text-xs shadow-sm border border-slate-200 mt-3">${renderMarkdown(reply)}</div>`;
+                chatHistory.push({role:"model", parts:[{text:reply}]});
+            } catch(e) {
+                document.getElementById('loading_bubble').innerText = "오류 발생";
             } finally {
-                inputEl.disabled = false;
-                document.getElementById('ai_chat_send_btn').disabled = false;
-                inputEl.focus();
+                inp.disabled=false; log.scrollTop = log.scrollHeight;
             }
         }
 
-        // Initialize Webapp on window load
-        window.onload = function() {
-            renderEquipments();
-            updateFundingSplitLabels();
-            updateParameterLabels();
-            runAnalysis();
-        }
+        window.onload = resetParameters;
     </script>
 </body>
 </html>
