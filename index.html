@@ -1,10 +1,25 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, DollarSign, Building, PieChart, Activity, Briefcase, Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight, Globe, Layers } from 'lucide-react';
+import { TrendingUp, DollarSign, Building, PieChart, Activity, Briefcase, Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight, Globe, Layers, Folder, Save, FilePlus } from 'lucide-react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc } from 'firebase/firestore';
+
+// --- Firebase Initialization (Mandatory Pattern) ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- 언어 팩 (i18n) ---
 const translations = {
   '사업타당성 시뮬레이터': 'Feasibility Simulator',
   '변수를 수정하면 우측에 실시간으로 반영됩니다.': 'Modifying variables updates the right panel in real-time.',
+  '프로젝트 관리': 'Project Management',
+  '프로젝트명': 'Project Name',
+  '저장': 'Save',
+  '새로 만들기': 'New',
+  '프로젝트 불러오기...': 'Load Project...',
   '1. 거시환경변수': '1. Macro Variables',
   '물가상승률 (%)': 'Inflation Rate (%)',
   '조달 금리 (%)': 'Interest Rate (%)',
@@ -195,7 +210,88 @@ const translations = {
   '품질검사/시험비': 'QA/QC',
   '폐기물/환경안전비': 'Waste/EHS',
   '기타 유동부채 변동 (영업현금 유입)': 'Other Current Liab Changes (Inflow)',
-  '기타 유동자산 변동 (영업현금 유출)': 'Other Current Asset Changes (Outflow)'
+  '기타 유동자산 변동 (영업현금 유출)': 'Other Current Asset Changes (Outflow)',
+  '비현금유출비용': 'Non-cash Expenses',
+  '자산/부채 변동 (유입)': 'Asset/Liab Changes (Inflow)',
+  '자산/부채 변동 (유출)': 'Asset/Liab Changes (Outflow)'
+};
+
+// --- 초기 기본값 구조 ---
+const arr5 = (val) => Array(5).fill(val);
+const arr6 = (y0, yRem) => [y0, ...Array(5).fill(yRem)];
+
+const DEFAULT_INPUTS = {
+  inflationRate: arr5(2.5),
+  interestRate: arr5(5.0),
+  exchangeRate: arr5(1300),
+  industryGrowth: arr5(3.0),
+  taxRate: arr5(20.0),
+  costOfEquity: arr5(10.0),
+
+  equityList: [{ id: 1, name: '창업자', amounts: arr6(500000000, 0) }],
+  debtList: [{ id: 1, name: 'A은행 차입', amounts: arr6(500000000, 0) }],
+  capexList: [{ id: 1, name: '기계장치', amounts: arr6(800000000, 0), usefulLife: 5 }],
+  intangibleList: [{ id: 1, name: '소프트웨어', amounts: arr6(0, 0), usefulLife: 5 }],
+  advancesList: [{ id: 1, name: '계약금/선수금', amounts: arr6(0, 0) }],
+  accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: arr6(0, 0) }],
+  prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: arr6(0, 0) }],
+  receivableList: [{ id: 1, name: '미수수익/미수금', amounts: arr6(0, 0) }],
+
+  utilization: [80, 85, 90, 95, 100],
+  lossRate: arr5(2.0),
+
+  rawMaterialMain: arr5(2500),
+  rawMaterialSub: arr5(1500),
+  directLabor: arr5(2000),
+  directExpPower: arr5(200),
+  directExpWater: arr5(100),
+  directExpConsumables: arr5(200),
+  indirectExpQC: arr5(400),
+  indirectExpMaintenance: arr5(400),
+  indirectExpWaste: arr5(200),
+  
+  arDays: arr5(30),
+  invDays: arr5(30),
+  apDays: arr5(30),
+
+  logisticsRate: arr5(2.0),
+  salesCommRate: arr5(1.5),
+  asCostRate: arr5(0.5),
+
+  utilities: arr5(10000000),
+  travel: arr5(8000000),
+  telecom: arr5(5000000),
+
+  laborFix: arr5(150000000),
+  benefits: arr5(20000000),
+  rent: arr5(60000000),
+  taxes: arr5(5000000),
+  insurance: arr5(12000000),
+  fees: arr5(15000000),
+  rnd: arr5(20000000),
+  marketing: arr5(50000000),
+  supplies: arr5(12000000),
+  badDebt: arr5(0),
+  otherSga: arr5(10000000),
+
+  nonOpIncCash: arr5(0),
+  nonOpIncNonCash: arr5(0),
+  nonOpExpCash: arr5(0),
+  nonOpExpNonCash: arr5(0),
+
+  salesHierarchy: [
+    {
+      id: 'c1', name: '대한민국',
+      clients: [
+        {
+          id: 'cl1', name: 'A상사',
+          products: [
+            { id: 'p1', name: '기본 제품', prices: arr5(15000), volumes: [100000, 110000, 120000, 130000, 140000] }
+          ]
+        }
+      ]
+    }
+  ]
 };
 
 // --- 유틸리티 함수 ---
@@ -259,13 +355,13 @@ const NumInput = ({ value, onChange, placeholder, className = "" }) => {
       value={localVal}
       onChange={handleChange}
       placeholder={placeholder}
-      className={`text-right border border-slate-300 rounded py-1 px-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${className}`}
+      className={`text-right border border-slate-300 rounded py-1 px-1.5 focus:ring-1 focus:ring-red-700 focus:border-red-700 outline-none transition-all ${className}`}
     />
   );
 };
 
 // --- 토글 가능한 테이블 행 컴포넌트 ---
-const ExpandableRow = ({ label, values, ratios, details, isBold, bgColor, textColor = 'text-slate-700', isHeader = false, compact = false }) => {
+const ExpandableRow = ({ label, values, ratios, details, isBold, isTotal, isHeader = false, compact = false }) => {
   const [expanded, setExpanded] = useState(false);
   const hasDetails = details && details.length > 0;
   
@@ -274,11 +370,17 @@ const ExpandableRow = ({ label, values, ratios, details, isBold, bgColor, textCo
 
   const toMillion = (val) => val / 1000000;
 
+  // 컨설팅 펌 스타일 (무채색 + 레드 악센트)
+  let rowClass = 'border-b border-slate-200 text-slate-800';
+  if (isHeader) rowClass = 'border-t-2 border-b-2 border-slate-800 font-bold bg-slate-50 text-slate-900';
+  else if (isTotal) rowClass = 'border-t border-b border-slate-400 font-bold bg-slate-50/50 text-slate-900';
+  else if (isBold) rowClass = 'font-semibold text-slate-900';
+
   return (
     <>
-      <tr className={`${bgColor || ''} ${isHeader ? 'border-t-2 border-slate-300' : 'border-b border-slate-100'}`}>
+      <tr className={rowClass}>
         <td 
-          className={`${py} ${px} text-left ${isBold ? 'font-bold' : 'font-medium'} ${textColor} ${hasDetails ? 'cursor-pointer hover:bg-slate-200/50 transition-colors select-none' : ''}`}
+          className={`${py} ${px} text-left ${hasDetails ? 'cursor-pointer hover:bg-slate-100 transition-colors select-none' : ''}`}
           onClick={() => hasDetails && setExpanded(!expanded)}
         >
           <div className="flex items-center gap-1.5">
@@ -291,11 +393,11 @@ const ExpandableRow = ({ label, values, ratios, details, isBold, bgColor, textCo
           </div>
         </td>
         {values.map((val, idx) => (
-          <td key={idx} className={`${py} ${px} ${isBold ? 'font-bold' : ''} ${textColor} ${compact ? 'text-[11px]' : 'text-sm'}`}>
+          <td key={idx} className={`${py} ${px} ${compact ? 'text-[11px]' : 'text-sm'}`}>
             <div className="flex flex-col items-end">
               <span>{formatCurrency(toMillion(val))}</span>
               {ratios && ratios[idx] !== undefined && ratios[idx] !== 0 && (
-                <span className="text-[10px] text-slate-400 font-normal mt-0.5">
+                <span className="text-[10px] text-slate-500 font-normal mt-0.5">
                   ({formatPercent(ratios[idx])})
                 </span>
               )}
@@ -308,13 +410,13 @@ const ExpandableRow = ({ label, values, ratios, details, isBold, bgColor, textCo
         const compactIndentClass = detail.level === 2 ? 'pl-10' : detail.level === 1 ? 'pl-6' : 'pl-4';
         
         return (
-          <tr key={`detail-${idx}`} className="bg-slate-50 border-b border-slate-100/50 last:border-b-0 hover:bg-slate-100/50">
-            <td className={`${compact ? 'py-1.5 px-2 ' + compactIndentClass : 'py-2.5 px-4 ' + indentClass} text-left flex items-center 
-              ${detail.isGroup ? 'font-semibold text-slate-700' : 'text-slate-500'}`}>
-              <span className={compact ? 'text-[10px]' : 'text-xs'}>{detail.label}</span>
+          <tr key={`detail-${idx}`} className="bg-white border-b border-slate-100 last:border-b-0 hover:bg-slate-50">
+            <td className={`${compact ? 'py-1.5 px-2 ' + compactIndentClass : 'py-2 px-4 ' + indentClass} text-left flex items-center 
+              ${detail.isGroup ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+              <span className={compact ? 'text-[10px]' : 'text-[13px]'}>{detail.label}</span>
             </td>
             {detail.values.map((val, vIdx) => (
-              <td key={`detail-val-${vIdx}`} className={`${compact ? 'py-1.5 px-2 text-[10px]' : 'py-2.5 px-4 text-xs'} ${detail.isGroup ? 'font-semibold text-slate-700' : 'text-slate-500'}`}>
+              <td key={`detail-val-${vIdx}`} className={`${compact ? 'py-1.5 px-2 text-[10px]' : 'py-2 px-4 text-[13px]'} ${detail.isGroup ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
                  <div className="flex flex-col items-end">
                   <span>{formatCurrency(toMillion(val))}</span>
                   {detail.ratios && detail.ratios[vIdx] !== undefined && detail.ratios[vIdx] !== 0 && (
@@ -336,93 +438,99 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('npv');
   const [lang, setLang] = useState('ko');
 
+  const [user, setUser] = useState(null);
+  const [projects, setProjects] = useState([]);
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [projectName, setProjectName] = useState('새 프로젝트');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
+
+  const [inputs, setInputs] = useState(DEFAULT_INPUTS);
+
   const t = (key) => {
     if (lang === 'en' && translations[key]) return translations[key];
     return key;
   };
 
-  const arr5 = (val) => Array(5).fill(val);
-  const arr6 = (y0, yRem) => [y0, ...Array(5).fill(yRem)];
-
-  // --- 상태 관리 ---
-  const [inputs, setInputs] = useState({
-    inflationRate: arr5(2.5),
-    interestRate: arr5(5.0),
-    exchangeRate: arr5(1300),
-    industryGrowth: arr5(3.0),
-    taxRate: arr5(20.0),
-
-    costOfEquity: arr5(10.0), // 신규: 자기자본비용
-
-    equityList: [{ id: 1, name: '창업자', amounts: arr6(500000000, 0) }],
-    debtList: [{ id: 1, name: 'A은행 차입', amounts: arr6(500000000, 0) }],
-    
-    capexList: [{ id: 1, name: '기계장치', amounts: arr6(800000000, 0), usefulLife: 5 }],
-    intangibleList: [{ id: 1, name: '소프트웨어', amounts: arr6(0, 0), usefulLife: 5 }],
-    
-    advancesList: [{ id: 1, name: '계약금/선수금', amounts: arr6(0, 0) }],
-    accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: arr6(0, 0) }],
-    
-    prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: arr6(0, 0) }],
-    receivableList: [{ id: 1, name: '미수수익/미수금', amounts: arr6(0, 0) }],
-
-    utilization: [80, 85, 90, 95, 100],
-    lossRate: arr5(2.0),
-
-    rawMaterialMain: arr5(2500),
-    rawMaterialSub: arr5(1500),
-    directLabor: arr5(2000),
-    directExpPower: arr5(200),
-    directExpWater: arr5(100),
-    directExpConsumables: arr5(200),
-    indirectExpQC: arr5(400),
-    indirectExpMaintenance: arr5(400),
-    indirectExpWaste: arr5(200),
-    
-    arDays: arr5(30),
-    invDays: arr5(30),
-    apDays: arr5(30),
-
-    logisticsRate: arr5(2.0),
-    salesCommRate: arr5(1.5),
-    asCostRate: arr5(0.5),
-
-    utilities: arr5(10000000),
-    travel: arr5(8000000),
-    telecom: arr5(5000000),
-
-    laborFix: arr5(150000000),
-    benefits: arr5(20000000),
-    rent: arr5(60000000),
-    taxes: arr5(5000000),
-    insurance: arr5(12000000),
-    fees: arr5(15000000),
-    rnd: arr5(20000000),
-    marketing: arr5(50000000),
-    supplies: arr5(12000000),
-    badDebt: arr5(0),
-    otherSga: arr5(10000000),
-
-    // 영업외수익/비용 및 비현금성
-    nonOpIncCash: arr5(0),
-    nonOpIncNonCash: arr5(0),
-    nonOpExpCash: arr5(0),
-    nonOpExpNonCash: arr5(0),
-
-    salesHierarchy: [
-      {
-        id: 'c1', name: '대한민국',
-        clients: [
-          {
-            id: 'cl1', name: 'A상사',
-            products: [
-              { id: 'p1', name: '기본 제품', prices: arr5(15000), volumes: [100000, 110000, 120000, 130000, 140000] }
-            ]
-          }
-        ]
+  // Firebase Auth Initialization (Mandatory Rule 3)
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (e) {
+        console.error("Auth error", e);
       }
-    ]
-  });
+    };
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, setUser);
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch Projects from Firestore
+  useEffect(() => {
+    if (!user) return;
+    const projectsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'projects');
+    const unsubscribe = onSnapshot(projectsRef, (snapshot) => {
+      const projs = [];
+      snapshot.forEach(doc => projs.push({ id: doc.id, ...doc.data() }));
+      projs.sort((a, b) => b.updatedAt - a.updatedAt);
+      setProjects(projs);
+    }, (error) => {
+      console.error("Fetch projects error:", error);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  // Handle Save Project
+  const handleSave = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    setSaveStatus('');
+    try {
+      const projectData = {
+        name: projectName || '제목 없음',
+        inputs: inputs,
+        updatedAt: Date.now(),
+      };
+      
+      if (currentProjectId) {
+        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'projects', currentProjectId);
+        await setDoc(docRef, projectData, { merge: true });
+        setSaveStatus(t('저장 완료'));
+      } else {
+        projectData.createdAt = Date.now();
+        const projectsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'projects');
+        const newDoc = await addDoc(projectsRef, projectData);
+        setCurrentProjectId(newDoc.id);
+        setSaveStatus(t('저장 완료'));
+      }
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (e) {
+      console.error(e);
+    }
+    setIsSaving(false);
+  };
+
+  // Handle Load Project
+  const handleLoad = (id) => {
+    const proj = projects.find(p => p.id === id);
+    if (proj) {
+      setInputs(proj.inputs);
+      setProjectName(proj.name);
+      setCurrentProjectId(proj.id);
+    }
+  };
+
+  // Handle New Project
+  const handleNew = () => {
+    setInputs(DEFAULT_INPUTS);
+    setProjectName('새 프로젝트');
+    setCurrentProjectId(null);
+  };
 
   const handleArrayChange = (name, index, value) => {
     setInputs(prev => {
@@ -489,7 +597,6 @@ export default function App() {
   const model = useMemo(() => {
     const depreciationYears = 5; 
 
-    // WACC Calculation based on Year 0 structure
     const initV = totalEquity[0] + totalDebt[0];
     const wE = initV > 0 ? totalEquity[0] / initV : 0;
     const wD = initV > 0 ? totalDebt[0] / initV : 0;
@@ -504,7 +611,7 @@ export default function App() {
     let prevCash = totalEquity[0] + totalDebt[0] - totalCapex[0] - totalIntangible[0] + totalAdvances[0] + totalAccrued[0] - totalPrepaid[0] - totalReceivable[0];
     let prevRetainedEarnings = 0;
     
-    // Year 0 (기초)
+    // Year 0
     result.bs.push({
       year: 0, cash: prevCash, ar: 0, inv: 0, currentAssets: prevCash + totalPrepaid[0] + totalReceivable[0],
       ppeNet: totalCapex[0], nonCurrentAssets: totalCapex[0] + totalIntangible[0], totalAssets: prevCash + totalCapex[0] + totalIntangible[0] + totalPrepaid[0] + totalReceivable[0],
@@ -857,11 +964,11 @@ export default function App() {
 
   const YearlyInputField = ({ label, values, onChangeArray }) => (
     <div className="flex flex-col gap-1 mb-3">
-      <label className="text-xs font-semibold text-slate-700">{label}</label>
+      <label className="text-xs font-semibold text-slate-800">{label}</label>
       <div className="grid grid-cols-5 gap-1">
         {values.map((v, i) => (
           <div key={i} className="flex flex-col">
-            <span className="text-[10px] text-slate-400 mb-0.5 text-center">Y{i+1}</span>
+            <span className="text-[9px] text-slate-400 mb-0.5 text-center font-medium tracking-wider">Y{i+1}</span>
             <NumInput value={v} className="text-[11px]" onChange={(val) => handleArrayChange(onChangeArray, i, val)} />
           </div>
         ))}
@@ -872,31 +979,31 @@ export default function App() {
   const DynamicListYearly = ({ listName, items, title, namePlaceholder, hasUsefulLife }) => (
     <div className="mb-5">
       <div className="flex justify-between items-center mb-2">
-        <label className="text-xs font-bold text-slate-700">{title}</label>
-        <button onClick={() => addListItem(listName)} className="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center gap-1 bg-slate-100 hover:bg-blue-50 px-2 py-1 rounded transition-colors">
-          <Plus size={14} /> {t('항목 추가')}
+        <label className="text-xs font-bold text-slate-800">{title}</label>
+        <button onClick={() => addListItem(listName)} className="text-[11px] font-semibold text-slate-600 hover:text-red-700 flex items-center gap-1 bg-white border border-slate-300 hover:border-red-700 px-2 py-1 rounded transition-colors shadow-sm">
+          <Plus size={12} /> {t('항목 추가')}
         </button>
       </div>
       <div className="space-y-3">
         {items.map((item) => (
-          <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+          <div key={item.id} className="bg-white border border-slate-200 rounded p-2.5 shadow-sm">
             <div className="flex justify-between items-center mb-2">
               <input type="text" value={item.name} placeholder={namePlaceholder} onChange={(e) => handleListFieldChange(listName, item.id, 'name', e.target.value)}
-                className="flex-1 min-w-0 text-xs font-bold bg-transparent border-b border-slate-300 focus:border-blue-500 outline-none pb-1 mr-2" />
+                className="flex-1 min-w-0 text-xs font-bold bg-transparent border-b border-slate-300 focus:border-red-700 outline-none pb-1 mr-2 text-slate-800" />
               {hasUsefulLife && (
                 <div className="flex items-center gap-1 mr-3 shrink-0">
                   <span className="text-[10px] text-slate-500 font-medium">{t('내용연수')}</span>
                   <input type="number" value={item.usefulLife || ''} onChange={(e) => handleListFieldChange(listName, item.id, 'usefulLife', Number(e.target.value))}
-                    className="w-10 text-right text-[11px] border border-slate-300 rounded py-0.5 px-1 focus:ring-1 focus:ring-blue-500 outline-none" min="1" step="1" />
+                    className="w-10 text-right text-[11px] border border-slate-300 rounded py-0.5 px-1 focus:ring-1 focus:ring-red-700 outline-none" min="1" step="1" />
                   <span className="text-[10px] text-slate-500 font-medium">년</span>
                 </div>
               )}
-              <button onClick={() => removeListItem(listName, item.id)} className="text-slate-400 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+              <button onClick={() => removeListItem(listName, item.id)} className="text-slate-400 hover:text-red-700 transition-colors"><Trash2 size={14} /></button>
             </div>
             <div className="grid grid-cols-6 gap-1 mt-1">
               {item.amounts.map((amt, idx) => (
                 <div key={idx} className="flex flex-col">
-                  <span className="text-[9px] text-slate-400 text-center mb-0.5">Y{idx}</span>
+                  <span className="text-[9px] text-slate-400 text-center mb-0.5 font-medium tracking-wider">Y{idx}</span>
                   <NumInput value={amt} className="text-[10px] px-1" onChange={(val) => handleListAmountChange(listName, item.id, idx, val)} />
                 </div>
               ))}
@@ -907,34 +1014,68 @@ export default function App() {
     </div>
   );
 
-  const InputGroup = ({ title, children, icon: Icon }) => (
-    <div className="mb-6 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-      <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
-        {Icon && <Icon size={18} className="text-blue-600" />} {title}
+  const InputGroup = ({ title, children }) => (
+    <div className="mb-6 bg-white p-5 border-t-2 border-slate-800 shadow-sm">
+      <h3 className="text-[13px] font-bold text-slate-900 mb-5 uppercase tracking-wide">
+        {title}
       </h3>
       <div>{children}</div>
     </div>
   );
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-800">
+    <div className="flex h-screen bg-slate-100 font-sans text-slate-800 antialiased selection:bg-red-100 selection:text-red-900">
       {/* --- 왼쪽 패널: 입력 폼 --- */}
-      <div className="w-[450px] min-w-[400px] bg-slate-50 border-r border-slate-200 flex flex-col overflow-hidden">
-        <div className="p-4 bg-white border-b border-slate-200 flex justify-between items-center shrink-0 z-10 shadow-sm">
+      <div className="w-[450px] min-w-[400px] bg-slate-50 border-r border-slate-300 flex flex-col overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+        <div className="p-5 bg-white border-b border-slate-300 flex justify-between items-center shrink-0">
           <div>
-            <h1 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Activity className="text-blue-600" size={20} /> {t('사업타당성 시뮬레이터')}
+            <h1 className="text-lg font-black text-slate-900 tracking-tight">
+              {t('사업타당성 시뮬레이터')}
             </h1>
-            <p className="text-[10px] text-slate-500 mt-0.5">{t('변수를 수정하면 우측에 실시간으로 반영됩니다.')}</p>
+            <p className="text-[10px] text-slate-500 mt-1 font-medium">{t('변수를 수정하면 우측에 실시간으로 반영됩니다.')}</p>
           </div>
           <button onClick={() => setLang(l => l === 'ko' ? 'en' : 'ko')}
-            className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition-colors text-slate-700">
-            <Globe size={14} /> {lang === 'ko' ? 'ENG' : 'KOR'}
+            className="flex items-center gap-1.5 text-[10px] font-bold tracking-wider bg-white border border-slate-300 hover:border-slate-800 px-3 py-1.5 rounded transition-colors text-slate-800 shadow-sm uppercase">
+            <Globe size={12} /> {lang === 'ko' ? 'ENG' : 'KOR'}
           </button>
         </div>
 
         <div className="p-4 overflow-y-auto custom-scrollbar">
-          <InputGroup title={t('1. 거시환경변수')} icon={TrendingUp}>
+          {/* --- 프로젝트 관리 --- */}
+          <InputGroup title={t('프로젝트 관리')}>
+            <div className="flex flex-col gap-3">
+              <input 
+                type="text" 
+                value={projectName} 
+                onChange={(e) => setProjectName(e.target.value)} 
+                placeholder={t('프로젝트명')} 
+                className="w-full text-sm font-bold border-b-2 border-slate-300 focus:border-red-700 bg-transparent outline-none py-1 text-slate-800"
+              />
+              <div className="flex gap-2">
+                <button onClick={handleSave} disabled={isSaving} className="flex-1 flex items-center justify-center gap-1 bg-slate-800 text-white text-[11px] font-bold py-2 rounded hover:bg-slate-700 transition-colors uppercase">
+                  <Save size={12} /> {isSaving ? '...' : t('저장')}
+                </button>
+                <button onClick={handleNew} className="flex-1 flex items-center justify-center gap-1 bg-white border border-slate-300 text-slate-700 text-[11px] font-bold py-2 rounded hover:border-slate-800 transition-colors uppercase">
+                  <FilePlus size={12} /> {t('새로 만들기')}
+                </button>
+              </div>
+              {saveStatus && <p className="text-green-600 text-[10px] text-center font-bold">{saveStatus}</p>}
+              <div className="mt-2">
+                <select 
+                  onChange={(e) => handleLoad(e.target.value)} 
+                  value={currentProjectId || ''}
+                  className="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-red-700"
+                >
+                  <option value="" disabled>{t('프로젝트 불러오기...')}</option>
+                  {projects.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </InputGroup>
+
+          <InputGroup title={t('1. 거시환경변수')}>
             <YearlyInputField label={t('물가상승률 (%)')} values={inputs.inflationRate} onChangeArray="inflationRate" />
             <YearlyInputField label={t('조달 금리 (%)')} values={inputs.interestRate} onChangeArray="interestRate" />
             <YearlyInputField label={t('환율 (원/$)')} values={inputs.exchangeRate} onChangeArray="exchangeRate" />
@@ -942,73 +1083,79 @@ export default function App() {
             <YearlyInputField label={t('세율 (%)')} values={inputs.taxRate} onChangeArray="taxRate" />
           </InputGroup>
 
-          <InputGroup title={t('2. 자본조달')} icon={DollarSign}>
+          <InputGroup title={t('2. 자본조달')}>
             <YearlyInputField label={t('자기자본비용 (%)')} values={inputs.costOfEquity} onChangeArray="costOfEquity" />
-            <div className="h-px bg-slate-100 my-4"></div>
+            <div className="h-px bg-slate-200 my-5"></div>
             <DynamicListYearly listName="equityList" items={inputs.equityList} title={t('자기자본')} namePlaceholder={t('조달처 (예: 창업자, 투자사)')} />
             <DynamicListYearly listName="debtList" items={inputs.debtList} title={t('타인자본')} namePlaceholder={t('조달처 (예: A은행, 기보)')} />
             
-            <div className="bg-slate-100 p-3 rounded mt-4 text-xs">
-              <div className="flex justify-between mb-1"><span>{t('자기자본 비율')} (Y0)</span><span className="font-bold text-slate-700">{formatPercent(model.wE)}</span></div>
-              <div className="flex justify-between mb-1"><span>{t('타인자본 비율')} (Y0)</span><span className="font-bold text-slate-700">{formatPercent(model.wD)}</span></div>
-              <div className="flex justify-between border-t border-slate-300 pt-1 mt-1"><span>{t('가중평균자본비용 (WACC)')}</span><span className="font-bold text-blue-600">{formatPercent(model.wacc)}</span></div>
+            <div className="bg-slate-800 text-white p-4 rounded mt-4 text-xs shadow-md">
+              <div className="flex justify-between mb-2"><span className="text-slate-300">{t('자기자본 비율')} (Y0)</span><span className="font-bold">{formatPercent(model.wE)}</span></div>
+              <div className="flex justify-between mb-2"><span className="text-slate-300">{t('타인자본 비율')} (Y0)</span><span className="font-bold">{formatPercent(model.wD)}</span></div>
+              <div className="flex justify-between border-t border-slate-600 pt-2 mt-2"><span className="font-bold">{t('가중평균자본비용 (WACC)')}</span><span className="font-black text-red-400">{formatPercent(model.wacc)}</span></div>
             </div>
           </InputGroup>
 
-          <InputGroup title={t('3. 자금소요 - 투자')} icon={Building}>
+          <InputGroup title={t('3. 자금소요 - 투자')}>
             <DynamicListYearly listName="capexList" items={inputs.capexList} title={t('설비투자액')} namePlaceholder={t('항목 (예: 기계장치, 인테리어)')} hasUsefulLife />
             <DynamicListYearly listName="intangibleList" items={inputs.intangibleList} title={t('무형자산투자액')} namePlaceholder={t('항목 (예: 소프트웨어, 특허권)')} hasUsefulLife />
-            <div className="h-px bg-slate-100 my-4"></div>
+            <div className="h-px bg-slate-200 my-5"></div>
             <YearlyInputField label={t('가동률 (초기) (%)')} values={inputs.utilization} onChangeArray="utilization" />
             <YearlyInputField label={t('생산 로스(Loss)율 (%)')} values={inputs.lossRate} onChangeArray="lossRate" />
           </InputGroup>
 
-          <InputGroup title={t('4. 자금소요 - 운전자본(변동비 및 기타)')} icon={PieChart}>
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-2 bg-slate-100 p-1.5 rounded">{t('원재료비')}</div>
+          <InputGroup title={t('4. 자금소요 - 운전자본(변동비 및 기타)')}>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('원재료비')}</div>
             <YearlyInputField label={t('원자재')} values={inputs.rawMaterialMain} onChangeArray="rawMaterialMain" />
             <YearlyInputField label={t('부자재')} values={inputs.rawMaterialSub} onChangeArray="rawMaterialSub" />
             
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-4 bg-slate-100 p-1.5 rounded">{t('직접노무비')}</div>
+            <div className="h-px bg-slate-100 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('직접노무비')}</div>
             <YearlyInputField label={t('단위 직접노무비')} values={inputs.directLabor} onChangeArray="directLabor" />
             
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-4 bg-slate-100 p-1.5 rounded">{t('직접경비')}</div>
+            <div className="h-px bg-slate-100 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('직접경비')}</div>
             <YearlyInputField label={t('전력비')} values={inputs.directExpPower} onChangeArray="directExpPower" />
             <YearlyInputField label={t('용수비')} values={inputs.directExpWater} onChangeArray="directExpWater" />
             <YearlyInputField label={t('생산소모품비')} values={inputs.directExpConsumables} onChangeArray="directExpConsumables" />
             
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-4 bg-slate-100 p-1.5 rounded">{t('간접경비')}</div>
+            <div className="h-px bg-slate-100 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('간접경비')}</div>
             <YearlyInputField label={t('품질검사비')} values={inputs.indirectExpQC} onChangeArray="indirectExpQC" />
             <YearlyInputField label={t('수선유지비')} values={inputs.indirectExpMaintenance} onChangeArray="indirectExpMaintenance" />
             <YearlyInputField label={t('폐기물처리비')} values={inputs.indirectExpWaste} onChangeArray="indirectExpWaste" />
 
-            <div className="h-px bg-slate-200 my-4"></div>
-            <div className="text-xs font-bold text-slate-700 mb-3">{t('운전자본 회전일수')}</div>
+            <div className="h-px bg-slate-200 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('운전자본 회전일수')}</div>
             <YearlyInputField label={t('매출채권 회전일수')} values={inputs.arDays} onChangeArray="arDays" />
             <YearlyInputField label={t('재고자산 회전일수')} values={inputs.invDays} onChangeArray="invDays" />
             <YearlyInputField label={t('매입채무 회전일수')} values={inputs.apDays} onChangeArray="apDays" />
 
-            <div className="h-px bg-slate-200 my-4"></div>
-            <div className="text-xs font-bold text-blue-700 mb-2 mt-4 bg-blue-50 p-1.5 rounded">{t('기타 유동부채 변동 (영업현금 유입)')}</div>
+            <div className="h-px bg-slate-200 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('기타 유동부채 변동 (영업현금 유입)')}</div>
             <DynamicListYearly listName="advancesList" items={inputs.advancesList} title={t('선수금/선수수익 증가 (유입)')} namePlaceholder={t('항목 (예: 계약금, 선수금)')} />
             <DynamicListYearly listName="accruedList" items={inputs.accruedList} title={t('미지급금/예수금 증가 (유입)')} namePlaceholder={t('항목 (예: 미지급비용, 부가세예수금)')} />
             
-            <div className="text-xs font-bold text-red-700 mb-2 mt-4 bg-red-50 p-1.5 rounded">{t('기타 유동자산 변동 (영업현금 유출)')}</div>
+            <div className="h-px bg-slate-100 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('기타 유동자산 변동 (영업현금 유출)')}</div>
             <DynamicListYearly listName="prepaidList" items={inputs.prepaidList} title={t('선급금/선급비용 증가 (유출)')} namePlaceholder={t('항목 (예: 선급공사비, 선급보험료)')} />
             <DynamicListYearly listName="receivableList" items={inputs.receivableList} title={t('미수금/미수수익 증가 (유출)')} namePlaceholder={t('항목 (예: 미수수익, 환급금)')} />
           </InputGroup>
 
-          <InputGroup title={t('5. 자금소요 - 운용(판관비)')} icon={Briefcase}>
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-2 bg-slate-100 p-1.5 rounded">{t('직접변동비 (매출액 대비 %)')}</div>
+          <InputGroup title={t('5. 자금소요 - 운용(판관비)')}>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('직접변동비 (매출액 대비 %)')}</div>
             <YearlyInputField label={t('물류/수출비용 (%)')} values={inputs.logisticsRate} onChangeArray="logisticsRate" />
             <YearlyInputField label={t('판매수수료 (%)')} values={inputs.salesCommRate} onChangeArray="salesCommRate" />
             <YearlyInputField label={t('AS비용 (%)')} values={inputs.asCostRate} onChangeArray="asCostRate" />
 
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-4 bg-slate-100 p-1.5 rounded">{t('준변동비 (연간 금액)')}</div>
+            <div className="h-px bg-slate-200 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('준변동비 (연간 금액)')}</div>
             <YearlyInputField label={t('수도광열비')} values={inputs.utilities} onChangeArray="utilities" />
             <YearlyInputField label={t('여비교통비')} values={inputs.travel} onChangeArray="travel" />
             <YearlyInputField label={t('통신비')} values={inputs.telecom} onChangeArray="telecom" />
 
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-4 bg-slate-100 p-1.5 rounded">{t('고정비 (연간 금액)')}</div>
+            <div className="h-px bg-slate-200 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('고정비 (연간 금액)')}</div>
             <YearlyInputField label={t('인건비(급여/퇴직 등)')} values={inputs.laborFix} onChangeArray="laborFix" />
             <YearlyInputField label={t('복리후생비(교육 등)')} values={inputs.benefits} onChangeArray="benefits" />
             <YearlyInputField label={t('임차료')} values={inputs.rent} onChangeArray="rent" />
@@ -1022,52 +1169,52 @@ export default function App() {
             <YearlyInputField label={t('기타 판관비')} values={inputs.otherSga} onChangeArray="otherSga" />
           </InputGroup>
 
-          <InputGroup title={t('6. 매출액 추정 (국가/거래처/품목별)')} icon={ShoppingCart}>
-            <div className="flex justify-between items-center mb-3">
-              <label className="text-xs font-bold text-slate-700">{t('매출 구조')}</label>
-              <button onClick={addCountry} className="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center gap-1 bg-slate-100 hover:bg-blue-50 px-2 py-1 rounded transition-colors">
-                <Plus size={14} /> {t('국가 추가')}
+          <InputGroup title={t('6. 매출액 추정 (국가/거래처/품목별)')}>
+            <div className="flex justify-between items-center mb-4">
+              <label className="text-xs font-bold text-slate-800">{t('매출 구조')}</label>
+              <button onClick={addCountry} className="text-[11px] font-semibold text-slate-600 hover:text-red-700 flex items-center gap-1 bg-white border border-slate-300 hover:border-red-700 px-2 py-1 rounded transition-colors shadow-sm">
+                <Plus size={12} /> {t('국가 추가')}
               </button>
             </div>
             
             <div className="space-y-4">
               {inputs.salesHierarchy.map((country) => (
-                <div key={country.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center mb-2 pb-2 border-b border-slate-200">
+                <div key={country.id} className="bg-white border border-slate-200 rounded p-3 shadow-sm">
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
                     <input type="text" value={country.name} onChange={(e) => updateCountry(country.id, e.target.value)}
-                      placeholder={t('국가명')} className="text-sm font-bold bg-transparent focus:text-blue-700 outline-none w-1/2" />
+                      placeholder={t('국가명')} className="text-sm font-black text-slate-900 bg-transparent focus:text-red-700 outline-none w-1/2" />
                     <div className="flex gap-2">
-                      <button onClick={() => addClient(country.id)} className="text-[10px] bg-white border border-slate-300 px-2 py-1 rounded shadow-sm hover:bg-slate-100 transition-colors">+ {t('거래처 추가')}</button>
-                      <button onClick={() => removeCountry(country.id)} className="text-slate-400 hover:text-red-500 p-1"><Trash2 size={14} /></button>
+                      <button onClick={() => addClient(country.id)} className="text-[10px] font-bold text-slate-600 bg-slate-50 border border-slate-300 px-2 py-1 rounded hover:bg-slate-100 transition-colors uppercase">+ {t('거래처 추가')}</button>
+                      <button onClick={() => removeCountry(country.id)} className="text-slate-400 hover:text-red-700 p-1"><Trash2 size={14} /></button>
                     </div>
                   </div>
                   
                   {country.clients.map((client) => (
-                    <div key={client.id} className="ml-2 mt-3 p-2 bg-white border border-slate-100 rounded shadow-sm">
-                      <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
+                    <div key={client.id} className="ml-2 mt-3 p-3 bg-slate-50 border border-slate-200 rounded">
+                      <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-200">
                         <input type="text" value={client.name} onChange={(e) => updateClient(country.id, client.id, e.target.value)}
-                          placeholder={t('거래처명')} className="text-xs font-semibold bg-transparent focus:text-blue-600 outline-none w-1/2" />
+                          placeholder={t('거래처명')} className="text-xs font-bold text-slate-800 bg-transparent focus:text-red-700 outline-none w-1/2" />
                         <div className="flex gap-2">
-                          <button onClick={() => addProduct(country.id, client.id)} className="text-[10px] text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded hover:bg-slate-100">+ {t('품목 추가')}</button>
-                          <button onClick={() => removeClient(country.id, client.id)} className="text-slate-300 hover:text-red-400"><Trash2 size={12} /></button>
+                          <button onClick={() => addProduct(country.id, client.id)} className="text-[10px] font-semibold text-slate-600 bg-white border border-slate-300 px-2 py-0.5 rounded hover:bg-slate-100">+ {t('품목 추가')}</button>
+                          <button onClick={() => removeClient(country.id, client.id)} className="text-slate-400 hover:text-red-700"><Trash2 size={12} /></button>
                         </div>
                       </div>
 
-                      <div className="space-y-3 mt-2">
+                      <div className="space-y-4 mt-2">
                         {client.products.map(product => (
-                          <div key={product.id} className="bg-slate-50/50 p-2 rounded border border-slate-100">
-                             <div className="flex justify-between items-center mb-2">
+                          <div key={product.id} className="bg-white p-3 rounded border border-slate-200 shadow-sm">
+                             <div className="flex justify-between items-center mb-3">
                                <input type="text" value={product.name} onChange={(e) => updateProduct(country.id, client.id, product.id, 'name', null, e.target.value)}
-                                  placeholder={t('품목명')} className="text-[11px] font-medium bg-transparent border-b border-slate-300 outline-none w-2/3" />
-                               <button onClick={() => removeProduct(country.id, client.id, product.id)} className="text-slate-300 hover:text-red-400"><Trash2 size={12} /></button>
+                                  placeholder={t('품목명')} className="text-[11px] font-bold text-slate-800 bg-transparent border-b border-slate-300 focus:border-red-700 outline-none w-2/3 pb-1" />
+                               <button onClick={() => removeProduct(country.id, client.id, product.id)} className="text-slate-400 hover:text-red-700"><Trash2 size={12} /></button>
                              </div>
-                             <div className="text-[10px] font-medium text-slate-500 mb-1">{t('가격')}</div>
-                             <div className="grid grid-cols-5 gap-1 mb-2">
+                             <div className="text-[10px] font-semibold text-slate-500 mb-1">{t('가격')}</div>
+                             <div className="grid grid-cols-5 gap-1 mb-3">
                                 {product.prices.map((p, idx) => (
                                   <NumInput key={`p-${idx}`} value={p} onChange={(v) => updateProduct(country.id, client.id, product.id, 'prices', idx, v)} className="text-[10px]" />
                                 ))}
                              </div>
-                             <div className="text-[10px] font-medium text-slate-500 mb-1">{t('수량')}</div>
+                             <div className="text-[10px] font-semibold text-slate-500 mb-1">{t('수량')}</div>
                              <div className="grid grid-cols-5 gap-1">
                                 {product.volumes.map((v, idx) => (
                                   <NumInput key={`v-${idx}`} value={v} onChange={(val) => updateProduct(country.id, client.id, product.id, 'volumes', idx, val)} className="text-[10px]" />
@@ -1083,12 +1230,13 @@ export default function App() {
             </div>
           </InputGroup>
 
-          <InputGroup title={t('7. 영업외수익/비용 및 비현금성 항목')} icon={Layers}>
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-2 bg-slate-100 p-1.5 rounded">{t('영업외수익')}</div>
+          <InputGroup title={t('7. 영업외수익/비용 및 비현금성 항목')}>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('영업외수익')}</div>
             <YearlyInputField label={t('현금성 수익 (이자수익 등)')} values={inputs.nonOpIncCash} onChangeArray="nonOpIncCash" />
             <YearlyInputField label={t('비현금성 수익 (외환/처분이익 등)')} values={inputs.nonOpIncNonCash} onChangeArray="nonOpIncNonCash" />
 
-            <div className="text-xs font-bold text-slate-700 mb-2 mt-4 bg-slate-100 p-1.5 rounded">{t('영업외비용')}</div>
+            <div className="h-px bg-slate-200 my-5"></div>
+            <div className="text-[11px] font-bold text-slate-800 mb-3 uppercase tracking-wider">{t('영업외비용')}</div>
             <YearlyInputField label={t('현금성 비용 (기타수수료 등)')} values={inputs.nonOpExpCash} onChangeArray="nonOpExpCash" />
             <YearlyInputField label={t('비현금성 비용 (외환/처분손실 등)')} values={inputs.nonOpExpNonCash} onChangeArray="nonOpExpNonCash" />
           </InputGroup>
@@ -1096,8 +1244,8 @@ export default function App() {
       </div>
 
       {/* --- 오른쪽 패널: 분석 결과 --- */}
-      <div className="flex-1 flex flex-col bg-slate-100 h-full overflow-hidden">
-        <div className="bg-white border-b border-slate-200 px-6 pt-4 flex gap-6 overflow-x-auto shrink-0 custom-scrollbar">
+      <div className="flex-1 flex flex-col bg-slate-50 h-full overflow-hidden">
+        <div className="bg-white border-b border-slate-300 px-8 pt-6 flex gap-8 overflow-x-auto shrink-0 custom-scrollbar z-10 shadow-sm">
           {[
             { id: 'npv', label: t('사업타당성 (NPV/IRR)') },
             { id: 'is_fin', label: t('재무회계 IS') },
@@ -1106,63 +1254,63 @@ export default function App() {
             { id: 'cf', label: t('현금흐름표 (CF)') },
           ].map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 text-sm font-semibold transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.id ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              className={`pb-4 text-[13px] font-bold uppercase tracking-wider transition-all border-b-[3px] whitespace-nowrap ${activeTab === tab.id ? 'border-red-700 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        <div className="flex-1 overflow-auto p-6 custom-scrollbar">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-w-[700px]">
+        <div className="flex-1 overflow-auto p-8 custom-scrollbar">
+          <div className="bg-white border border-slate-300 shadow-sm min-w-[700px]">
             
             {activeTab === 'npv' && (
               <div className="p-8">
-                <h2 className="text-xl font-bold mb-6 text-slate-800">
+                <h2 className="text-2xl font-black mb-8 text-slate-900 tracking-tight">
                   {t('사업타당성 분석 결과')}
                 </h2>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
-                    <p className="text-blue-600 text-sm font-bold mb-1">{t('순현재가치 (NPV)')}</p>
-                    <p className="text-2xl font-black text-blue-900">{formatCurrency(model.npv / 1000000)} <span className="text-sm font-medium">{t('백만원')}</span></p>
-                    <p className="text-[11px] text-blue-700 mt-2">{t('할인율(WACC)')} {formatPercent(model.wacc)} {t('적용')}</p>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+                  <div className="bg-white rounded p-6 border border-slate-300 shadow-sm">
+                    <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">{t('순현재가치 (NPV)')}</p>
+                    <p className="text-3xl font-black text-slate-900">{formatCurrency(model.npv / 1000000)} <span className="text-sm font-medium">{t('백만원')}</span></p>
+                    <p className="text-[11px] text-slate-500 mt-3 font-medium">{t('할인율(WACC)')} {formatPercent(model.wacc)} {t('적용')}</p>
                   </div>
-                  <div className={`rounded-xl p-5 border ${model.irr > model.wacc ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}`}>
-                    <p className={`text-sm font-bold mb-1 ${model.irr > model.wacc ? 'text-green-600' : 'text-red-600'}`}>{t('내부수익률 (IRR)')}</p>
-                    <p className={`text-2xl font-black ${model.irr > model.wacc ? 'text-green-900' : 'text-red-900'}`}>{formatPercent(model.irr)}</p>
-                    <p className={`text-[11px] mt-2 ${model.irr > model.wacc ? 'text-green-700' : 'text-red-700'}`}>
+                  <div className="bg-white rounded p-6 border border-slate-300 shadow-sm">
+                    <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">{t('내부수익률 (IRR)')}</p>
+                    <p className={`text-3xl font-black ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>{formatPercent(model.irr)}</p>
+                    <p className={`text-[11px] mt-3 font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-500'}`}>
                       {model.irr > model.wacc ? t('타당성 확보 (IRR > WACC)') : t('타당성 미흡 (IRR < WACC)')}
                     </p>
                   </div>
-                  <div className="bg-orange-50 rounded-xl p-5 border border-orange-100">
-                    <p className="text-orange-600 text-sm font-bold mb-1">{t('손익분기기간 (Payback Period)')}</p>
-                    <p className="text-2xl font-black text-orange-900">
+                  <div className="bg-white rounded p-6 border border-slate-300 shadow-sm">
+                    <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">{t('손익분기기간 (Payback Period)')}</p>
+                    <p className="text-3xl font-black text-slate-900">
                       {model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> 5'} <span className="text-sm font-medium">{t('년')}</span>
                     </p>
-                    <p className="text-[11px] text-orange-700 mt-2">투자금 회수 소요 기간</p>
+                    <p className="text-[11px] text-slate-500 mt-3 font-medium">투자금 회수 소요 기간</p>
                   </div>
-                  <div className="bg-purple-50 rounded-xl p-5 border border-purple-100">
-                    <p className="text-purple-600 text-sm font-bold mb-1">{t('손익분기 매출액 (1차년도)')}</p>
-                    <p className="text-2xl font-black text-purple-900">
+                  <div className="bg-white rounded p-6 border border-slate-300 shadow-sm">
+                    <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">{t('손익분기 매출액 (1차년도)')}</p>
+                    <p className="text-3xl font-black text-slate-900">
                       {formatCurrency(model.is_managerial[0]?.bepRevenue / 1000000)} <span className="text-sm font-medium">{t('백만원')}</span>
                     </p>
-                    <p className="text-[11px] text-purple-700 mt-2">BEP (Y1 기준)</p>
+                    <p className="text-[11px] text-slate-500 mt-3 font-medium">BEP (Y1 기준)</p>
                   </div>
                 </div>
 
-                <h3 className="text-md font-bold mb-4 text-slate-700">{t('잉여현금흐름 추정 (단위: 백만원)')}</h3>
-                <div className="overflow-x-auto">
+                <h3 className="text-[13px] font-bold mb-4 text-slate-900 uppercase tracking-widest">{t('잉여현금흐름 추정 (단위: 백만원)')}</h3>
+                <div className="overflow-x-auto border border-slate-300">
                   <table className="w-full text-sm text-right border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-y border-slate-200">
-                        <th className="py-3 px-4 text-left font-semibold text-slate-600">{t('구분')}</th>
-                        {[0,1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-semibold text-slate-600">Y{y}</th>)}
+                      <tr className="bg-slate-50 border-b border-slate-300">
+                        <th className="py-3 px-4 text-left font-bold text-slate-800">{t('구분')}</th>
+                        {[0,1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-bold text-slate-800">Y{y}</th>)}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 border-b border-slate-200">
+                    <tbody className="divide-y divide-slate-200">
                       <ExpandableRow 
                         label={t('현금의 유입')} 
                         values={model.fcffData.map(d => d.nopat + d.depreciation + d.amortization + d.advancesInflow + d.accruedInflow + d.terminalValue)} 
-                        isBold textColor="text-blue-700" bgColor="bg-slate-50"
+                        isTotal
                         details={[
                           { label: t('세후영업이익 (NOPAT)'), values: model.fcffData.map(d => d.nopat), isGroup: true, level: 1 },
                           { label: t('매출액'), values: [0, ...model.is_managerial.map(d => d.revenue)], level: 2 },
@@ -1171,34 +1319,37 @@ export default function App() {
                           { label: t('고정비'), values: [0, ...model.is_managerial.map(d => d.fixedCosts)], level: 2 },
                           { label: t('영업이익'), values: [0, ...model.is_managerial.map(d => d.operatingProfit)], level: 2 },
                           { label: t('법인세비용'), values: [0, ...model.is_financial.map(d => d.tax)], level: 2 },
-                          { label: t('감가상각비'), values: model.fcffData.map(d => d.depreciation), level: 1 },
-                          { label: t('무형자산상각비'), values: model.fcffData.map(d => d.amortization), level: 1 },
-                          { label: t('선수금/선수수익의 증가(감소)'), values: model.fcffData.map(d => d.advancesInflow), level: 1 },
-                          { label: t('미지급금/예수금의 증가(감소)'), values: model.fcffData.map(d => d.accruedInflow), level: 1 },
+                          { label: t('비현금유출비용'), values: model.fcffData.map(d => d.depreciation + d.amortization), isGroup: true, level: 1 },
+                          { label: t('감가상각비'), values: model.fcffData.map(d => d.depreciation), level: 2 },
+                          { label: t('무형자산상각비'), values: model.fcffData.map(d => d.amortization), level: 2 },
+                          { label: t('자산/부채 변동 (유입)'), values: model.fcffData.map(d => d.advancesInflow + d.accruedInflow), isGroup: true, level: 1 },
+                          { label: t('선수금/선수수익의 증가(감소)'), values: model.fcffData.map(d => d.advancesInflow), level: 2 },
+                          { label: t('미지급금/예수금의 증가(감소)'), values: model.fcffData.map(d => d.accruedInflow), level: 2 },
                           { label: t('잔존가치 (Terminal Value)'), values: model.fcffData.map(d => d.terminalValue), level: 1 },
                         ]} 
                       />
                       <ExpandableRow 
                         label={t('현금의 유출')} 
                         values={model.fcffData.map(d => d.capex + d.intangibleCapex + d.deltaWc + d.prepaidOutflow + d.receivableOutflow)} 
-                        isBold textColor="text-red-600" bgColor="bg-slate-50"
+                        isTotal
                         details={[
                           { label: t('자본적지출 (CAPEX)'), values: model.fcffData.map(d => d.capex), level: 1 },
                           { label: t('무형자산투자액'), values: model.fcffData.map(d => d.intangibleCapex), level: 1 },
-                          { label: t('운전자본증감 (ΔWC)'), values: model.fcffData.map(d => d.deltaWc), level: 1 },
-                          { label: t('선급금/선급비용의 감소(증가)'), values: model.fcffData.map(d => d.prepaidOutflow), level: 1 },
-                          { label: t('미수금/미수수익의 감소(증가)'), values: model.fcffData.map(d => d.receivableOutflow), level: 1 },
+                          { label: t('자산/부채 변동 (유출)'), values: model.fcffData.map(d => d.deltaWc + d.prepaidOutflow + d.receivableOutflow), isGroup: true, level: 1 },
+                          { label: t('운전자본증감 (ΔWC)'), values: model.fcffData.map(d => d.deltaWc), level: 2 },
+                          { label: t('선급금/선급비용의 감소(증가)'), values: model.fcffData.map(d => d.prepaidOutflow), level: 2 },
+                          { label: t('미수금/미수수익의 감소(증가)'), values: model.fcffData.map(d => d.receivableOutflow), level: 2 },
                         ]} 
                       />
                       <ExpandableRow 
                         label={t('잉여현금흐름')} 
                         values={model.fcffData.map(d => d.fcff)} 
-                        isBold textColor="text-slate-900" bgColor="bg-slate-100" isHeader 
+                        isHeader 
                       />
                       <ExpandableRow 
                         label={t('할인된 잉여현금흐름 (PV of FCFF)')} 
                         values={model.fcffData.map(d => d.pvFcff)} 
-                        isBold textColor="text-slate-500" bgColor="bg-slate-50" 
+                        isTotal 
                       />
                     </tbody>
                   </table>
@@ -1208,18 +1359,18 @@ export default function App() {
 
             {activeTab === 'is_fin' && (
               <div className="p-0">
-                <div className="p-6 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold text-slate-800">{t('재무회계 IS')}</h2>
+                <div className="p-8 border-b border-slate-300 bg-white">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t('재무회계 IS')}</h2>
                 </div>
                 <table className="w-full text-sm text-right">
                   <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200">
-                      <th className="py-3 px-4 text-left font-semibold text-slate-600 w-1/4">{t('과목 (단위: 백만원)')}</th>
-                      {[1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-semibold text-slate-600">Y{y}</th>)}
+                    <tr className="bg-slate-50 border-b border-slate-300">
+                      <th className="py-3 px-4 text-left font-bold text-slate-800 w-1/4">{t('과목 (단위: 백만원)')}</th>
+                      {[1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-bold text-slate-800">Y{y}</th>)}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 border-b border-slate-200">
-                    <ExpandableRow label={t('매출액')} values={model.is_financial.map(d => d.revenue)} isBold textColor="text-slate-800"
+                  <tbody className="divide-y divide-slate-200">
+                    <ExpandableRow label={t('매출액')} values={model.is_financial.map(d => d.revenue)} isBold
                       details={model.revenueDetails} />
                     <ExpandableRow label={t('매출원가')} values={model.is_financial.map(d => d.cogs)} ratios={model.is_financial.map(d => d.ratios.cogsRatio)}
                       details={[
@@ -1234,20 +1385,20 @@ export default function App() {
                         { label: t('폐기물처리비'), values: model.is_financial.map(d => d.cogsDetails.indExpWaste) },
                         { label: t('감가상각비'), values: model.is_financial.map(d => d.cogsDetails.depreciation) },
                       ]} />
-                    <ExpandableRow label={t('매출총이익')} values={model.is_financial.map(d => d.grossProfit)} ratios={model.is_financial.map(d => d.ratios.grossMargin)} isBold bgColor="bg-slate-50" textColor="text-blue-700" />
+                    <ExpandableRow label={t('매출총이익')} values={model.is_financial.map(d => d.grossProfit)} ratios={model.is_financial.map(d => d.ratios.grossMargin)} isTotal />
                     <ExpandableRow label={t('판매비와관리비')} values={model.is_financial.map(d => d.totalSga)} ratios={model.is_financial.map(d => d.ratios.sgaRatio)}
                       details={[
-                        { label: t('직접변동비 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaVar), isGroup: true, level: 1 },
+                        { label: t('변동 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaVar), isGroup: true, level: 1 },
                         { label: t('물류/수출비용'), values: model.is_financial.map(d => d.sgaDetails.varLogistics), level: 2 },
                         { label: t('판매수수료'), values: model.is_financial.map(d => d.sgaDetails.varSalesComm), level: 2 },
                         { label: t('AS비용'), values: model.is_financial.map(d => d.sgaDetails.varAsCost), level: 2 },
                         
-                        { label: t('준변동비 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi), isGroup: true, level: 1 },
+                        { label: t('준변동 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi), isGroup: true, level: 1 },
                         { label: t('수도광열비'), values: model.is_financial.map(d => d.sgaDetails.semiUtilities), level: 2 },
                         { label: t('여비교통비'), values: model.is_financial.map(d => d.sgaDetails.semiTravel), level: 2 },
                         { label: t('통신비'), values: model.is_financial.map(d => d.sgaDetails.semiTelecom), level: 2 },
 
-                        { label: t('고정비 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaFixOnly), isGroup: true, level: 1 },
+                        { label: t('고정 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaFixOnly), isGroup: true, level: 1 },
                         { label: t('인건비(급여/퇴직 등)'), values: model.is_financial.map(d => d.sgaDetails.fixLabor), level: 2 },
                         { label: t('복리후생비(교육 등)'), values: model.is_financial.map(d => d.sgaDetails.fixBenefits), level: 2 },
                         { label: t('임차료'), values: model.is_financial.map(d => d.sgaDetails.fixRent), level: 2 },
@@ -1261,7 +1412,7 @@ export default function App() {
                         { label: t('기타 판관비'), values: model.is_financial.map(d => d.sgaDetails.fixOther), level: 2 },
                         { label: t('무형자산상각비'), values: model.is_financial.map(d => d.sgaDetails.amortization), isGroup: true, level: 1 },
                       ]} />
-                    <ExpandableRow label={t('영업이익')} values={model.is_financial.map(d => d.operatingProfit)} ratios={model.is_financial.map(d => d.ratios.opMargin)} isBold bgColor="bg-blue-50/50" textColor="text-blue-800" />
+                    <ExpandableRow label={t('영업이익')} values={model.is_financial.map(d => d.operatingProfit)} ratios={model.is_financial.map(d => d.ratios.opMargin)} isTotal />
                     
                     <ExpandableRow label={t('영업외수익 총계')} values={model.is_financial.map(d => d.totalNonOpInc)}
                       details={[
@@ -1275,7 +1426,7 @@ export default function App() {
                         { label: t('비현금성 비용 (외환/처분손실 등)'), values: model.is_financial.map(d => d.nonOpExpNC), level: 1 }
                       ]} />
                     <ExpandableRow label={t('법인세비용')} values={model.is_financial.map(d => d.tax)} />
-                    <ExpandableRow label={t('당기순이익')} values={model.is_financial.map(d => d.netIncome)} ratios={model.is_financial.map(d => d.ratios.netMargin)} isBold bgColor="bg-slate-100" textColor="text-slate-900" isHeader />
+                    <ExpandableRow label={t('당기순이익')} values={model.is_financial.map(d => d.netIncome)} ratios={model.is_financial.map(d => d.ratios.netMargin)} isHeader />
                   </tbody>
                 </table>
               </div>
@@ -1283,20 +1434,20 @@ export default function App() {
 
             {activeTab === 'is_mgr' && (
               <div className="p-0">
-                <div className="p-6 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold text-slate-800">{t('관리회계 IS')}</h2>
+                <div className="p-8 border-b border-slate-300 bg-white">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t('관리회계 IS')}</h2>
                 </div>
                 <table className="w-full text-sm text-right">
                   <thead>
-                    <tr className="bg-slate-100 border-b border-slate-200">
-                      <th className="py-3 px-4 text-left font-semibold text-slate-600 w-1/4">{t('과목 (단위: 백만원)')}</th>
-                      {[1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-semibold text-slate-600">Y{y}</th>)}
+                    <tr className="bg-slate-50 border-b border-slate-300">
+                      <th className="py-3 px-4 text-left font-bold text-slate-800 w-1/4">{t('과목 (단위: 백만원)')}</th>
+                      {[1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-bold text-slate-800">Y{y}</th>)}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 border-b border-slate-200">
-                    <ExpandableRow label={t('매출액')} values={model.is_managerial.map(d => d.revenue)} isBold textColor="text-slate-800"
+                  <tbody className="divide-y divide-slate-200 border-b border-slate-200">
+                    <ExpandableRow label={t('매출액')} values={model.is_managerial.map(d => d.revenue)} isBold
                       details={model.revenueDetails} />
-                    <ExpandableRow label={t('변동비')} values={model.is_managerial.map(d => d.variableCosts)} ratios={model.is_managerial.map(d => d.ratios.varRatio)} textColor="text-red-600"
+                    <ExpandableRow label={t('변동비')} values={model.is_managerial.map(d => d.variableCosts)} ratios={model.is_managerial.map(d => d.ratios.varRatio)}
                       details={[
                         { label: t('변동 매출원가'), values: model.is_managerial.map(d => d.varCostDetails.rawMat + d.varCostDetails.dirLabor + d.varCostDetails.dirExp), isGroup: true, level: 1 },
                         { label: t('원재료비'), values: model.is_managerial.map(d => d.varCostDetails.rawMat), level: 2 },
@@ -1307,7 +1458,7 @@ export default function App() {
                         { label: t('판매수수료'), values: model.is_managerial.map(d => d.varCostDetails.sgaVarSalesComm), level: 2 },
                         { label: t('AS비용'), values: model.is_managerial.map(d => d.varCostDetails.sgaVarAsCost), level: 2 },
                       ]} />
-                    <ExpandableRow label={t('공헌이익')} values={model.is_managerial.map(d => d.contributionMargin)} ratios={model.is_managerial.map(d => d.ratios.cmRatio)} isBold bgColor="bg-purple-50/50" textColor="text-purple-800" />
+                    <ExpandableRow label={t('공헌이익')} values={model.is_managerial.map(d => d.contributionMargin)} ratios={model.is_managerial.map(d => d.ratios.cmRatio)} isTotal />
                     <ExpandableRow label={t('고정비')} values={model.is_managerial.map(d => d.fixedCosts)} ratios={model.is_managerial.map(d => d.ratios.fixedRatio)}
                   details={[
                     { label: t('제조 간접경비'), values: model.is_managerial.map(d => d.fixCostDetails.indExpQC + d.fixCostDetails.indExpMaintenance + d.fixCostDetails.indExpWaste), isGroup: true, level: 1 },
@@ -1337,7 +1488,7 @@ export default function App() {
                     { label: t('대손상각비'), values: model.is_managerial.map(d => d.fixCostDetails.fixBadDebt), level: 2 },
                     { label: t('기타 판관비'), values: model.is_managerial.map(d => d.fixCostDetails.fixOther), level: 2 }
                   ]} />
-                <ExpandableRow label={t('영업이익')} values={model.is_managerial.map(d => d.operatingProfit)} ratios={model.is_managerial.map(d => d.ratios.opMargin)} isBold bgColor="bg-slate-100" textColor="text-slate-900" isHeader />
+                <ExpandableRow label={t('영업이익')} values={model.is_managerial.map(d => d.operatingProfit)} ratios={model.is_managerial.map(d => d.ratios.opMargin)} isHeader />
                   </tbody>
                 </table>
               </div>
@@ -1345,21 +1496,21 @@ export default function App() {
 
             {activeTab === 'bs' && (
               <div className="p-0">
-                <div className="p-6 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold text-slate-800">{t('재무상태표 (BS)')}</h2>
+                <div className="p-8 border-b border-slate-300 bg-white">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t('재무상태표 (BS)')}</h2>
                 </div>
-                <div className="flex flex-row p-4 gap-4 overflow-x-auto min-w-max">
+                <div className="flex flex-row p-6 gap-6 overflow-x-auto min-w-max bg-white">
                   {/* 자산 패널 */}
-                  <div className="flex-1 border border-slate-200 rounded-lg bg-white overflow-hidden min-w-[500px]">
-                    <div className="bg-slate-100 p-2 font-bold text-center border-b border-slate-200 text-slate-700 text-sm">{t('자산')}</div>
+                  <div className="flex-1 border border-slate-300 rounded overflow-hidden min-w-[500px]">
+                    <div className="bg-slate-50 p-3 font-bold text-center border-b border-slate-300 text-slate-900 text-sm tracking-wide uppercase">{t('자산')}</div>
                     <table className="w-full text-right">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="py-2 px-2 text-left text-xs font-semibold text-slate-600 w-1/4">{t('과목')}</th>
-                          {[0,1,2,3,4,5].map(y => <th key={`asset-h-${y}`} className="py-2 px-2 text-xs font-semibold text-slate-600">Y{y}</th>)}
+                        <tr className="bg-slate-50 border-b border-slate-300">
+                          <th className="py-2 px-3 text-left text-xs font-bold text-slate-800 w-1/4">{t('과목')}</th>
+                          {[0,1,2,3,4,5].map(y => <th key={`asset-h-${y}`} className="py-2 px-3 text-xs font-bold text-slate-800">Y{y}</th>)}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 border-b border-slate-200">
+                      <tbody className="divide-y divide-slate-200 border-b border-slate-200">
                         <ExpandableRow compact label={t('유동자산')} values={model.bs.map(d => d.currentAssets)}
                           details={[
                             { label: t('현금및현금성자산'), values: model.bs.map(d => d.bsDetails.cash), level: 1 },
@@ -1374,21 +1525,21 @@ export default function App() {
                             { label: t('무형자산 (순액)'), values: model.bs.map(d => d.bsDetails.intangibleNet), level: 1 },
                             { label: t('기타자산(순액) (비현금성누적)'), values: model.bs.map(d => d.bsDetails.otherNetAssets), level: 1 }
                           ]} />
-                        <ExpandableRow compact label={t('자산 총계')} values={model.bs.map(d => d.totalAssets)} isBold bgColor="bg-slate-100" textColor="text-slate-900" isHeader />
+                        <ExpandableRow compact label={t('자산 총계')} values={model.bs.map(d => d.totalAssets)} isHeader />
                       </tbody>
                     </table>
                   </div>
                   {/* 부채 및 자본 패널 */}
-                  <div className="flex-1 border border-slate-200 rounded-lg bg-white overflow-hidden min-w-[500px]">
-                    <div className="bg-slate-100 p-2 font-bold text-center border-b border-slate-200 text-slate-700 text-sm">{t('부채 및 자본')}</div>
+                  <div className="flex-1 border border-slate-300 rounded overflow-hidden min-w-[500px]">
+                    <div className="bg-slate-50 p-3 font-bold text-center border-b border-slate-300 text-slate-900 text-sm tracking-wide uppercase">{t('부채 및 자본')}</div>
                     <table className="w-full text-right">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="py-2 px-2 text-left text-xs font-semibold text-slate-600 w-1/4">{t('과목')}</th>
-                          {[0,1,2,3,4,5].map(y => <th key={`le-h-${y}`} className="py-2 px-2 text-xs font-semibold text-slate-600">Y{y}</th>)}
+                        <tr className="bg-slate-50 border-b border-slate-300">
+                          <th className="py-2 px-3 text-left text-xs font-bold text-slate-800 w-1/4">{t('과목')}</th>
+                          {[0,1,2,3,4,5].map(y => <th key={`le-h-${y}`} className="py-2 px-3 text-xs font-bold text-slate-800">Y{y}</th>)}
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-100 border-b border-slate-200">
+                      <tbody className="divide-y divide-slate-200 border-b border-slate-200">
                         <ExpandableRow compact label={t('유동부채')} values={model.bs.map(d => d.currentLiabilities)}
                           details={[
                             { label: t('매입채무'), values: model.bs.map(d => d.bsDetails.ap), level: 1 },
@@ -1397,14 +1548,14 @@ export default function App() {
                           ]} />
                         <ExpandableRow compact label={t('비유동부채')} values={model.bs.map(d => d.nonCurrentLiabilities)}
                           details={[{ label: t('차입금'), values: model.bs.map(d => d.bsDetails.debt), level: 1 }]} />
-                        <ExpandableRow compact label={t('부채 총계')} values={model.bs.map(d => d.totalLiabilities)} ratios={model.bs.map(d => d.ratios ? d.ratios.debtRatio : 0)} isBold bgColor="bg-slate-50" />
+                        <ExpandableRow compact label={t('부채 총계')} values={model.bs.map(d => d.totalLiabilities)} ratios={model.bs.map(d => d.ratios ? d.ratios.debtRatio : 0)} isTotal />
                         
                         <ExpandableRow compact label={t('자본금')} values={model.bs.map(d => d.bsDetails.capital)}
                           details={inputs.equityList.map((eq) => ({ label: eq.name || `Investor`, values: model.bs.map((_, yearIndex) => inputs.equityList.reduce((sum, item) => sum + (item.amounts.slice(0, yearIndex+1).reduce((a,b)=>a+b,0)), 0)), level: 1 }))} />
                         <ExpandableRow compact label={t('이익잉여금')} values={model.bs.map(d => d.bsDetails.retainedEarnings)} />
-                        <ExpandableRow compact label={t('자본 총계')} values={model.bs.map(d => d.totalEquity)} isBold bgColor="bg-slate-50" />
+                        <ExpandableRow compact label={t('자본 총계')} values={model.bs.map(d => d.totalEquity)} isTotal />
 
-                        <ExpandableRow compact label={t('부채 및 자본 총계')} values={model.bs.map(d => d.totalLiabilities + d.totalEquity)} isBold bgColor="bg-slate-100" textColor="text-slate-900" isHeader />
+                        <ExpandableRow compact label={t('부채 및 자본 총계')} values={model.bs.map(d => d.totalLiabilities + d.totalEquity)} isHeader />
                       </tbody>
                     </table>
                   </div>
@@ -1414,18 +1565,18 @@ export default function App() {
 
             {activeTab === 'cf' && (
               <div className="p-0">
-                <div className="p-6 border-b border-slate-100 bg-slate-50">
-                  <h2 className="text-lg font-bold text-slate-800">{t('현금흐름표 (CF)')}</h2>
+                <div className="p-8 border-b border-slate-300 bg-white">
+                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{t('현금흐름표 (CF)')}</h2>
                 </div>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto border-b border-slate-300">
                   <table className="w-full text-sm text-right min-w-[700px]">
                     <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200">
-                        <th className="py-3 px-4 text-left font-semibold text-slate-600 w-1/4">{t('과목 (단위: 백만원)')}</th>
-                        {[0,1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-semibold text-slate-600">Y{y}</th>)}
+                      <tr className="bg-slate-50 border-b border-slate-300">
+                        <th className="py-3 px-4 text-left font-bold text-slate-800 w-1/4">{t('과목 (단위: 백만원)')}</th>
+                        {[0,1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 font-bold text-slate-800">Y{y}</th>)}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 border-b border-slate-200">
+                    <tbody className="divide-y divide-slate-200">
                       <ExpandableRow label={t('영업활동으로인한현금흐름')} values={model.cf.map(d => d.operatingCf)} isBold
                         details={[
                           { label: t('당기순이익'), values: model.cf.map(d => d.cfDetails.netIncome), level: 1 },
@@ -1447,7 +1598,7 @@ export default function App() {
                           { label: t('선수금/선수수익의 증가(감소)'), values: model.cf.map(d => d.cfDetails.advancesInflow), level: 2 },
                           { label: t('미지급금/예수금의 증가(감소)'), values: model.cf.map(d => d.cfDetails.accruedInflow), level: 2 }
                         ]} />
-                      <ExpandableRow label={t('투자활동으로인한현금흐름')} values={model.cf.map(d => d.investingCf)} textColor="text-red-600" isBold
+                      <ExpandableRow label={t('투자활동으로인한현금흐름')} values={model.cf.map(d => d.investingCf)} isBold
                         details={[
                           { label: t('자본적지출 (CAPEX)'), values: model.cf.map(d => d.cfDetails.capex), level: 1 },
                           { label: t('무형자산투자액'), values: model.cf.map(d => d.cfDetails.intangibleCapex), level: 1 }
@@ -1457,9 +1608,9 @@ export default function App() {
                           { label: t('자기자본 유입'), values: model.cf.map(d => d.cfDetails.equity), level: 1 },
                           { label: t('타인자본 유입 (차입)'), values: model.cf.map(d => d.cfDetails.debt), level: 1 }
                         ]} />
-                      <ExpandableRow label={t('현금의 증감')} values={model.cf.map(d => d.netCf)} isBold bgColor="bg-slate-50" textColor="text-blue-700" isHeader />
-                      <ExpandableRow label={t('기초 현금')} values={model.cf.map(d => d.beginningCash)} isBold bgColor="bg-slate-50" textColor="text-slate-700" />
-                      <ExpandableRow label={t('기말 현금')} values={model.cf.map(d => d.endingCash)} isBold bgColor="bg-slate-100" textColor="text-slate-900" isHeader />
+                      <ExpandableRow label={t('현금의 증감')} values={model.cf.map(d => d.netCf)} isTotal />
+                      <ExpandableRow label={t('기초 현금')} values={model.cf.map(d => d.beginningCash)} isBold />
+                      <ExpandableRow label={t('기말 현금')} values={model.cf.map(d => d.endingCash)} isHeader />
                     </tbody>
                   </table>
                 </div>
