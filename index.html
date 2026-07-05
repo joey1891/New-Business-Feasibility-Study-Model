@@ -18,18 +18,17 @@
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+    body { font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
     input:focus, select:focus { outline: none; border-color: #b91c1c; box-shadow: 0 0 0 1px #b91c1c; }
   </style>
 </head>
 <body>
   <div id="root"></div>
 
-  <!-- 여기서부터 React 프로그램 코드입니다 -->
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
-    // Supabase 설정 (본인의 키로 변경 가능)
+    // --- 고객님의 Supabase DB 연결 정보 ---
     const supabaseUrl = 'https://iyvfybwzlamucanqedfz.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
@@ -87,37 +86,51 @@
         setLocalVal(raw);
         if (raw !== '' && raw !== '-' && raw !== '.') onChange(Number(raw));
       };
-      return <input type="text" value={localVal} onChange={handleChange} placeholder={placeholder} className={`text-right border border-slate-300 rounded py-1 px-1.5 transition-all ${className}`} />;
+      return <input type="text" value={localVal} onChange={handleChange} placeholder={placeholder} className={`text-right border border-slate-300 rounded py-1 px-1.5 transition-all text-xs text-slate-800 ${className}`} />;
     };
 
-    const ExpandableRow = ({ label, values, ratios, details, isBold, isTotal, isHeader }) => {
+    const ExpandableRow = ({ label, values, ratios, details, isBold, isTotal, isHeader, isCompact = false }) => {
       const [ex, setEx] = useState(false);
       const hasD = details && details.length > 0;
-      let rowCls = 'border-b border-slate-200 text-slate-800 bg-white';
-      if (isHeader) rowCls = 'border-y border-slate-800 font-bold bg-slate-50 text-slate-900';
+      
+      let rowCls = 'border-b border-slate-200 text-slate-800 bg-white hover:bg-slate-50 transition-colors';
+      if (isHeader) rowCls = 'border-t-2 border-b-2 border-slate-800 font-bold bg-slate-100 text-slate-900';
       else if (isTotal) rowCls = 'border-y border-slate-300 font-bold bg-slate-50 text-slate-900';
-      else if (isBold) rowCls = 'font-semibold text-slate-900';
+      else if (isBold) rowCls = 'font-bold text-slate-900';
+
+      const paddingClass = isCompact ? 'py-1.5 px-3' : 'py-2.5 px-4';
+      const labelTextSize = isCompact ? 'text-[12px]' : 'text-sm';
+      const valueTextSize = isCompact ? 'text-[12px]' : 'text-[13px]';
 
       return (
         <React.Fragment>
           <tr className={rowCls}>
-            <td className={`py-2 px-4 text-left ${hasD ? 'cursor-pointer hover:bg-slate-50 select-none' : ''}`} onClick={() => hasD && setEx(!ex)}>
-              <span className="inline-block w-4">{hasD ? (ex ? '▼' : '▶') : ''}</span>
-              <span className="text-[13px]">{label}</span>
+            <td className={`${paddingClass} text-left ${hasD ? 'cursor-pointer select-none' : ''}`} onClick={() => hasD && setEx(!ex)}>
+              <div className="flex items-center gap-1.5">
+                <span className="w-3 text-slate-400 text-[10px]">{hasD ? (ex ? '▼' : '▶') : ''}</span>
+                <span className={labelTextSize}>{label}</span>
+              </div>
             </td>
             {values.map((val, idx) => (
-              <td key={idx} className="py-2 px-4 text-right text-[13px]">
-                {formatCurrency(toMil(val))}
-                {ratios && ratios[idx] !== 0 ? <div className="text-[10px] text-slate-400">({formatPercent(ratios[idx])})</div> : null}
+              <td key={idx} className={`${paddingClass} text-right align-middle ${valueTextSize}`}>
+                <span>{formatCurrency(toMil(val))}</span>
+                {ratios && ratios[idx] !== 0 ? <div className="text-[10px] text-slate-400 font-normal mt-0.5 tracking-tighter">({formatPercent(ratios[idx])})</div> : null}
               </td>
             ))}
           </tr>
           {ex && hasD && details.map((d, i) => (
-            <tr key={i} className="bg-white border-b border-slate-100 hover:bg-slate-50">
-              <td className={`py-1.5 px-4 text-left text-[12px] text-slate-600 ${d.level === 2 ? 'pl-12' : 'pl-8'}`}>{d.label}</td>
+            <tr key={i} className="bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors">
+              <td className={`py-2 px-4 text-left text-xs text-slate-600 ${d.level === 2 ? 'pl-12' : 'pl-8'} ${d.isGroup ? 'font-bold text-slate-800' : ''}`}>
+                {d.label}
+              </td>
               {d.values.map((v, vi) => (
-                <td key={vi} className="py-1.5 px-4 text-right text-[12px] text-slate-600">
-                  {formatCurrency(toMil(v))}
+                <td key={vi} className={`py-2 px-4 text-right text-xs align-middle ${d.isGroup ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                  <span>{formatCurrency(toMil(v))}</span>
+                  {d.ratios && d.ratios[vi] !== undefined && d.ratios[vi] !== 0 ? (
+                    <div className="text-[10px] text-slate-400 font-normal mt-0.5 tracking-tighter">
+                      ({formatPercent(d.ratios[vi])})
+                    </div>
+                  ) : null}
                 </td>
               ))}
             </tr>
@@ -127,25 +140,38 @@
     };
 
     function App() {
+      // --- 인증 및 전역 상태 ---
+      const [user, setUser] = useState(null);
+      const [authLoading, setAuthLoading] = useState(true);
+      const [authError, setAuthError] = useState('');
+      
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+
       const [activeTab, setActiveTab] = useState('npv');
       const [inputs, setInputs] = useState(DEFAULT_INPUTS);
-      const [user, setUser] = useState(null);
       const [projects, setProjects] = useState([]);
       const [projectName, setProjectName] = useState('새 프로젝트');
       const [currentProjectId, setCurrentProjectId] = useState(null);
       const [saveStatus, setSaveStatus] = useState('');
-      const [lang, setLang] = useState('ko');
-
-      // 다국어 번역 함수 추가
-      const translations = {
-        '새 프로젝트': 'New Project'
-      };
-      const t = (key) => (lang === 'en' && translations[key]) ? translations[key] : key;
 
       useEffect(() => {
-        supabaseClient.auth.signInAnonymously().then(({ data }) => setUser(data?.user)).catch(console.error);
+        // 앱 최초 진입 시 세션 확인
+        supabaseClient.auth.getSession().then(({ data, error }) => {
+          if (data?.session?.user) {
+            setUser(data.session.user);
+          }
+          setAuthLoading(false);
+        });
+
+        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+          setUser(session?.user || null);
+        });
+
+        return () => subscription.unsubscribe();
       }, []);
 
+      // DB에서 프로젝트 불러오기
       useEffect(() => {
         if (!user) return;
         const fetchProjects = async () => {
@@ -153,8 +179,42 @@
           if (data) setProjects(data);
         };
         fetchProjects();
+
+        const channel = supabaseClient.channel('schema-db-changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'feasibility_projects', filter: `user_id=eq.${user.id}` }, () => { fetchProjects(); })
+          .subscribe();
+        return () => { supabaseClient.removeChannel(channel); };
       }, [user]);
 
+      // --- 로그인 / 가입 핸들러 ---
+      const handleSignUp = async (e) => {
+        e.preventDefault();
+        setAuthError('');
+        if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) setAuthError(error.message);
+        else if (data?.user) setAuthError('✅ 가입 성공! 이제 로그인 가능합니다.');
+      };
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setAuthError('');
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) setAuthError('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.');
+      };
+
+      const handleAnonLogin = async () => {
+        setAuthError('');
+        const { error } = await supabaseClient.auth.signInAnonymously();
+        if (error) setAuthError('❌ 익명 로그인 실패: Supabase 관리자 페이지(Authentication -> Providers)에서 Anonymous 설정을 켜주세요!');
+      };
+
+      const handleLogout = async () => {
+        await supabaseClient.auth.signOut();
+        setUser(null);
+      };
+
+      // --- 프로젝트 저장 및 로드 ---
       const handleSave = async () => {
         if (!user) return;
         setSaveStatus('저장 중...');
@@ -169,10 +229,12 @@
           const { data: updated } = await supabaseClient.from('feasibility_projects').select('*').order('updated_at', { ascending: false });
           if (updated) setProjects(updated);
           setTimeout(() => setSaveStatus(''), 3000);
-        } catch (e) { setSaveStatus('❌ 오류 발생'); }
+        } catch (e) { 
+          setSaveStatus('❌ 오류 발생'); 
+          console.error(e);
+        }
       };
 
-      // 누락되었던 필수 기능(불러오기/새로만들기) 복구
       const handleLoad = (id) => {
         const proj = projects.find(p => p.id == id);
         if (proj) {
@@ -184,26 +246,17 @@
 
       const handleNew = () => {
         setInputs(DEFAULT_INPUTS);
-        setProjectName(t('새 프로젝트'));
+        setProjectName('새 프로젝트');
         setCurrentProjectId(null);
       };
 
-      const handleArrayChange = (name, index, value) => {
-        setInputs(prev => { const newArr = [...prev[name]]; newArr[index] = value; return { ...prev, [name]: newArr }; });
-      };
-
-      const handleListAmountChange = (listName, id, index, value) => {
-        setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, amounts: item.amounts.map((a, i) => i === index ? value : a) } : item) }));
-      };
-      
-      const handleListFieldChange = (listName, id, field, value) => {
-        setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
-      };
-
+      // --- 입력 핸들러들 ---
+      const handleArrayChange = (name, index, value) => setInputs(prev => { const newArr = [...prev[name]]; newArr[index] = value; return { ...prev, [name]: newArr }; });
+      const handleListAmountChange = (listName, id, index, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, amounts: item.amounts.map((a, i) => i === index ? value : a) } : item) }));
+      const handleListFieldChange = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
       const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: arr6(0, 0), usefulLife: 5 }] }));
       const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
 
-      // 누락되었던 매출 구조 조작 함수 복구
       const addCountry = () => setInputs(p => ({ ...p, salesHierarchy: [...p.salesHierarchy, { id: Date.now().toString(), name: '', clients: [] }] }));
       const updateCountry = (cId, name) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, name } : c) }));
       const removeCountry = (cId) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.filter(c => c.id !== cId) }));
@@ -360,285 +413,703 @@
         return res;
       }, [inputs]);
 
-      const YearlyInputField = ({ label, arrName }) => (
-        <div className="flex flex-col gap-1 mb-3">
-          <label className="text-xs font-semibold text-slate-800">{label}</label>
-          <div className="grid grid-cols-5 gap-1">
-            {inputs[arrName].map((v, i) => (
-              <div key={i} className="flex flex-col">
-                <span className="text-[9px] text-slate-400 mb-0.5 text-center font-medium">Y{i+1}</span>
-                <NumInput value={v} onChange={(val) => handleArrayChange(arrName, i, val)} />
-              </div>
-            ))}
+      const getF = (k1, k2) => model.is_financial.map(d => k2 ? d[k1][k2] : d[k1]);
+      const getM = (k1, k2) => model.is_managerial.map(d => k2 ? d[k1][k2] : d[k1]);
+      const getB = (k1, k2) => model.bs.map(d => k2 ? d[k1][k2] : d[k1]);
+      const getC = (k1, k2) => model.cf.map(d => k2 ? d[k1][k2] : d[k1]);
+      const getFC = (k) => model.fcffData.map(d => d[k]);
+
+      const equityDetails = useMemo(() => {
+        return inputs.equityList.map((eq) => {
+          return {
+            label: eq.name || 'Investor',
+            values: model.bs.map((_, yearIndex) => {
+              return eq.amounts.slice(0, yearIndex + 1).reduce((a, b) => a + b, 0);
+            }),
+            level: 1
+          };
+        });
+      }, [inputs.equityList, model.bs]);
+
+      const YearlyInputField = ({ label, arrName }) => {
+        return (
+          <div className="flex flex-col gap-1 mb-3">
+            <label className="text-[13px] font-bold text-slate-800 tracking-wide">{label}</label>
+            <div className="grid grid-cols-5 gap-1.5">
+              {inputs[arrName].map((v, i) => (
+                <div key={i} className="flex flex-col">
+                  <span className="text-[10px] text-slate-400 mb-0.5 text-center font-bold">Y{i+1}</span>
+                  <NumInput value={v} onChange={(val) => handleArrayChange(arrName, i, val)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const DynamicListYearly = ({ listName, items, title, namePlaceholder, hasUsefulLife }) => {
+        return (
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-[13px] font-bold text-slate-800 tracking-wide">{title}</label>
+              <button onClick={() => addListItem(listName)} className="text-xs font-semibold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2.5 py-1 rounded transition-colors shadow-sm">
+                + 항목 추가
+              </button>
+            </div>
+            <div className="space-y-3">
+              {items.map((item) => (
+                <div key={item.id} className="bg-white border border-slate-200 rounded p-3 shadow-sm">
+                  <div className="flex justify-between items-center mb-3">
+                    <input type="text" value={item.name} placeholder={namePlaceholder} onChange={(e) => handleListFieldChange(listName, item.id, 'name', e.target.value)}
+                      className="flex-1 min-w-0 text-[13px] font-bold bg-transparent border-b border-slate-300 focus:border-red-700 outline-none pb-1 mr-3 text-slate-800" />
+                    {hasUsefulLife ? (
+                      <div className="flex items-center gap-1.5 mr-3 shrink-0">
+                        <span className="text-[11px] text-slate-500 font-bold">내용연수</span>
+                        <input type="number" value={item.usefulLife || ''} onChange={(e) => handleListFieldChange(listName, item.id, 'usefulLife', Number(e.target.value))}
+                          className="w-12 text-right text-xs border border-slate-300 rounded py-0.5 px-1.5 focus:border-red-700 outline-none font-bold" min="1" step="1" />
+                        <span className="text-[11px] text-slate-500 font-bold">년</span>
+                      </div>
+                    ) : null}
+                    <button onClick={() => removeListItem(listName, item.id)} className="text-slate-400 hover:text-red-700 text-sm font-bold px-1">&times;</button>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1.5 mt-1">
+                    {item.amounts.map((amt, idx) => (
+                      <div key={idx} className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
+                        <NumInput value={amt} onChange={(val) => handleListAmountChange(listName, item.id, idx, val)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      const InputGroup = ({ title, children }) => {
+        return (
+          <div className="mb-6 bg-white p-5 border-t-2 border-slate-800 shadow-sm rounded-sm">
+            <h3 className="text-sm font-black text-slate-900 mb-5 tracking-tight">{title}</h3>
+            <div>{children}</div>
+          </div>
+        );
+      };
+
+      const TableHead = ({ years, compact }) => (
+        <thead>
+          <tr className="bg-slate-100 border-y-2 border-slate-800">
+            <th className={`py-3 px-4 text-left text-[13px] font-black text-slate-800 tracking-wider ${compact ? 'w-1/3' : 'w-[28%]'}`}>항목</th>
+            {years.map(y => <th key={y} className="py-3 px-4 text-right text-[13px] font-black text-slate-800">Y{y}</th>)}
+          </tr>
+        </thead>
+      );
+
+      const TableWrap = ({ title, years, children }) => (
+        <div className="p-8">
+          <div className="flex justify-between items-end mb-4">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{title}</h2>
+            <span className="text-xs text-slate-500">(단위: 백만원)</span>
+          </div>
+          <div className="overflow-x-auto border border-slate-300">
+            <table className="w-full text-sm text-right">
+              <TableHead years={years} />
+              <tbody className="divide-y divide-slate-200">
+                {children}
+              </tbody>
+            </table>
           </div>
         </div>
       );
 
+      // --- 로그인/회원가입 모달 UI ---
+      if (authLoading) return <div className="flex h-screen items-center justify-center bg-slate-100 font-bold text-slate-600">로딩 중...</div>;
+
+      if (!user) {
+        return (
+          <div className="flex h-screen items-center justify-center bg-slate-200 font-sans">
+            <div className="bg-white p-8 rounded-lg shadow-xl w-96 border-t-4 border-slate-800">
+              <h1 className="text-2xl font-black text-slate-900 tracking-tighter mb-2">사업타당성 시뮬레이터</h1>
+              <p className="text-xs text-slate-500 font-semibold mb-6">프로젝트 데이터를 클라우드에 안전하게 보관하세요.</p>
+              
+              <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">이메일 계정</label>
+                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required className="w-full border border-slate-300 rounded p-2 text-sm focus:border-red-700 outline-none" placeholder="example@email.com"/>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">비밀번호 (6자리 이상)</label>
+                  <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength="6" className="w-full border border-slate-300 rounded p-2 text-sm focus:border-red-700 outline-none" placeholder="••••••"/>
+                </div>
+                
+                {authError && <div className="bg-red-50 text-red-600 p-2 text-xs font-bold rounded border border-red-200">{authError}</div>}
+                
+                <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2">
+                  이메일로 로그인
+                </button>
+                <button type="button" onClick={handleSignUp} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors">
+                  새 계정으로 회원가입
+                </button>
+                
+                <div className="flex items-center my-2">
+                  <div className="flex-grow border-t border-slate-200"></div>
+                  <span className="flex-shrink-0 mx-4 text-slate-400 text-xs font-bold">OR</span>
+                  <div className="flex-grow border-t border-slate-200"></div>
+                </div>
+
+                <button type="button" onClick={handleAnonLogin} className="w-full bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-600 font-bold py-2.5 rounded transition-colors text-xs">
+                  로그인 없이 익명으로 시작하기
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
       return (
-        <div className="flex h-screen bg-slate-100 font-sans text-slate-800 overflow-hidden custom-scrollbar">
+        <div className="flex h-screen bg-slate-200 font-sans text-slate-800 overflow-hidden">
           
-          {/* --- 좌측 패널 --- */}
-          <div className="w-[420px] bg-slate-50 border-r border-slate-300 flex flex-col z-10">
-            <div className="p-4 bg-white border-b border-slate-300 flex justify-between items-center">
-              <h1 className="text-lg font-black text-slate-900">사업타당성 시뮬레이터</h1>
-              <button onClick={() => setLang(l => l === 'ko' ? 'en' : 'ko')} className="text-[10px] font-bold bg-slate-100 border border-slate-300 px-2 py-1 rounded">🌐 {lang==='ko'?'ENG':'KOR'}</button>
+          {/* --- 좌측 패널 (입력부) --- */}
+          <div className="w-[480px] min-w-[450px] bg-slate-50 border-r border-slate-300 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.05)]">
+            <div className="p-5 bg-white border-b border-slate-300 flex justify-between items-center">
+              <div>
+                <h1 className="text-xl font-black text-slate-900 tracking-tighter">사업타당성 시뮬레이터</h1>
+                <p className="text-[11px] text-slate-500 mt-1 font-semibold tracking-tight">수정된 수치는 우측 보고서에 실시간 반영됩니다.</p>
+              </div>
+              <button onClick={handleLogout} className="text-[10px] font-bold bg-slate-100 border border-slate-300 px-2 py-1.5 rounded hover:bg-slate-200">
+                로그아웃
+              </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-slate-50/50">
               
-              <div className="bg-white p-4 border border-slate-300 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">📁 프로젝트 관리</h3>
-                <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명" className="w-full text-sm font-bold border-b-2 border-slate-300 focus:border-red-700 outline-none py-1 mb-3" />
-                <div className="flex gap-2 mb-2">
-                  <button onClick={handleSave} className="flex-1 bg-slate-800 text-white text-[11px] font-bold py-2 rounded">💾 저장</button>
-                  <button onClick={handleNew} className="flex-1 bg-white border border-slate-300 text-slate-700 text-[11px] font-bold py-2 rounded">📄 새로 만들기</button>
+              <InputGroup title="📂 프로젝트 데이터 관리">
+                <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명 입력" className="w-full text-sm font-bold border border-slate-300 rounded focus:border-red-700 outline-none p-2 mb-3 bg-slate-50" />
+                <div className="flex gap-2 mb-3">
+                  <button onClick={handleSave} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 rounded transition-colors shadow-sm">💾 클라우드 저장</button>
+                  <button onClick={handleNew} className="flex-1 bg-white border border-slate-300 hover:border-slate-800 text-slate-800 text-xs font-bold py-2.5 rounded transition-colors shadow-sm">📄 신규 캔버스</button>
                 </div>
-                {saveStatus ? <p className="text-green-600 text-[10px] text-center font-bold">{saveStatus}</p> : null}
-                <select onChange={(e) => handleLoad(e.target.value)} value={currentProjectId || ''} className="w-full text-xs border border-slate-300 rounded p-1.5 outline-none">
-                  <option value="" disabled>프로젝트 불러오기...</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
+                {saveStatus ? <p className="text-red-700 text-xs text-center font-bold mb-3">{saveStatus}</p> : null}
+                <div className="bg-slate-100 p-3 rounded border border-slate-200">
+                  <p className="text-[11px] font-bold text-slate-600 mb-1.5">저장된 프로젝트 불러오기</p>
+                  <select onChange={(e) => handleLoad(e.target.value)} value={currentProjectId || ''} className="w-full text-xs font-semibold border border-slate-300 rounded p-2 outline-none focus:border-red-700 bg-white">
+                    <option value="" disabled>목록에서 선택...</option>
+                    {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({new Date(p.updated_at).toLocaleDateString()})</option>)}
+                  </select>
+                </div>
+              </InputGroup>
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">1. 거시환경변수</h3>
+              <InputGroup title="1. 거시환경변수">
                 <YearlyInputField label="물가상승률 (%)" arrName="inflationRate" />
                 <YearlyInputField label="조달 금리 (%)" arrName="interestRate" />
                 <YearlyInputField label="환율 (원/$)" arrName="exchangeRate" />
                 <YearlyInputField label="산업성장률 (%)" arrName="industryGrowth" />
-                <YearlyInputField label="세율 (%)" arrName="taxRate" />
-              </div>
+                <YearlyInputField label="법인세율 (%)" arrName="taxRate" />
+              </InputGroup>
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">2. 자본조달</h3>
-                <YearlyInputField label="자기자본비용 (%)" arrName="costOfEquity" />
+              <InputGroup title="2. 자본조달 구조">
+                <YearlyInputField label="자기자본비용 (요구수익률) (%)" arrName="costOfEquity" />
+                <div className="my-6 border-t border-dashed border-slate-300"></div>
+                <DynamicListYearly listName="equityList" items={inputs.equityList} title="자기자본 조달" namePlaceholder="조달처 (예: 창업자, VC)" />
+                <DynamicListYearly listName="debtList" items={inputs.debtList} title="타인자본 조달" namePlaceholder="조달처 (예: A은행, 기보)" />
                 
-                {/* WACC Info */}
-                <div className="bg-slate-800 text-white p-3 rounded mt-4 text-xs">
-                  <div className="flex justify-between mb-1"><span className="text-slate-300">자기자본 비율 (Y0)</span><span className="font-bold">{formatPercent(model.wE)}</span></div>
-                  <div className="flex justify-between mb-1"><span className="text-slate-300">타인자본 비율 (Y0)</span><span className="font-bold">{formatPercent(model.wD)}</span></div>
-                  <div className="flex justify-between border-t border-slate-600 pt-1 mt-1"><span className="font-bold">WACC</span><span className="font-black text-red-400">{formatPercent(model.wacc)}</span></div>
+                <div className="bg-slate-900 text-white p-4 rounded mt-4 shadow-inner">
+                  <div className="flex justify-between mb-1.5"><span className="text-slate-400 text-xs font-semibold">자기자본 비율 (초기 Y0)</span><span className="font-bold text-sm">{formatPercent(model.wE)}</span></div>
+                  <div className="flex justify-between mb-1.5"><span className="text-slate-400 text-xs font-semibold">타인자본 비율 (초기 Y0)</span><span className="font-bold text-sm">{formatPercent(model.wD)}</span></div>
+                  <div className="flex justify-between border-t border-slate-700 pt-2 mt-2"><span className="font-bold text-sm text-slate-200">가중평균자본비용 (WACC)</span><span className="font-black text-red-400 text-base">{formatPercent(model.wacc)}</span></div>
                 </div>
-              </div>
+              </InputGroup>
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">3. 자금소요 - 투자</h3>
-                <YearlyInputField label="가동률 (초기) (%)" arrName="utilization" />
-                <YearlyInputField label="생산 로스(Loss)율 (%)" arrName="lossRate" />
-              </div>
+              <InputGroup title="3. 자금소요 (투자/CAPEX)">
+                <DynamicListYearly listName="capexList" items={inputs.capexList} title="유형자산 (설비투자)" namePlaceholder="항목 (예: 기계장치, 공장)" hasUsefulLife />
+                <DynamicListYearly listName="intangibleList" items={inputs.intangibleList} title="무형자산 (소프트웨어 등)" namePlaceholder="항목 (예: ERP, 특허권)" hasUsefulLife />
+                <div className="my-6 border-t border-dashed border-slate-300"></div>
+                <YearlyInputField label="예상 설비 가동률 (%)" arrName="utilization" />
+                <YearlyInputField label="생산 수율 로스(Loss)율 (%)" arrName="lossRate" />
+              </InputGroup>
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">4. 자금소요 - 운전자본</h3>
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2">원재료비</div>
-                <YearlyInputField label="원자재" arrName="rawMaterialMain" />
-                <YearlyInputField label="부자재" arrName="rawMaterialSub" />
+              <InputGroup title="4. 자금소요 (운전자본 및 제조경비)">
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">원재료비</div>
+                <YearlyInputField label="주원자재 단가" arrName="rawMaterialMain" />
+                <YearlyInputField label="부자재 단가" arrName="rawMaterialSub" />
                 
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">직접노무비</div>
-                <YearlyInputField label="단위 직접노무비" arrName="directLabor" />
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">직접노무비</div>
+                <YearlyInputField label="단위당 직접노무비" arrName="directLabor" />
                 
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">직접경비</div>
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">직접경비</div>
                 <YearlyInputField label="전력비" arrName="directExpPower" />
                 <YearlyInputField label="용수비" arrName="directExpWater" />
                 <YearlyInputField label="생산소모품비" arrName="directExpConsumables" />
                 
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">간접경비</div>
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">간접경비</div>
                 <YearlyInputField label="품질검사비" arrName="indirectExpQC" />
                 <YearlyInputField label="수선유지비" arrName="indirectExpMaintenance" />
                 <YearlyInputField label="폐기물처리비" arrName="indirectExpWaste" />
 
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">회전일수</div>
-                <YearlyInputField label="매출채권 회전일수" arrName="arDays" />
-                <YearlyInputField label="재고자산 회전일수" arrName="invDays" />
-                <YearlyInputField label="매입채무 회전일수" arrName="apDays" />
-              </div>
+                <div className="my-6 border-t border-dashed border-slate-300"></div>
+                
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">운전자본 회전일수</div>
+                <YearlyInputField label="매출채권 회전일수 (Days)" arrName="arDays" />
+                <YearlyInputField label="재고자산 회전일수 (Days)" arrName="invDays" />
+                <YearlyInputField label="매입채무 회전일수 (Days)" arrName="apDays" />
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">5. 자금소요 - 판관비</h3>
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2">변동비(%)</div>
+                <div className="my-6 border-t border-dashed border-slate-300"></div>
+                
+                <div className="bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-1 rounded border border-blue-200 mb-3">유동부채 변동 (영업현금 유입 효과)</div>
+                <DynamicListYearly listName="advancesList" items={inputs.advancesList} title="선수금/선수수익" namePlaceholder="항목 (예: 선수금)" />
+                <DynamicListYearly listName="accruedList" items={inputs.accruedList} title="미지급금/예수금" namePlaceholder="항목 (예: 미지급비용)" />
+                
+                <div className="bg-red-100 text-red-800 text-[11px] font-bold px-2 py-1 rounded border border-red-200 mb-3 mt-5">유동자산 변동 (영업현금 유출 효과)</div>
+                <DynamicListYearly listName="prepaidList" items={inputs.prepaidList} title="선급금/선급비용" namePlaceholder="항목 (예: 선급금)" />
+                <DynamicListYearly listName="receivableList" items={inputs.receivableList} title="미수금/미수수익" namePlaceholder="항목 (예: 미수금)" />
+              </InputGroup>
+
+              <InputGroup title="5. 자금소요 (판매비와 관리비)">
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">직접변동비 (매출액 대비 %)</div>
                 <YearlyInputField label="물류/수출비용 (%)" arrName="logisticsRate" />
                 <YearlyInputField label="판매수수료 (%)" arrName="salesCommRate" />
-                <YearlyInputField label="AS비용 (%)" arrName="asCostRate" />
+                <YearlyInputField label="A/S 비용 (%)" arrName="asCostRate" />
 
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">준변동비</div>
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">준변동비 (연간 총액)</div>
                 <YearlyInputField label="수도광열비" arrName="utilities" />
                 <YearlyInputField label="여비교통비" arrName="travel" />
                 <YearlyInputField label="통신비" arrName="telecom" />
 
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">고정비</div>
-                <YearlyInputField label="인건비" arrName="laborFix" />
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">고정비 (연간 총액)</div>
+                <YearlyInputField label="인건비 (급여/퇴직금)" arrName="laborFix" />
                 <YearlyInputField label="복리후생비" arrName="benefits" />
                 <YearlyInputField label="임차료" arrName="rent" />
-                <YearlyInputField label="연구개발비" arrName="rnd" />
-                <YearlyInputField label="마케팅비" arrName="marketing" />
+                <YearlyInputField label="세금과공과" arrName="taxes" />
+                <YearlyInputField label="보험료" arrName="insurance" />
+                <YearlyInputField label="지급수수료" arrName="fees" />
+                <YearlyInputField label="연구개발비 (R&D)" arrName="rnd" />
+                <YearlyInputField label="마케팅/광고선전비" arrName="marketing" />
+                <YearlyInputField label="소모품비" arrName="supplies" />
+                <YearlyInputField label="대손상각비 (추정)" arrName="badDebt" />
                 <YearlyInputField label="기타 판관비" arrName="otherSga" />
-              </div>
+              </InputGroup>
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-xs font-bold text-slate-900 uppercase">6. 매출액 추정</h3>
-                  <button onClick={addCountry} className="text-[10px] bg-slate-100 px-2 py-1 rounded">국가 추가</button>
+              <InputGroup title="6. 매출액 추정 (국가/거래처/품목)">
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-xs font-semibold text-slate-500">매출 구조 트리</p>
+                  <button onClick={addCountry} className="text-xs font-bold bg-white border border-slate-300 hover:border-slate-800 text-slate-800 px-3 py-1 rounded transition-colors shadow-sm">+ 국가 추가</button>
                 </div>
-                {inputs.salesHierarchy.map(country => (
-                  <div key={country.id} className="mb-4 border p-2 rounded">
-                    <div className="flex gap-2 mb-2">
-                      <input type="text" value={country.name} onChange={e=>updateCountry(country.id, e.target.value)} placeholder="국가명" className="text-sm font-bold flex-1 border-b" />
-                      <button onClick={()=>addClient(country.id)} className="text-[10px] bg-slate-100 px-2 rounded">+ 거래처</button>
-                      <button onClick={()=>removeCountry(country.id)} className="text-red-500">x</button>
-                    </div>
-                    {country.clients.map(client => (
-                      <div key={client.id} className="ml-2 mb-2 p-2 bg-slate-50 rounded">
-                        <div className="flex gap-2 mb-2">
-                          <input type="text" value={client.name} onChange={e=>updateClient(country.id, client.id, e.target.value)} placeholder="거래처명" className="text-xs font-bold flex-1 bg-transparent border-b" />
-                          <button onClick={()=>addProduct(country.id, client.id)} className="text-[10px] bg-white px-2 border rounded">+ 품목</button>
-                          <button onClick={()=>removeClient(country.id, client.id)} className="text-red-500">x</button>
+                
+                <div className="space-y-4">
+                  {inputs.salesHierarchy.map((country) => (
+                    <div key={country.id} className="bg-slate-100 border border-slate-300 rounded p-3">
+                      <div className="flex justify-between items-center mb-3">
+                        <input type="text" value={country.name} onChange={(e) => updateCountry(country.id, e.target.value)} placeholder="국가명 입력" className="text-sm font-black text-slate-900 bg-transparent border-b-2 border-slate-400 focus:border-red-700 outline-none w-1/2 px-1 py-0.5" />
+                        <div className="flex gap-1">
+                          <button onClick={() => addClient(country.id)} className="text-[11px] font-bold text-slate-700 bg-white border border-slate-300 px-2.5 py-1 rounded shadow-sm hover:bg-slate-50">+ 거래처 추가</button>
+                          <button onClick={() => removeCountry(country.id)} className="text-slate-400 hover:text-red-700 px-2 font-bold">&times;</button>
                         </div>
-                        {client.products.map(product => (
-                          <div key={product.id} className="bg-white p-2 mb-2 rounded border">
-                            <div className="flex gap-2 mb-2">
-                              <input type="text" value={product.name} onChange={e=>updateProduct(country.id, client.id, product.id, 'name', null, e.target.value)} placeholder="품목명" className="text-[11px] font-bold flex-1 border-b" />
-                              <button onClick={()=>removeProduct(country.id, client.id, product.id)} className="text-red-500">x</button>
-                            </div>
-                            <div className="text-[9px] text-slate-500 mb-1">가격</div>
-                            <div className="grid grid-cols-5 gap-1 mb-2">
-                              {product.prices.map((p, i) => <NumInput key={'p'+i} value={p} onChange={v=>updateProduct(country.id, client.id, product.id, 'prices', i, v)} className="text-[10px]"/>)}
-                            </div>
-                            <div className="text-[9px] text-slate-500 mb-1">수량</div>
-                            <div className="grid grid-cols-5 gap-1">
-                              {product.volumes.map((v, i) => <NumInput key={'v'+i} value={v} onChange={val=>updateProduct(country.id, client.id, product.id, 'volumes', i, val)} className="text-[10px]"/>)}
+                      </div>
+                      
+                      {country.clients.map((client) => (
+                        <div key={client.id} className="ml-3 mt-3 p-3 bg-white border border-slate-200 rounded shadow-sm">
+                          <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                            <input type="text" value={client.name} onChange={(e) => updateClient(country.id, client.id, e.target.value)} placeholder="거래처명 입력" className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none w-1/2 px-1" />
+                            <div className="flex gap-1">
+                              <button onClick={() => addProduct(country.id, client.id)} className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded hover:bg-slate-200">+ 품목 추가</button>
+                              <button onClick={() => removeClient(country.id, client.id)} className="text-slate-400 hover:text-red-700 px-2">&times;</button>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
 
-              <div className="bg-white p-4 border-t-[3px] border-slate-800 shadow-sm rounded">
-                <h3 className="text-xs font-bold text-slate-900 mb-3 uppercase">7. 영업외수익/비용</h3>
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2">영업외수익</div>
-                <YearlyInputField label="현금성 수익" arrName="nonOpIncCash" />
-                <YearlyInputField label="비현금성 수익" arrName="nonOpIncNonCash" />
-                <div className="bg-slate-100 p-1.5 text-[10px] font-bold rounded mb-2 mt-4">영업외비용</div>
-                <YearlyInputField label="현금성 비용" arrName="nonOpExpCash" />
-                <YearlyInputField label="비현금성 비용" arrName="nonOpExpNonCash" />
-              </div>
+                          <div className="space-y-3 mt-2">
+                            {client.products.map(product => (
+                              <div key={product.id} className="bg-slate-50 p-2.5 rounded border border-slate-200">
+                                 <div className="flex justify-between items-center mb-3">
+                                   <input type="text" value={product.name} onChange={(e) => updateProduct(country.id, client.id, product.id, 'name', null, e.target.value)} placeholder="품목명 입력" className="text-[11px] font-bold text-slate-800 bg-transparent border-b border-slate-300 focus:border-red-700 outline-none w-2/3 px-1 pb-0.5" />
+                                   <button onClick={() => removeProduct(country.id, client.id, product.id)} className="text-slate-400 hover:text-red-700 font-bold">&times;</button>
+                                 </div>
+                                 <div className="text-[10px] font-bold text-slate-600 mb-1">단가 (Price)</div>
+                                 <div className="grid grid-cols-5 gap-1 mb-3">
+                                    {product.prices.map((p, idx) => (
+                                      <NumInput key={`p-${idx}`} value={p} onChange={(v) => updateProduct(country.id, client.id, product.id, 'prices', idx, v)} className="text-[10px]" />
+                                    ))}
+                                 </div>
+                                 <div className="text-[10px] font-bold text-slate-600 mb-1">수량 (Volume)</div>
+                                 <div className="grid grid-cols-5 gap-1">
+                                    {product.volumes.map((v, idx) => (
+                                      <NumInput key={`v-${idx}`} value={v} onChange={(val) => updateProduct(country.id, client.id, product.id, 'volumes', idx, val)} className="text-[10px]" />
+                                    ))}
+                                 </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </InputGroup>
 
+              <InputGroup title="7. 영업외수익/비용 및 비현금성 항목">
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외수익</div>
+                <YearlyInputField label="현금성 수익 (이자수익 등)" arrName="nonOpIncCash" />
+                <YearlyInputField label="비현금성 수익 (외환차익 등)" arrName="nonOpIncNonCash" />
+
+                <div className="my-6 border-t border-dashed border-slate-300"></div>
+                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외비용</div>
+                <YearlyInputField label="현금성 비용 (수수료 등)" arrName="nonOpExpCash" />
+                <YearlyInputField label="비현금성 비용 (외환차손 등)" arrName="nonOpExpNonCash" />
+              </InputGroup>
             </div>
           </div>
 
-          {/* --- 우측 뷰어 패널 --- */}
-          <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
-            <div className="bg-white border-b border-slate-300 px-6 pt-4 flex gap-6 overflow-x-auto shrink-0 shadow-sm w-full custom-scrollbar">
-              {['npv', 'is_fin', 'is_mgr', 'bs', 'cf'].map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={`pb-3 text-xs font-bold uppercase tracking-wider transition-all border-b-[3px] whitespace-nowrap ${activeTab === tab ? 'border-red-700 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
-                  {tab === 'npv' ? '사업타당성' : tab === 'is_fin' ? '재무회계 IS' : tab === 'is_mgr' ? '관리회계 IS' : tab === 'bs' ? '재무상태표' : '현금흐름표'}
+          {/* --- 우측 뷰어 패널 (보고서 렌더링) --- */}
+          <div className="flex-1 flex flex-col bg-[#e2e8f0] overflow-hidden">
+            {/* 상단 탭 네비게이션 */}
+            <div className="bg-white border-b border-slate-300 px-8 pt-5 flex gap-8 shrink-0 shadow-sm z-10 custom-scrollbar overflow-x-auto">
+              {[
+                { id: 'npv', label: '📊 사업타당성 분석 요약' },
+                { id: 'is_fin', label: '📑 재무회계 손익계산서' },
+                { id: 'is_mgr', label: '📈 관리회계 손익계산서' },
+                { id: 'bs', label: '🏦 재무상태표 (B/S)' },
+                { id: 'cf', label: '💵 현금흐름표 (C/F)' },
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`pb-4 text-[13px] font-black tracking-widest transition-all whitespace-nowrap outline-none ${activeTab === tab.id ? 'border-b-[3px] border-red-700 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
+                  {tab.label}
                 </button>
               ))}
             </div>
 
-            <div className="flex-1 overflow-auto p-6 w-full custom-scrollbar">
-              <div className="bg-white border border-slate-300 shadow-sm min-w-[700px] mb-10">
+            <div className="flex-1 overflow-auto p-8 custom-scrollbar relative">
+              <div className="max-w-6xl mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
                 
-                {activeTab === 'npv' ? (
-                  <div className="p-8">
-                    <h2 className="text-xl font-bold text-slate-900 mb-6 tracking-tight">사업타당성 분석 결과</h2>
-                    <div className="grid grid-cols-4 gap-4 mb-8">
-                      <div className="bg-slate-50 border border-slate-200 rounded p-4 text-center"><p className="text-[10px] text-slate-500 font-bold mb-1">NPV</p><p className="text-xl font-black text-slate-900">{formatCurrency(model.npv/1000000)}</p></div>
-                      <div className="bg-slate-50 border border-slate-200 rounded p-4 text-center"><p className="text-[10px] text-slate-500 font-bold mb-1">IRR</p><p className="text-xl font-black text-red-700">{formatPercent(model.irr)}</p></div>
-                      <div className="bg-slate-50 border border-slate-200 rounded p-4 text-center"><p className="text-[10px] text-slate-500 font-bold mb-1">Payback Period</p><p className="text-xl font-black text-slate-900">{model.paybackPeriod ? model.paybackPeriod.toFixed(1) : '> 5'}</p></div>
-                      <div className="bg-slate-50 border border-slate-200 rounded p-4 text-center"><p className="text-[10px] text-slate-500 font-bold mb-1">BEP (Y1)</p><p className="text-xl font-black text-slate-900">{formatCurrency(model.is_managerial[0]?.bepRevenue/1000000)}</p></div>
+                {/* 1. 사업타당성 결과 탭 */}
+                <div style={{ display: activeTab === 'npv' ? 'block' : 'none' }}>
+                  <div className="px-10 py-8 border-b border-slate-200 bg-slate-50">
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">사업타당성 종합 분석 보고서</h2>
+                    <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary</p>
+                  </div>
+                  <div className="p-10">
+                    <div className="grid grid-cols-4 gap-6 mb-12">
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">순현재가치 (NPV)</p>
+                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.npv / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span></p>
+                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">할인율(WACC) {formatPercent(model.wacc)} 적용</p>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-1 h-full ${model.irr > model.wacc ? 'bg-red-700' : 'bg-slate-400'}`}></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">내부수익률 (IRR)</p>
+                        <p className={`text-3xl font-black tracking-tighter ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>{formatPercent(model.irr)}</p>
+                        <p className={`text-[10px] mt-3 font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-400'}`}>
+                          {model.irr > model.wacc ? '✅ 타당성 확보 (IRR > WACC)' : '⚠️ 타당성 미흡 (IRR < WACC)'}
+                        </p>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">투자회수기간 (Payback)</p>
+                        <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                          {model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> 5'} <span className="text-sm font-bold text-slate-500">년</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">투자금 전액 회수 소요 기간</p>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">초년도 손익분기 (BEP)</p>
+                        <p className="text-3xl font-black text-slate-900 tracking-tighter">
+                          {formatCurrency(model.is_managerial[0]?.bepRevenue / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">Y1 목표 손익분기 매출액</p>
+                      </div>
                     </div>
-                    <div className="flex justify-between items-end mb-2"><h3 className="text-sm font-bold text-slate-900">잉여현금흐름 (FCFF)</h3><span className="text-[10px] text-slate-500">(백만원)</span></div>
-                    <table className="w-full text-right text-xs">
-                      <thead><tr className="bg-slate-100 border-y border-slate-400"><th className="p-2 text-left">항목</th>{[0,1,2,3,4,5].map(y=><th key={y} className="p-2">Y{y}</th>)}</tr></thead>
-                      <tbody className="divide-y divide-slate-100">
-                        <ExpandableRow label="현금유입" isBold values={model.fcffData.map(d=>d.nopat+d.depreciation+d.amortization+d.advancesInflow+d.accruedInflow+d.terminalValue)} details={[{label:'NOPAT', values:model.fcffData.map(d=>d.nopat)}, {label:'상각비', values:model.fcffData.map(d=>d.depreciation+d.amortization)}]} />
-                        <ExpandableRow label="현금유출" isBold values={model.fcffData.map(d=>d.capex+d.intangibleCapex+d.deltaWc+d.prepaidOutflow+d.receivableOutflow)} details={[{label:'CAPEX', values:model.fcffData.map(d=>d.capex+d.intangibleCapex)}, {label:'운전자본증감', values:model.fcffData.map(d=>d.deltaWc)}]} />
-                        <ExpandableRow label="잉여현금흐름" isHeader values={model.fcffData.map(d=>d.fcff)} />
+
+                    <div className="flex justify-between items-end mb-4 px-2">
+                      <h3 className="text-sm font-black text-slate-900 tracking-wide">잉여현금흐름 (FCFF) 추정</h3>
+                      <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                    </div>
+                    <table className="w-full text-right border-collapse border-y-2 border-slate-800">
+                      <TableHead years={[0,1,2,3,4,5]} />
+                      <tbody className="divide-y divide-slate-200">
+                        <ExpandableRow label="1. 현금의 유입 (+)" isBold
+                          values={model.fcffData.map(d => d.nopat + d.depreciation + d.amortization + d.advancesInflow + d.accruedInflow + d.terminalValue)} 
+                          details={[
+                            { label: '세후영업이익 (NOPAT)', values: model.fcffData.map(d => d.nopat), isGroup: true, level: 1 },
+                            { label: '매출액', values: [0, ...model.is_managerial.map(d => d.revenue)], level: 2 },
+                            { label: '변동비', values: [0, ...model.is_managerial.map(d => d.variableCosts)], level: 2 },
+                            { label: '공헌이익', values: [0, ...model.is_managerial.map(d => d.contributionMargin)], level: 2 },
+                            { label: '고정비', values: [0, ...model.is_managerial.map(d => d.fixedCosts)], level: 2 },
+                            { label: '영업이익', values: [0, ...model.is_managerial.map(d => d.operatingProfit)], level: 2 },
+                            { label: '법인세비용', values: [0, ...model.is_financial.map(d => d.tax)], level: 2 },
+                            { label: '비현금유출비용 (가산)', values: model.fcffData.map(d => d.depreciation + d.amortization), isGroup: true, level: 1 },
+                            { label: '감가상각비', values: model.fcffData.map(d => d.depreciation), level: 2 },
+                            { label: '무형자산상각비', values: model.fcffData.map(d => d.amortization), level: 2 },
+                            { label: '영업부채 증가 (유입)', values: model.fcffData.map(d => d.advancesInflow + d.accruedInflow), isGroup: true, level: 1 },
+                            { label: '선수금 등 증가', values: model.fcffData.map(d => d.advancesInflow), level: 2 },
+                            { label: '미지급금 등 증가', values: model.fcffData.map(d => d.accruedInflow), level: 2 },
+                            { label: '잔존가치 (Terminal Value)', values: model.fcffData.map(d => d.terminalValue), level: 1 },
+                          ]} 
+                        />
+                        <ExpandableRow label="2. 현금의 유출 (-)" isBold
+                          values={model.fcffData.map(d => d.capex + d.intangibleCapex + d.deltaWc + d.prepaidOutflow + d.receivableOutflow)} 
+                          details={[
+                            { label: '자본적지출 (CAPEX)', values: model.fcffData.map(d => d.capex), level: 1 },
+                            { label: '무형자산투자액', values: model.fcffData.map(d => d.intangibleCapex), level: 1 },
+                            { label: '운전자본증감액 (ΔWC)', values: model.fcffData.map(d => d.deltaWc), level: 1 },
+                            { label: '영업자산 증가 (유출)', values: model.fcffData.map(d => d.prepaidOutflow + d.receivableOutflow), isGroup: true, level: 1 },
+                            { label: '선급금 등 증가', values: model.fcffData.map(d => d.prepaidOutflow), level: 2 },
+                            { label: '미수금 등 증가', values: model.fcffData.map(d => d.receivableOutflow), level: 2 },
+                          ]} 
+                        />
+                        <ExpandableRow label="잉여현금흐름 (FCFF)" isHeader values={model.fcffData.map(d => d.fcff)} />
+                        <ExpandableRow label="할인된 잉여현금흐름 (PV)" isTotal values={model.fcffData.map(d => d.pvFcff)} />
                       </tbody>
                     </table>
                   </div>
-                ) : null}
+                </div>
 
-                {activeTab === 'is_fin' ? (
-                  <div className="p-8">
-                    <div className="flex justify-between items-end mb-2"><h3 className="text-sm font-bold text-slate-900">재무회계 손익계산서</h3><span className="text-[10px] text-slate-500">(백만원)</span></div>
-                    <table className="w-full text-right text-xs">
-                      <thead><tr className="bg-slate-100 border-y border-slate-400"><th className="p-2 text-left">항목</th>{[1,2,3,4,5].map(y=><th key={y} className="p-2">Y{y}</th>)}</tr></thead>
-                      <tbody className="divide-y divide-slate-100">
-                        <ExpandableRow label="매출액" values={model.is_financial.map(d=>d.revenue)} isBold />
-                        <ExpandableRow label="매출원가" values={model.is_financial.map(d=>d.cogs)} />
-                        <ExpandableRow label="매출총이익" values={model.is_financial.map(d=>d.grossProfit)} isTotal />
-                        <ExpandableRow label="판매비와관리비" values={model.is_financial.map(d=>d.totalSga)} />
-                        <ExpandableRow label="영업이익" values={model.is_financial.map(d=>d.operatingProfit)} isTotal />
-                        <ExpandableRow label="당기순이익" values={model.is_financial.map(d=>d.netIncome)} isHeader />
+                {/* 2. 재무회계 손익계산서 탭 */}
+                <div style={{ display: activeTab === 'is_fin' ? 'block' : 'none' }}>
+                  <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">재무회계 추정손익계산서</h2>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Financial Income Statement</p>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                  </div>
+                  <div className="p-10">
+                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
+                      <TableHead years={[1,2,3,4,5]} />
+                      <tbody className="divide-y divide-slate-200">
+                        <ExpandableRow label="I. 매출액" values={getF('revenue')} isBold details={model.revenueDetails} />
+                        <ExpandableRow label="II. 매출원가" values={getF('cogs')} ratios={getF('ratios', 'cogsRatio')}
+                          details={[
+                            { label: '원자재비', values: getF('cogsDetails', 'rawMatMain') },
+                            { label: '부자재비', values: getF('cogsDetails', 'rawMatSub') },
+                            { label: '직접노무비', values: getF('cogsDetails', 'directLabor') },
+                            { label: '전력비', values: getF('cogsDetails', 'dirExpPower') },
+                            { label: '용수비', values: getF('cogsDetails', 'dirExpWater') },
+                            { label: '생산소모품비', values: getF('cogsDetails', 'dirExpConsumables') },
+                            { label: '품질검사비', values: getF('cogsDetails', 'indExpQC') },
+                            { label: '수선유지비', values: getF('cogsDetails', 'indExpMaintenance') },
+                            { label: '폐기물처리비', values: getF('cogsDetails', 'indExpWaste') },
+                            { label: '감가상각비', values: getF('cogsDetails', 'depreciation') },
+                          ]} />
+                        <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={getF('ratios', 'grossMargin')} isTotal />
+                        <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={getF('ratios', 'sgaRatio')}
+                          details={[
+                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), isGroup: true, level: 1 },
+                            { label: '물류/수출비용', values: getF('sgaDetails', 'varLogistics'), level: 2 },
+                            { label: '판매수수료', values: getF('sgaDetails', 'varSalesComm'), level: 2 },
+                            { label: 'A/S비용', values: getF('sgaDetails', 'varAsCost'), level: 2 },
+                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), isGroup: true, level: 1 },
+                            { label: '수도광열비', values: getF('sgaDetails', 'semiUtilities'), level: 2 },
+                            { label: '여비교통비', values: getF('sgaDetails', 'semiTravel'), level: 2 },
+                            { label: '통신비', values: getF('sgaDetails', 'semiTelecom'), level: 2 },
+                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), isGroup: true, level: 1 },
+                            { label: '인건비(급여 등)', values: getF('sgaDetails', 'fixLabor'), level: 2 },
+                            { label: '복리후생비', values: getF('sgaDetails', 'fixBenefits'), level: 2 },
+                            { label: '임차료', values: getF('sgaDetails', 'fixRent'), level: 2 },
+                            { label: '세금과공과', values: getF('sgaDetails', 'fixTaxes'), level: 2 },
+                            { label: '보험료', values: getF('sgaDetails', 'fixInsurance'), level: 2 },
+                            { label: '지급수수료', values: getF('sgaDetails', 'fixFees'), level: 2 },
+                            { label: '연구개발비', values: getF('sgaDetails', 'fixRnd'), level: 2 },
+                            { label: '마케팅비', values: getF('sgaDetails', 'fixMarketing'), level: 2 },
+                            { label: '소모품비', values: getF('sgaDetails', 'fixSupplies'), level: 2 },
+                            { label: '대손상각비', values: getF('sgaDetails', 'fixBadDebt'), level: 2 },
+                            { label: '기타 판관비', values: getF('sgaDetails', 'fixOther'), level: 2 },
+                            { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), isGroup: true, level: 1 },
+                          ]} />
+                        <ExpandableRow label="V. 영업이익" values={getF('operatingProfit')} ratios={getF('ratios', 'opMargin')} isHeader />
+                        <ExpandableRow label="VI. 영업외수익" values={getF('totalNonOpInc')}
+                          details={[
+                            { label: '현금성 수익', values: getF('nonOpIncC'), level: 1 },
+                            { label: '비현금성 수익', values: getF('nonOpIncNC'), level: 1 }
+                          ]} />
+                        <ExpandableRow label="VII. 영업외비용" values={getF('totalNonOpExp')}
+                          details={[
+                            { label: '이자비용', values: getF('interestExpense'), level: 1 },
+                            { label: '현금성 비용', values: getF('nonOpExpC'), level: 1 },
+                            { label: '비현금성 비용', values: getF('nonOpExpNC'), level: 1 }
+                          ]} />
+                        <ExpandableRow label="VIII. 법인세차감전순이익" values={getF('ebt')} isTotal />
+                        <ExpandableRow label="IX. 법인세비용" values={getF('tax')} />
+                        <ExpandableRow label="X. 당기순이익" values={getF('netIncome')} ratios={getF('ratios', 'netMargin')} isHeader />
                       </tbody>
                     </table>
                   </div>
-                ) : null}
+                </div>
 
-                {activeTab === 'is_mgr' ? (
-                  <div className="p-8">
-                    <div className="flex justify-between items-end mb-2"><h3 className="text-sm font-bold text-slate-900">관리회계 손익계산서</h3><span className="text-[10px] text-slate-500">(백만원)</span></div>
-                    <table className="w-full text-right text-xs">
-                      <thead><tr className="bg-slate-100 border-y border-slate-400"><th className="p-2 text-left">항목</th>{[1,2,3,4,5].map(y=><th key={y} className="p-2">Y{y}</th>)}</tr></thead>
-                      <tbody className="divide-y divide-slate-100">
-                        <ExpandableRow label="매출액" values={model.is_managerial.map(d=>d.revenue)} isBold />
-                        <ExpandableRow label="변동비" values={model.is_managerial.map(d=>d.variableCosts)} />
-                        <ExpandableRow label="공헌이익" values={model.is_managerial.map(d=>d.contributionMargin)} isTotal />
-                        <ExpandableRow label="고정비" values={model.is_managerial.map(d=>d.fixedCosts)} />
-                        <ExpandableRow label="영업이익" values={model.is_managerial.map(d=>d.operatingProfit)} isHeader />
+                {/* 3. 관리회계 손익계산서 탭 */}
+                <div style={{ display: activeTab === 'is_mgr' ? 'block' : 'none' }}>
+                  <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">관리회계 추정손익계산서</h2>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Managerial Income Statement</p>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                  </div>
+                  <div className="p-10">
+                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
+                      <TableHead years={[1,2,3,4,5]} />
+                      <tbody className="divide-y divide-slate-200">
+                        <ExpandableRow label="I. 매출액" values={getM('revenue')} isBold details={model.revenueDetails} />
+                        <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={getM('ratios', 'varRatio')}
+                          details={[
+                            { label: '제조 변동비', values: model.is_managerial.map(d => d.varCostDetails.rawMat + d.varCostDetails.dirLabor + d.varCostDetails.dirExp), isGroup: true, level: 1 },
+                            { label: '원재료비', values: getM('varCostDetails', 'rawMat'), level: 2 },
+                            { label: '직접노무비', values: getM('varCostDetails', 'dirLabor'), level: 2 },
+                            { label: '직접경비', values: getM('varCostDetails', 'dirExp'), level: 2 },
+                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), isGroup: true, level: 1 },
+                            { label: '물류/수출비용', values: getM('varCostDetails', 'sgaVarLogistics'), level: 2 },
+                            { label: '판매수수료', values: getM('varCostDetails', 'sgaVarSalesComm'), level: 2 },
+                            { label: 'A/S비용', values: getM('varCostDetails', 'sgaVarAsCost'), level: 2 },
+                          ]} />
+                        <ExpandableRow label="III. 공헌이익" values={getM('contributionMargin')} ratios={getM('ratios', 'cmRatio')} isTotal />
+                        <ExpandableRow label="IV. 고정비" values={getM('fixedCosts')} ratios={getM('ratios', 'fixedRatio')}
+                          details={[
+                            { label: '제조 고정비', values: model.is_managerial.map(d => d.fixCostDetails.indExpQC + d.fixCostDetails.indExpMaintenance + d.fixCostDetails.indExpWaste), isGroup: true, level: 1 },
+                            { label: '품질검사비', values: getM('fixCostDetails', 'indExpQC'), level: 2 },
+                            { label: '수선유지비', values: getM('fixCostDetails', 'indExpMaintenance'), level: 2 },
+                            { label: '폐기물처리비', values: getM('fixCostDetails', 'indExpWaste'), level: 2 },
+                            
+                            { label: '상각비 (제조/판관 통합)', values: model.is_managerial.map(d => d.fixCostDetails.depreciation + d.fixCostDetails.amortization), isGroup: true, level: 1 },
+                            { label: '감가상각비', values: getM('fixCostDetails', 'depreciation'), level: 2 },
+                            { label: '무형자산상각비', values: getM('fixCostDetails', 'amortization'), level: 2 },
+                            
+                            { label: '준변동 판관비', values: getM('fixCostDetails', 'totalSgaSemi'), isGroup: true, level: 1 },
+                            { label: '수도광열비', values: getM('fixCostDetails', 'semiUtilities'), level: 2 },
+                            { label: '여비교통비', values: getM('fixCostDetails', 'semiTravel'), level: 2 },
+                            { label: '통신비', values: getM('fixCostDetails', 'semiTelecom'), level: 2 },
+
+                            { label: '고정 판관비', values: getM('fixCostDetails', 'totalSgaFixOnly'), isGroup: true, level: 1 },
+                            { label: '인건비(급여 등)', values: getM('fixCostDetails', 'fixLabor'), level: 2 },
+                            { label: '복리후생비', values: getM('fixCostDetails', 'fixBenefits'), level: 2 },
+                            { label: '임차료', values: getM('fixCostDetails', 'fixRent'), level: 2 },
+                            { label: '세금과공과', values: getM('fixCostDetails', 'fixTaxes'), level: 2 },
+                            { label: '보험료', values: model.is_financial.map(d => d.sgaDetails.fixInsurance), level: 2 },
+                            { label: '지급수수료', values: getM('fixCostDetails', 'fixFees'), level: 2 },
+                            { label: '연구개발비', values: getM('fixCostDetails', 'fixRnd'), level: 2 },
+                            { label: '마케팅비', values: getM('fixCostDetails', 'fixMarketing'), level: 2 },
+                            { label: '소모품비', values: getM('fixCostDetails', 'fixSupplies'), level: 2 },
+                            { label: '대손상각비', values: getM('fixCostDetails', 'fixBadDebt'), level: 2 },
+                            { label: '기타 판관비', values: getM('fixCostDetails', 'fixOther'), level: 2 }
+                          ]} />
+                        <ExpandableRow label="V. 영업이익" values={getM('operatingProfit')} ratios={getM('ratios', 'opMargin')} isHeader />
                       </tbody>
                     </table>
                   </div>
-                ) : null}
+                </div>
 
-                {activeTab === 'bs' ? (
-                  <div className="p-8">
-                    <div className="flex justify-between items-end mb-2"><h3 className="text-sm font-bold text-slate-900">재무상태표</h3><span className="text-[10px] text-slate-500">(백만원)</span></div>
-                    <div className="flex gap-4">
-                      <table className="w-1/2 text-right text-xs">
-                        <thead><tr className="bg-slate-100 border-y border-slate-400"><th className="p-2 text-left">자산</th>{[0,1,2,3,4,5].map(y=><th key={y} className="p-2">Y{y}</th>)}</tr></thead>
+                {/* 4. 재무상태표 탭 */}
+                <div style={{ display: activeTab === 'bs' ? 'block' : 'none' }}>
+                  <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">추정 재무상태표</h2>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Estimated Balance Sheet</p>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                  </div>
+                  <div className="p-10 flex flex-row gap-8">
+                    <div className="flex-1 border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                      <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">자 산 (Assets)</div>
+                      <table className="w-full text-right border-collapse">
+                        <TableHead years={[0,1,2,3,4,5]} compact />
                         <tbody className="divide-y divide-slate-100">
-                          <ExpandableRow label="유동자산" values={model.bs.map(d=>d.currentAssets)} />
-                          <ExpandableRow label="비유동자산" values={model.bs.map(d=>d.nonCurrentAssets)} />
-                          <ExpandableRow label="자산총계" values={model.bs.map(d=>d.totalAssets)} isHeader />
+                          <ExpandableRow isCompact label="I. 유동자산" values={getB('currentAssets')} isBold
+                            details={[
+                              { label: '현금및현금성자산', values: getB('bsDetails', 'cash'), level: 1 },
+                              { label: '매출채권 (순액)', values: getB('bsDetails', 'ar'), level: 1 },
+                              { label: '재고자산', values: getB('bsDetails', 'inv'), level: 1 },
+                              { label: '선급금/선급비용', values: getB('bsDetails', 'prepaidNet'), level: 1 },
+                              { label: '미수금/미수수익', values: getB('bsDetails', 'receivableNet'), level: 1 }
+                            ]} />
+                          <ExpandableRow isCompact label="II. 비유동자산" values={getB('nonCurrentAssets')} isBold
+                            details={[
+                              { label: '유형자산 (순액)', values: getB('bsDetails', 'ppeNet'), level: 1 },
+                              { label: '무형자산 (순액)', values: getB('bsDetails', 'intangibleNet'), level: 1 },
+                              { label: '기타 비유동자산', values: getB('bsDetails', 'otherNetAssets'), level: 1 }
+                            ]} />
+                          <ExpandableRow isCompact label="자산 총계" values={getB('totalAssets')} isHeader />
                         </tbody>
                       </table>
-                      <table className="w-1/2 text-right text-xs">
-                        <thead><tr className="bg-slate-100 border-y border-slate-400"><th className="p-2 text-left">부채/자본</th>{[0,1,2,3,4,5].map(y=><th key={y} className="p-2">Y{y}</th>)}</tr></thead>
+                    </div>
+                    <div className="flex-1 border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                      <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">부채 및 자본 (Liab. & Equity)</div>
+                      <table className="w-full text-right border-collapse">
+                        <TableHead years={[0,1,2,3,4,5]} compact />
                         <tbody className="divide-y divide-slate-100">
-                          <ExpandableRow label="유동부채" values={model.bs.map(d=>d.currentLiabilities)} />
-                          <ExpandableRow label="비유동부채" values={model.bs.map(d=>d.nonCurrentLiabilities)} />
-                          <ExpandableRow label="자본총계" values={model.bs.map(d=>d.totalEquity)} />
-                          <ExpandableRow label="부채/자본총계" values={model.bs.map(d=>d.totalLiabilities+d.totalEquity)} isHeader />
+                          <ExpandableRow isCompact label="I. 유동부채" values={getB('currentLiabilities')} isBold
+                            details={[
+                              { label: '매입채무', values: getB('bsDetails', 'ap'), level: 1 },
+                              { label: '선수금/선수수익', values: getB('bsDetails', 'advancesNet'), level: 1 },
+                              { label: '미지급금/예수금', values: getB('bsDetails', 'accruedNet'), level: 1 }
+                            ]} />
+                          <ExpandableRow isCompact label="II. 비유동부채" values={getB('nonCurrentLiabilities')} isBold
+                            details={[{ label: '장기차입금', values: getB('bsDetails', 'debt'), level: 1 }]} />
+                          <ExpandableRow isCompact label="부채 총계" values={getB('totalLiabilities')} ratios={model.bs.map(d => d.ratios ? d.ratios.debtRatio : 0)} isTotal />
+                          
+                          <ExpandableRow isCompact label="III. 자본금" values={getB('bsDetails', 'capital')} isBold details={equityDetails} />
+                          <ExpandableRow isCompact label="IV. 이익잉여금" values={getB('bsDetails', 'retainedEarnings')} isBold />
+                          <ExpandableRow isCompact label="자본 총계" values={getB('totalEquity')} isTotal />
+
+                          <ExpandableRow isCompact label="부채 및 자본 총계" values={model.bs.map(d => d.totalLiabilities + d.totalEquity)} isHeader />
                         </tbody>
                       </table>
                     </div>
                   </div>
-                ) : null}
+                </div>
 
-                {activeTab === 'cf' ? (
-                  <div className="p-8">
-                    <div className="flex justify-between items-end mb-2"><h3 className="text-sm font-bold text-slate-900">현금흐름표</h3><span className="text-[10px] text-slate-500">(백만원)</span></div>
-                    <table className="w-full text-right text-xs">
-                      <thead><tr className="bg-slate-100 border-y border-slate-400"><th className="p-2 text-left">항목</th>{[0,1,2,3,4,5].map(y=><th key={y} className="p-2">Y{y}</th>)}</tr></thead>
-                      <tbody className="divide-y divide-slate-100">
-                        <ExpandableRow label="영업활동현금흐름" values={model.cf.map(d=>d.operatingCf)} isBold />
-                        <ExpandableRow label="투자활동현금흐름" values={model.cf.map(d=>d.investingCf)} isBold />
-                        <ExpandableRow label="재무활동현금흐름" values={model.cf.map(d=>d.financingCf)} isBold />
-                        <ExpandableRow label="현금의 증감" values={model.cf.map(d=>d.netCf)} isTotal />
-                        <ExpandableRow label="기말현금" values={model.cf.map(d=>d.endingCash)} isHeader />
+                {/* 5. 현금흐름표 탭 */}
+                <div style={{ display: activeTab === 'cf' ? 'block' : 'none' }}>
+                  <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
+                    <div>
+                      <h2 className="text-2xl font-black text-slate-900 tracking-tight">추정 현금흐름표</h2>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Statement of Cash Flows</p>
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                  </div>
+                  <div className="p-10">
+                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
+                      <TableHead years={[0,1,2,3,4,5]} />
+                      <tbody className="divide-y divide-slate-200">
+                        <ExpandableRow label="I. 영업활동 현금흐름" values={getC('operatingCf')} isBold
+                          details={[
+                            { label: '당기순이익', values: getC('cfDetails', 'netIncome'), level: 1 },
+                            { label: '현금유출 없는 비용 가산 (+)', values: getC('nonCashExpAdd'), isGroup: true, level: 1 },
+                            { label: '감가상각비', values: getC('cfDetails', 'depreciation'), level: 2 },
+                            { label: '무형자산상각비', values: getC('cfDetails', 'amortization'), level: 2 },
+                            { label: '대손상각비', values: getC('cfDetails', 'badDebtExp'), level: 2 },
+                            { label: '기타 비현금성 비용', values: getC('cfDetails', 'nonOpExpNonCash'), level: 2 },
+                            { label: '현금유입 없는 수익 차감 (-)', values: getC('nonCashIncDed'), isGroup: true, level: 1 },
+                            { label: '기타 비현금성 수익', values: getC('cfDetails', 'nonOpIncNonCash'), level: 2 },
+                            { label: '영업자산부채 변동 증감 (ΔWC)', values: getC('deltaWc'), isGroup: true, level: 1 },
+                            { label: '매출채권 감소(증가)', values: getC('cfDetails', 'deltaArGross'), level: 2 },
+                            { label: '재고자산 감소(증가)', values: getC('cfDetails', 'deltaInv'), level: 2 },
+                            { label: '선급금 등 감소(증가)', values: getC('cfDetails', 'prepaidOutflow'), level: 2 },
+                            { label: '미수금 등 감소(증가)', values: getC('cfDetails', 'receivableOutflow'), level: 2 },
+                            { label: '매입채무 증가(감소)', values: getC('cfDetails', 'deltaAp'), level: 2 },
+                            { label: '선수금 등 증가(감소)', values: getC('cfDetails', 'advancesInflow'), level: 2 },
+                            { label: '미지급금 등 증가(감소)', values: getC('cfDetails', 'accruedInflow'), level: 2 }
+                          ]} />
+                        <ExpandableRow label="II. 투자활동 현금흐름" values={getC('investingCf')} isBold
+                          details={[
+                            { label: '자본적지출 (CAPEX)', values: getC('cfDetails', 'capex'), level: 1 },
+                            { label: '무형자산 투자액', values: getC('cfDetails', 'intangibleCapex'), level: 1 }
+                          ]} />
+                        <ExpandableRow label="III. 재무활동 현금흐름" values={getC('financingCf')} isBold
+                          details={[
+                            { label: '자기자본 유입 (증자)', values: getC('cfDetails', 'equity'), level: 1 },
+                            { label: '타인자본 유입 (차입)', values: getC('cfDetails', 'debt'), level: 1 }
+                          ]} />
+                        <ExpandableRow label="현금의 증감 (I + II + III)" values={getC('netCf')} isTotal />
+                        <ExpandableRow label="기초 현금" values={getC('beginningCash')} isBold />
+                        <ExpandableRow label="기말 현금" values={getC('endingCash')} isHeader />
                       </tbody>
                     </table>
                   </div>
-                ) : null}
+                </div>
+
               </div>
             </div>
           </div>
         </div>
-    );
+      );
     }
     
     const root = ReactDOM.createRoot(document.getElementById('root'));
