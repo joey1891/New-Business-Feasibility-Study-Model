@@ -208,6 +208,7 @@
       const [user, setUser] = useState(null);
       const [authLoading, setAuthLoading] = useState(true);
       const [authError, setAuthError] = useState('');
+      const [signUpMessage, setSignUpMessage] = useState(''); // 가입 완료 메시지 상태 추가
       
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
@@ -219,13 +220,47 @@
       const [currentProjectId, setCurrentProjectId] = useState(null);
       const [saveStatus, setSaveStatus] = useState('');
 
+      // 승인 여부를 확인하고 유저 세션을 설정하는 함수
+      const checkApprovalAndSetUser = async (sessionUser) => {
+        if (!sessionUser) {
+          setUser(null);
+          setAuthLoading(false);
+          return;
+        }
+        
+        try {
+          const { data, error } = await supabaseClient
+            .from('user_profiles')
+            .select('is_approved')
+            .eq('id', sessionUser.id)
+            .single();
+            
+          if (data && data.is_approved) {
+            setUser(sessionUser); // 승인된 유저만 세션 부여
+            setAuthError('');
+          } else {
+            await supabaseClient.auth.signOut(); // 미승인 시 즉시 로그아웃
+            setUser(null);
+            setAuthError('⏳ 아직 관리자 승인 대기 중입니다. 승인 후 이용 가능합니다.');
+          }
+        } catch (e) {
+          console.error("Profile check error:", e);
+          setUser(null);
+        }
+        setAuthLoading(false);
+      };
+
       useEffect(() => {
         supabaseClient.auth.getSession().then(({ data }) => {
-          if (data?.session?.user) setUser(data.session.user);
-          setAuthLoading(false);
+          checkApprovalAndSetUser(data?.session?.user);
         });
-        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
-          setUser(session?.user || null);
+        
+        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+            checkApprovalAndSetUser(session?.user);
+          } else if (event === 'SIGNED_OUT') {
+            setUser(null);
+          }
         });
         return () => subscription.unsubscribe();
       }, []);
@@ -245,17 +280,23 @@
       const handleSignUp = async (e) => {
         e.preventDefault();
         setAuthError('');
+        setSignUpMessage('');
         if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
         const { data, error } = await supabaseClient.auth.signUp({ email, password });
         if (error) setAuthError(error.message);
-        else if (data?.user) setAuthError('✅ 가입 성공! 이제 로그인 가능합니다.');
+        else if (data?.user) setSignUpMessage('✅ 가입이 접수되었습니다! 관리자 승인 후 로그인해 주세요.');
       };
 
       const handleLogin = async (e) => {
         e.preventDefault();
         setAuthError('');
+        setSignUpMessage('');
+        setAuthLoading(true);
         const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) setAuthError('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.');
+        if (error) {
+          setAuthError('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.');
+          setAuthLoading(false);
+        }
       };
 
       const handleLogout = async () => {
@@ -506,11 +547,12 @@
                 </div>
                 
                 {authError && <div className="bg-red-50 text-red-600 p-2 text-xs font-bold rounded border border-red-200">{authError}</div>}
+                {signUpMessage && <div className="bg-green-50 text-green-700 p-2 text-xs font-bold rounded border border-green-200">{signUpMessage}</div>}
                 
-                <button type="submit" className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2">
-                  이메일로 로그인
+                <button type="submit" disabled={authLoading} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2">
+                  {authLoading ? '로그인 확인 중...' : '이메일로 로그인'}
                 </button>
-                <button type="button" onClick={handleSignUp} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors">
+                <button type="button" onClick={handleSignUp} disabled={authLoading} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors">
                   새 계정으로 회원가입
                 </button>
               </form>
