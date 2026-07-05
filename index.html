@@ -4,7 +4,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc } from 'firebase/firestore';
 
-// --- Firebase Initialization (Mandatory Pattern) ---
+// --- Firebase Initialization (Canvas Environment Default) ---
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -452,7 +452,7 @@ export default function App() {
     return key;
   };
 
-  // Firebase Auth Initialization (Mandatory Rule 3)
+  // Firebase Auth & Data Initialization
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -470,7 +470,6 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Fetch Projects from Firestore
   useEffect(() => {
     if (!user) return;
     const projectsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'projects');
@@ -487,7 +486,10 @@ export default function App() {
 
   // Handle Save Project
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      setSaveStatus('로그인이 필요합니다.');
+      return;
+    }
     setIsSaving(true);
     setSaveStatus('');
     try {
@@ -510,12 +512,12 @@ export default function App() {
       }
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (e) {
-      console.error(e);
+      console.error('Save error:', e);
+      setSaveStatus('저장 실패');
     }
     setIsSaving(false);
   };
 
-  // Handle Load Project
   const handleLoad = (id) => {
     const proj = projects.find(p => p.id === id);
     if (proj) {
@@ -525,7 +527,6 @@ export default function App() {
     }
   };
 
-  // Handle New Project
   const handleNew = () => {
     setInputs(DEFAULT_INPUTS);
     setProjectName('새 프로젝트');
