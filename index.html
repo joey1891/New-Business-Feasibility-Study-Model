@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>사업타당성 시뮬레이터 (컨설팅 펌 스타일)</title>
   
+  <!-- 라이브러리 직접 불러오기 (설치 불필요) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,6 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
+    /* 스크롤바 디자인 (컨설팅 스타일) */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -23,9 +25,11 @@
 <body>
   <div id="root"></div>
 
+  <!-- 여기서부터 React 프로그램 코드입니다 -->
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
+    // --- 1. 고객님의 Supabase DB 연결 정보 ---
     const supabaseUrl = 'https://iyvfybwzlamucanqedfz.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
@@ -208,7 +212,7 @@
       const [user, setUser] = useState(null);
       const [authLoading, setAuthLoading] = useState(true);
       const [authError, setAuthError] = useState('');
-      const [signUpMessage, setSignUpMessage] = useState(''); // 가입 완료 메시지 상태 추가
+      const [signUpMessage, setSignUpMessage] = useState('');
       
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
@@ -220,7 +224,7 @@
       const [currentProjectId, setCurrentProjectId] = useState(null);
       const [saveStatus, setSaveStatus] = useState('');
 
-      // 승인 여부를 확인하고 유저 세션을 설정하는 함수
+      // --- 에러를 원천 차단한 프로필 승인 확인 로직 ---
       const checkApprovalAndSetUser = async (sessionUser) => {
         if (!sessionUser) {
           setUser(null);
@@ -229,23 +233,31 @@
         }
         
         try {
+          // 배열(select)로 받아와서 에러가 나지 않도록 우회합니다. (.single() 제거)
           const { data, error } = await supabaseClient
             .from('user_profiles')
             .select('is_approved')
-            .eq('id', sessionUser.id)
-            .single();
+            .eq('id', sessionUser.id);
             
-          if (data && data.is_approved) {
-            setUser(sessionUser); // 승인된 유저만 세션 부여
+          if (error) {
+            await supabaseClient.auth.signOut();
+            setUser(null);
+            setAuthError(`❌ DB 조회 에러: ${error.message}`);
+          } else if (data && data.length > 0 && data[0].is_approved === true) {
+            // DB에 데이터가 있고 TRUE로 되어 있는 경우 통과!
+            setUser(sessionUser);
             setAuthError('');
           } else {
-            await supabaseClient.auth.signOut(); // 미승인 시 즉시 로그아웃
+            // 미승인이거나 데이터가 없는 경우 차단
+            await supabaseClient.auth.signOut();
             setUser(null);
-            setAuthError('⏳ 아직 관리자 승인 대기 중입니다. 승인 후 이용 가능합니다.');
+            setAuthError('⏳ 관리자 승인 대기 중입니다. 또는 프로필 정보가 없습니다.');
           }
         } catch (e) {
           console.error("Profile check error:", e);
+          await supabaseClient.auth.signOut();
           setUser(null);
+          setAuthError('❌ 예기치 않은 오류가 발생했습니다.');
         }
         setAuthLoading(false);
       };
@@ -254,7 +266,6 @@
         supabaseClient.auth.getSession().then(({ data }) => {
           checkApprovalAndSetUser(data?.session?.user);
         });
-        
         const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
           if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
             checkApprovalAndSetUser(session?.user);
@@ -272,9 +283,6 @@
           if (data) setProjects(data);
         };
         fetchProjects();
-
-        // 캔버스(샌드박스) 환경에서는 WebSocket (Realtime) 연결이 차단되므로 
-        // 실시간 동기화 코드를 제거하고 수동으로 최신 데이터를 불러옵니다.
       }, [user]);
 
       const handleSignUp = async (e) => {
@@ -282,9 +290,16 @@
         setAuthError('');
         setSignUpMessage('');
         if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
+        
+        setAuthLoading(true);
         const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) setAuthError(error.message);
-        else if (data?.user) setSignUpMessage('✅ 가입이 접수되었습니다! 관리자 승인 후 로그인해 주세요.');
+        if (error) {
+          setAuthError(`❌ 가입 실패: ${error.message}`);
+        } else if (data?.user) {
+          await supabaseClient.auth.signOut(); // 가입 직후 자동 로그인 방지
+          setSignUpMessage('✅ 가입이 완료되었습니다! 관리자가 승인한 후 로그인해 주세요.');
+        }
+        setAuthLoading(false);
       };
 
       const handleLogin = async (e) => {
@@ -294,7 +309,7 @@
         setAuthLoading(true);
         const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
-          setAuthError('로그인 실패: 이메일 또는 비밀번호를 확인해주세요.');
+          setAuthError(`❌ 로그인 실패: ${error.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 틀렸습니다.' : error.message}`);
           setAuthLoading(false);
         }
       };
@@ -312,17 +327,14 @@
             await supabaseClient.from('feasibility_projects').update({ name: projectName, inputs, updated_at: new Date().toISOString() }).eq('id', currentProjectId);
           } else {
             const { data } = await supabaseClient.from('feasibility_projects').insert([{ name: projectName, inputs, user_id: user.id }]).select();
-            if (data) setCurrentProjectId(data[0].id);
+            if (data && data.length > 0) setCurrentProjectId(data[0].id);
           }
           setSaveStatus('✅ 클라우드 저장 완료');
-          
-          // 실시간 웹소켓 대신 저장 직후 최신 리스트를 새로고침합니다.
           const { data: updated } = await supabaseClient.from('feasibility_projects').select('*').order('updated_at', { ascending: false });
           if (updated) setProjects(updated);
-          
           setTimeout(() => setSaveStatus(''), 3000);
         } catch (e) { 
-          setSaveStatus('❌ 오류 발생'); 
+          setSaveStatus('❌ 권한 오류'); 
           console.error(e);
         }
       };
@@ -549,10 +561,10 @@
                 {authError && <div className="bg-red-50 text-red-600 p-2 text-xs font-bold rounded border border-red-200">{authError}</div>}
                 {signUpMessage && <div className="bg-green-50 text-green-700 p-2 text-xs font-bold rounded border border-green-200">{signUpMessage}</div>}
                 
-                <button type="submit" disabled={authLoading} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2">
-                  {authLoading ? '로그인 확인 중...' : '이메일로 로그인'}
+                <button type="submit" disabled={authLoading} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2 disabled:opacity-50">
+                  {authLoading ? '확인 중...' : '이메일로 로그인'}
                 </button>
-                <button type="button" onClick={handleSignUp} disabled={authLoading} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors">
+                <button type="button" onClick={handleSignUp} disabled={authLoading} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors disabled:opacity-50">
                   새 계정으로 회원가입
                 </button>
               </form>
@@ -922,7 +934,7 @@
                   <div className="p-10">
                     <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
                       <TableHead years={[1,2,3,4,5]} />
-                      <tbody className="divide-y divide-slate-200">
+                      <tbody className="divide-y divide-slate-200 border-b border-slate-200">
                         <ExpandableRow label="I. 매출액" values={getM('revenue')} isBold details={model.revenueDetails} />
                         <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={getM('ratios', 'varRatio')}
                           details={[
@@ -942,13 +954,16 @@
                             { label: '품질검사비', values: getM('fixCostDetails', 'indExpQC'), level: 2 },
                             { label: '수선유지비', values: getM('fixCostDetails', 'indExpMaintenance'), level: 2 },
                             { label: '폐기물처리비', values: getM('fixCostDetails', 'indExpWaste'), level: 2 },
+                            
                             { label: '상각비 (제조/판관 통합)', values: model.is_managerial.map(d => d.fixCostDetails.depreciation + d.fixCostDetails.amortization), isGroup: true, level: 1 },
                             { label: '감가상각비', values: getM('fixCostDetails', 'depreciation'), level: 2 },
                             { label: '무형자산상각비', values: getM('fixCostDetails', 'amortization'), level: 2 },
+                            
                             { label: '준변동 판관비', values: getM('fixCostDetails', 'totalSgaSemi'), isGroup: true, level: 1 },
                             { label: '수도광열비', values: getM('fixCostDetails', 'semiUtilities'), level: 2 },
                             { label: '여비교통비', values: getM('fixCostDetails', 'semiTravel'), level: 2 },
                             { label: '통신비', values: getM('fixCostDetails', 'semiTelecom'), level: 2 },
+
                             { label: '고정 판관비', values: getM('fixCostDetails', 'totalSgaFixOnly'), isGroup: true, level: 1 },
                             { label: '인건비(급여 등)', values: getM('fixCostDetails', 'fixLabor'), level: 2 },
                             { label: '복리후생비', values: getM('fixCostDetails', 'fixBenefits'), level: 2 },
