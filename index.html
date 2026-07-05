@@ -1,25 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { TrendingUp, DollarSign, Building, PieChart, Activity, Briefcase, Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight, Globe, Layers, Folder, Save, FilePlus } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc } from 'firebase/firestore';
-
-// --- Firebase Initialization (Canvas Environment Default) ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+import { TrendingUp, DollarSign, Building, PieChart, Activity, Briefcase, Plus, Trash2, ShoppingCart, ChevronDown, ChevronRight, Globe, Layers } from 'lucide-react';
 
 // --- 언어 팩 (i18n) ---
 const translations = {
   '사업타당성 시뮬레이터': 'Feasibility Simulator',
   '변수를 수정하면 우측에 실시간으로 반영됩니다.': 'Modifying variables updates the right panel in real-time.',
-  '프로젝트 관리': 'Project Management',
-  '프로젝트명': 'Project Name',
-  '저장': 'Save',
-  '새로 만들기': 'New',
-  '프로젝트 불러오기...': 'Load Project...',
   '1. 거시환경변수': '1. Macro Variables',
   '물가상승률 (%)': 'Inflation Rate (%)',
   '조달 금리 (%)': 'Interest Rate (%)',
@@ -216,84 +201,6 @@ const translations = {
   '자산/부채 변동 (유출)': 'Asset/Liab Changes (Outflow)'
 };
 
-// --- 초기 기본값 구조 ---
-const arr5 = (val) => Array(5).fill(val);
-const arr6 = (y0, yRem) => [y0, ...Array(5).fill(yRem)];
-
-const DEFAULT_INPUTS = {
-  inflationRate: arr5(2.5),
-  interestRate: arr5(5.0),
-  exchangeRate: arr5(1300),
-  industryGrowth: arr5(3.0),
-  taxRate: arr5(20.0),
-  costOfEquity: arr5(10.0),
-
-  equityList: [{ id: 1, name: '창업자', amounts: arr6(500000000, 0) }],
-  debtList: [{ id: 1, name: 'A은행 차입', amounts: arr6(500000000, 0) }],
-  capexList: [{ id: 1, name: '기계장치', amounts: arr6(800000000, 0), usefulLife: 5 }],
-  intangibleList: [{ id: 1, name: '소프트웨어', amounts: arr6(0, 0), usefulLife: 5 }],
-  advancesList: [{ id: 1, name: '계약금/선수금', amounts: arr6(0, 0) }],
-  accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: arr6(0, 0) }],
-  prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: arr6(0, 0) }],
-  receivableList: [{ id: 1, name: '미수수익/미수금', amounts: arr6(0, 0) }],
-
-  utilization: [80, 85, 90, 95, 100],
-  lossRate: arr5(2.0),
-
-  rawMaterialMain: arr5(2500),
-  rawMaterialSub: arr5(1500),
-  directLabor: arr5(2000),
-  directExpPower: arr5(200),
-  directExpWater: arr5(100),
-  directExpConsumables: arr5(200),
-  indirectExpQC: arr5(400),
-  indirectExpMaintenance: arr5(400),
-  indirectExpWaste: arr5(200),
-  
-  arDays: arr5(30),
-  invDays: arr5(30),
-  apDays: arr5(30),
-
-  logisticsRate: arr5(2.0),
-  salesCommRate: arr5(1.5),
-  asCostRate: arr5(0.5),
-
-  utilities: arr5(10000000),
-  travel: arr5(8000000),
-  telecom: arr5(5000000),
-
-  laborFix: arr5(150000000),
-  benefits: arr5(20000000),
-  rent: arr5(60000000),
-  taxes: arr5(5000000),
-  insurance: arr5(12000000),
-  fees: arr5(15000000),
-  rnd: arr5(20000000),
-  marketing: arr5(50000000),
-  supplies: arr5(12000000),
-  badDebt: arr5(0),
-  otherSga: arr5(10000000),
-
-  nonOpIncCash: arr5(0),
-  nonOpIncNonCash: arr5(0),
-  nonOpExpCash: arr5(0),
-  nonOpExpNonCash: arr5(0),
-
-  salesHierarchy: [
-    {
-      id: 'c1', name: '대한민국',
-      clients: [
-        {
-          id: 'cl1', name: 'A상사',
-          products: [
-            { id: 'p1', name: '기본 제품', prices: arr5(15000), volumes: [100000, 110000, 120000, 130000, 140000] }
-          ]
-        }
-      ]
-    }
-  ]
-};
-
 // --- 유틸리티 함수 ---
 const formatCurrency = (value) => {
   if (value === undefined || value === null || isNaN(value)) return '0';
@@ -438,100 +345,93 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('npv');
   const [lang, setLang] = useState('ko');
 
-  const [user, setUser] = useState(null);
-  const [projects, setProjects] = useState([]);
-  const [currentProjectId, setCurrentProjectId] = useState(null);
-  const [projectName, setProjectName] = useState('새 프로젝트');
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState('');
-
-  const [inputs, setInputs] = useState(DEFAULT_INPUTS);
-
   const t = (key) => {
     if (lang === 'en' && translations[key]) return translations[key];
     return key;
   };
 
-  // Firebase Auth & Data Initialization
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (e) {
-        console.error("Auth error", e);
+  const arr5 = (val) => Array(5).fill(val);
+  const arr6 = (y0, yRem) => [y0, ...Array(5).fill(yRem)];
+
+  // --- 상태 관리 ---
+  const [inputs, setInputs] = useState({
+    inflationRate: arr5(2.5),
+    interestRate: arr5(5.0),
+    exchangeRate: arr5(1300),
+    industryGrowth: arr5(3.0),
+    taxRate: arr5(20.0),
+
+    costOfEquity: arr5(10.0), // 신규: 자기자본비용
+
+    equityList: [{ id: 1, name: '창업자', amounts: arr6(500000000, 0) }],
+    debtList: [{ id: 1, name: 'A은행 차입', amounts: arr6(500000000, 0) }],
+    
+    capexList: [{ id: 1, name: '기계장치', amounts: arr6(800000000, 0), usefulLife: 5 }],
+    intangibleList: [{ id: 1, name: '소프트웨어', amounts: arr6(0, 0), usefulLife: 5 }],
+    
+    advancesList: [{ id: 1, name: '계약금/선수금', amounts: arr6(0, 0) }],
+    accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: arr6(0, 0) }],
+    
+    prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: arr6(0, 0) }],
+    receivableList: [{ id: 1, name: '미수수익/미수금', amounts: arr6(0, 0) }],
+
+    utilization: [80, 85, 90, 95, 100],
+    lossRate: arr5(2.0),
+
+    rawMaterialMain: arr5(2500),
+    rawMaterialSub: arr5(1500),
+    directLabor: arr5(2000),
+    directExpPower: arr5(200),
+    directExpWater: arr5(100),
+    directExpConsumables: arr5(200),
+    indirectExpQC: arr5(400),
+    indirectExpMaintenance: arr5(400),
+    indirectExpWaste: arr5(200),
+    
+    arDays: arr5(30),
+    invDays: arr5(30),
+    apDays: arr5(30),
+
+    logisticsRate: arr5(2.0),
+    salesCommRate: arr5(1.5),
+    asCostRate: arr5(0.5),
+
+    utilities: arr5(10000000),
+    travel: arr5(8000000),
+    telecom: arr5(5000000),
+
+    laborFix: arr5(150000000),
+    benefits: arr5(20000000),
+    rent: arr5(60000000),
+    taxes: arr5(5000000),
+    insurance: arr5(12000000),
+    fees: arr5(15000000),
+    rnd: arr5(20000000),
+    marketing: arr5(50000000),
+    supplies: arr5(12000000),
+    badDebt: arr5(0),
+    otherSga: arr5(10000000),
+
+    // 영업외수익/비용 및 비현금성
+    nonOpIncCash: arr5(0),
+    nonOpIncNonCash: arr5(0),
+    nonOpExpCash: arr5(0),
+    nonOpExpNonCash: arr5(0),
+
+    salesHierarchy: [
+      {
+        id: 'c1', name: '대한민국',
+        clients: [
+          {
+            id: 'cl1', name: 'A상사',
+            products: [
+              { id: 'p1', name: '기본 제품', prices: arr5(15000), volumes: [100000, 110000, 120000, 130000, 140000] }
+            ]
+          }
+        ]
       }
-    };
-    initAuth();
-    const unsubscribe = onAuthStateChanged(auth, setUser);
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const projectsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'projects');
-    const unsubscribe = onSnapshot(projectsRef, (snapshot) => {
-      const projs = [];
-      snapshot.forEach(doc => projs.push({ id: doc.id, ...doc.data() }));
-      projs.sort((a, b) => b.updatedAt - a.updatedAt);
-      setProjects(projs);
-    }, (error) => {
-      console.error("Fetch projects error:", error);
-    });
-    return () => unsubscribe();
-  }, [user]);
-
-  // Handle Save Project
-  const handleSave = async () => {
-    if (!user) {
-      setSaveStatus('로그인이 필요합니다.');
-      return;
-    }
-    setIsSaving(true);
-    setSaveStatus('');
-    try {
-      const projectData = {
-        name: projectName || '제목 없음',
-        inputs: inputs,
-        updatedAt: Date.now(),
-      };
-      
-      if (currentProjectId) {
-        const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'projects', currentProjectId);
-        await setDoc(docRef, projectData, { merge: true });
-        setSaveStatus(t('저장 완료'));
-      } else {
-        projectData.createdAt = Date.now();
-        const projectsRef = collection(db, 'artifacts', appId, 'users', user.uid, 'projects');
-        const newDoc = await addDoc(projectsRef, projectData);
-        setCurrentProjectId(newDoc.id);
-        setSaveStatus(t('저장 완료'));
-      }
-      setTimeout(() => setSaveStatus(''), 3000);
-    } catch (e) {
-      console.error('Save error:', e);
-      setSaveStatus('저장 실패');
-    }
-    setIsSaving(false);
-  };
-
-  const handleLoad = (id) => {
-    const proj = projects.find(p => p.id === id);
-    if (proj) {
-      setInputs(proj.inputs);
-      setProjectName(proj.name);
-      setCurrentProjectId(proj.id);
-    }
-  };
-
-  const handleNew = () => {
-    setInputs(DEFAULT_INPUTS);
-    setProjectName('새 프로젝트');
-    setCurrentProjectId(null);
-  };
+    ]
+  });
 
   const handleArrayChange = (name, index, value) => {
     setInputs(prev => {
@@ -598,6 +498,7 @@ export default function App() {
   const model = useMemo(() => {
     const depreciationYears = 5; 
 
+    // WACC Calculation based on Year 0 structure
     const initV = totalEquity[0] + totalDebt[0];
     const wE = initV > 0 ? totalEquity[0] / initV : 0;
     const wD = initV > 0 ? totalDebt[0] / initV : 0;
@@ -612,7 +513,7 @@ export default function App() {
     let prevCash = totalEquity[0] + totalDebt[0] - totalCapex[0] - totalIntangible[0] + totalAdvances[0] + totalAccrued[0] - totalPrepaid[0] - totalReceivable[0];
     let prevRetainedEarnings = 0;
     
-    // Year 0
+    // Year 0 (기초)
     result.bs.push({
       year: 0, cash: prevCash, ar: 0, inv: 0, currentAssets: prevCash + totalPrepaid[0] + totalReceivable[0],
       ppeNet: totalCapex[0], nonCurrentAssets: totalCapex[0] + totalIntangible[0], totalAssets: prevCash + totalCapex[0] + totalIntangible[0] + totalPrepaid[0] + totalReceivable[0],
@@ -1042,40 +943,6 @@ export default function App() {
         </div>
 
         <div className="p-4 overflow-y-auto custom-scrollbar">
-          {/* --- 프로젝트 관리 --- */}
-          <InputGroup title={t('프로젝트 관리')}>
-            <div className="flex flex-col gap-3">
-              <input 
-                type="text" 
-                value={projectName} 
-                onChange={(e) => setProjectName(e.target.value)} 
-                placeholder={t('프로젝트명')} 
-                className="w-full text-sm font-bold border-b-2 border-slate-300 focus:border-red-700 bg-transparent outline-none py-1 text-slate-800"
-              />
-              <div className="flex gap-2">
-                <button onClick={handleSave} disabled={isSaving} className="flex-1 flex items-center justify-center gap-1 bg-slate-800 text-white text-[11px] font-bold py-2 rounded hover:bg-slate-700 transition-colors uppercase">
-                  <Save size={12} /> {isSaving ? '...' : t('저장')}
-                </button>
-                <button onClick={handleNew} className="flex-1 flex items-center justify-center gap-1 bg-white border border-slate-300 text-slate-700 text-[11px] font-bold py-2 rounded hover:border-slate-800 transition-colors uppercase">
-                  <FilePlus size={12} /> {t('새로 만들기')}
-                </button>
-              </div>
-              {saveStatus && <p className="text-green-600 text-[10px] text-center font-bold">{saveStatus}</p>}
-              <div className="mt-2">
-                <select 
-                  onChange={(e) => handleLoad(e.target.value)} 
-                  value={currentProjectId || ''}
-                  className="w-full text-xs border border-slate-300 rounded p-1.5 outline-none focus:ring-1 focus:ring-red-700"
-                >
-                  <option value="" disabled>{t('프로젝트 불러오기...')}</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </InputGroup>
-
           <InputGroup title={t('1. 거시환경변수')}>
             <YearlyInputField label={t('물가상승률 (%)')} values={inputs.inflationRate} onChangeArray="inflationRate" />
             <YearlyInputField label={t('조달 금리 (%)')} values={inputs.interestRate} onChangeArray="interestRate" />
@@ -1389,17 +1256,17 @@ export default function App() {
                     <ExpandableRow label={t('매출총이익')} values={model.is_financial.map(d => d.grossProfit)} ratios={model.is_financial.map(d => d.ratios.grossMargin)} isTotal />
                     <ExpandableRow label={t('판매비와관리비')} values={model.is_financial.map(d => d.totalSga)} ratios={model.is_financial.map(d => d.ratios.sgaRatio)}
                       details={[
-                        { label: t('변동 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaVar), isGroup: true, level: 1 },
+                        { label: t('직접변동비 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaVar), isGroup: true, level: 1 },
                         { label: t('물류/수출비용'), values: model.is_financial.map(d => d.sgaDetails.varLogistics), level: 2 },
                         { label: t('판매수수료'), values: model.is_financial.map(d => d.sgaDetails.varSalesComm), level: 2 },
                         { label: t('AS비용'), values: model.is_financial.map(d => d.sgaDetails.varAsCost), level: 2 },
                         
-                        { label: t('준변동 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi), isGroup: true, level: 1 },
+                        { label: t('준변동비 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi), isGroup: true, level: 1 },
                         { label: t('수도광열비'), values: model.is_financial.map(d => d.sgaDetails.semiUtilities), level: 2 },
                         { label: t('여비교통비'), values: model.is_financial.map(d => d.sgaDetails.semiTravel), level: 2 },
                         { label: t('통신비'), values: model.is_financial.map(d => d.sgaDetails.semiTelecom), level: 2 },
 
-                        { label: t('고정 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaFixOnly), isGroup: true, level: 1 },
+                        { label: t('고정비 판관비'), values: model.is_financial.map(d => d.sgaDetails.totalSgaFixOnly), isGroup: true, level: 1 },
                         { label: t('인건비(급여/퇴직 등)'), values: model.is_financial.map(d => d.sgaDetails.fixLabor), level: 2 },
                         { label: t('복리후생비(교육 등)'), values: model.is_financial.map(d => d.sgaDetails.fixBenefits), level: 2 },
                         { label: t('임차료'), values: model.is_financial.map(d => d.sgaDetails.fixRent), level: 2 },
