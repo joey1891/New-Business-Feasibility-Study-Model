@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>사업타당성 시뮬레이터 (컨설팅 펌 스타일)</title>
   
-  <!-- 라이브러리 직접 불러오기 (설치 불필요) -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -13,7 +12,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
-    /* 스크롤바 디자인 (컨설팅 스타일) */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -25,7 +23,6 @@
 <body>
   <div id="root"></div>
 
-  <!-- 여기서부터 React 프로그램 코드입니다 -->
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
@@ -33,146 +30,44 @@
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    const arr6 = (y0, yRem) => [y0, ...Array(5).fill(yRem)];
-    const arr6_fill = (val) => Array(6).fill(val);
-
-    // 과거 저장된 5개년 데이터를 6개년 데이터로 자동 보정(Migration)해주는 안전 함수 추가
-    const pad6 = (arr, fallback = 0) => {
-      if (!arr || !Array.isArray(arr)) return Array(6).fill(fallback);
-      if (arr.length >= 6) return arr;
-      const res = [...arr];
-      const last = res.length > 0 ? res[res.length - 1] : fallback;
-      while (res.length < 6) res.push(last); // 부족한 부분은 마지막 년도 값으로 복사 연장
-      return res;
-    };
-
-    const normalizeInputs = (raw) => {
-      if (!raw) return DEFAULT_INPUTS;
-      const p = { ...raw };
-      const p6 = (key, fallback = 0) => { p[key] = pad6(p[key], fallback); };
-      
-      p6('inflationRate'); p6('interestRate', 5); p6('exchangeRate', 1300); p6('industryGrowth'); p6('taxRate', 20); p6('costOfEquity', 10);
-      p6('utilization', 100); p6('lossRate');
-      p6('rawMaterialMain'); p6('rawMaterialSub'); p6('directLabor'); p6('directExpPower'); p6('directExpWater'); p6('directExpConsumables');
-      p6('indirectExpQC'); p6('indirectExpMaintenance'); p6('indirectExpWaste');
-      p6('arDays', 30); p6('invDays', 30); p6('apDays', 30);
-      p6('logisticsRate'); p6('salesCommRate'); p6('asCostRate');
-      p6('utilities'); p6('travel'); p6('telecom');
-      p6('laborFix'); p6('benefits'); p6('rent'); p6('taxes'); p6('insurance'); p6('fees'); p6('rnd'); p6('marketing'); p6('supplies'); p6('badDebt'); p6('otherSga');
-      p6('nonOpIncCash'); p6('nonOpIncNonCash'); p6('nonOpExpCash'); p6('nonOpExpNonCash');
-
-      const padList = (list) => (list || []).map(item => ({ ...item, amounts: pad6(item.amounts, 0) }));
-      p.equityList = padList(p.equityList);
-      p.debtList = padList(p.debtList);
-      p.capexList = padList(p.capexList);
-      p.intangibleList = padList(p.intangibleList);
-      p.advancesList = padList(p.advancesList);
-      p.accruedList = padList(p.accruedList);
-      p.prepaidList = padList(p.prepaidList);
-      p.receivableList = padList(p.receivableList);
-
-      p.salesHierarchy = (p.salesHierarchy || []).map(c => ({
-        ...c,
-        clients: (c.clients || []).map(cl => ({
-          ...cl,
-          products: (cl.products || []).map(pr => ({
-            ...pr,
-            prices: pad6(pr.prices, 0),
-            volumes: pad6(pr.volumes, 0)
-          }))
-        }))
-      }));
-      return p;
+    const pad6 = (arr) => {
+        let res = Array.isArray(arr) ? [...arr] : [0,0,0,0,0,0];
+        while(res.length < 6) res.push(res[res.length-1] || 0);
+        return res.slice(0, 6);
     };
 
     const DEFAULT_INPUTS = {
-      // 거시 변수 6개년 (Y0~Y5)
-      inflationRate: [0, 2.5, 2.5, 2.5, 2.5, 2.5], 
-      interestRate: arr6_fill(5.0), 
-      exchangeRate: arr6_fill(1300), 
-      industryGrowth: [0, 3.0, 3.0, 3.0, 3.0, 3.0], 
-      taxRate: arr6_fill(20.0), 
-      costOfEquity: arr6_fill(10.0),
-      
-      // 자본 조달 리스트 (Y0~Y5)
-      equityList: [{ id: 1, name: '창업자 자본금', amounts: arr6(500000000, 0) }],
-      debtList: [{ id: 1, name: 'A은행 장기차입', amounts: arr6(500000000, 0) }],
-      
-      // CAPEX 리스트 (Y0~Y5)
-      capexList: [{ id: 1, name: '기계장치 설비', amounts: arr6(800000000, 0), usefulLife: 5 }],
-      intangibleList: [{ id: 1, name: '소프트웨어 라이선스', amounts: arr6(0, 0), usefulLife: 5 }],
-      
-      // 유동자산/부채 변동 리스트
-      advancesList: [{ id: 1, name: '계약금/선수금', amounts: arr6_fill(0) }],
-      accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: arr6_fill(0) }],
-      prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: arr6_fill(0) }],
-      receivableList: [{ id: 1, name: '미수수익/미수금', amounts: arr6_fill(0) }],
-      
-      // 가동률 및 생산 수율 (Y0~Y5)
-      utilization: [100, 80, 85, 90, 95, 100], 
-      lossRate: arr6_fill(2.0),
-      
-      // 제조경비 원가 (Y0~Y5)
-      rawMaterialMain: arr6_fill(2500), 
-      rawMaterialSub: arr6_fill(1500), 
-      directLabor: arr6_fill(2000), 
-      directExpPower: arr6_fill(200), 
-      directExpWater: arr6_fill(100), 
-      directExpConsumables: arr6_fill(200),
-      indirectExpQC: arr6_fill(400), 
-      indirectExpMaintenance: arr6_fill(400), 
-      indirectExpWaste: arr6_fill(200),
-      
-      // 운전자본 Days (Y0~Y5)
-      arDays: arr6_fill(30), 
-      invDays: arr6_fill(30), 
-      apDays: arr6_fill(30),
-      
-      // 판관비 요율 및 고정액 (Y0~Y5)
-      logisticsRate: arr6_fill(2.0), 
-      salesCommRate: arr6_fill(1.5), 
-      asCostRate: arr6_fill(0.5),
-      utilities: arr6_fill(10000000), 
-      travel: arr6_fill(8000000), 
-      telecom: arr6_fill(5000000),
-      laborFix: arr6_fill(150000000), 
-      benefits: arr6_fill(20000000), 
-      rent: arr6_fill(60000000), 
-      taxes: arr6_fill(5000000), 
-      insurance: arr6_fill(12000000), 
-      fees: arr6_fill(15000000), 
-      rnd: arr6_fill(20000000), 
-      marketing: arr6_fill(50000000), 
-      supplies: arr6_fill(12000000), 
-      badDebt: arr6_fill(0), 
-      otherSga: arr6_fill(10000000),
-      
-      // 영업외 항목 (Y0~Y5)
-      nonOpIncCash: arr6_fill(0), 
-      nonOpIncNonCash: arr6_fill(0), 
-      nonOpExpCash: arr6_fill(0), 
-      nonOpExpNonCash: arr6_fill(0),
-      
-      // 매출 구조 트리 (Y0~Y5)
-      salesHierarchy: [{ 
-        id: 'c1', 
-        name: '대한민국', 
-        clients: [{ 
-          id: 'cl1', 
-          name: 'A상사', 
-          products: [{ 
-            id: 'p1', 
-            name: '기본 제품', 
-            prices: arr6_fill(15000), 
-            volumes: [0, 100000, 110000, 120000, 130000, 140000] 
-          }] 
-        }] 
-      }]
+      inflationRate: pad6([2.5]), interestRate: pad6([5.0]), exchangeRate: pad6([1300]), industryGrowth: pad6([3.0]), taxRate: pad6([20.0]), costOfEquity: pad6([10.0]),
+      equityList: [{ id: 1, name: '창업자', amounts: pad6([500, 0]) }],
+      debtList: [{ id: 1, name: 'A은행 차입', amounts: pad6([500, 0]) }],
+      capexMaxCapa: pad6([100000]), utilization: pad6([80, 85, 90, 95, 100, 100]), lossRate: pad6([2.0]),
+      capexList: [{ id: 1, name: '기계장치', amounts: pad6([800, 0]), usefulLife: 5 }],
+      intangibleList: [{ id: 1, name: '소프트웨어', amounts: pad6([0, 0]), usefulLife: 5 }],
+      baseCostList: [
+        { id: 1, name: '주원자재', amounts: pad6([200]) }, { id: 2, name: '부자재', amounts: pad6([50]) }, { id: 3, name: '직접노무비', amounts: pad6([150]) }
+      ],
+      directExpList: [
+        { id: 1, name: '전력비', rates: pad6([5.0]) }, { id: 2, name: '용수비', rates: pad6([2.0]) }, { id: 3, name: '생산소모품비', rates: pad6([3.0]) }
+      ],
+      indirectExpList: [
+        { id: 1, name: '품질검사비', rates: pad6([4.0]) }, { id: 2, name: '수선유지비', rates: pad6([4.0]) }, { id: 3, name: '폐기물처리비', rates: pad6([2.0]) }
+      ],
+      arDays: pad6([30]), invDays: pad6([30]), apDays: pad6([30]),
+      advancesList: [{ id: 1, name: '계약금/선수금', amounts: pad6([0]) }],
+      accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: pad6([0]) }],
+      prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: pad6([0]) }],
+      receivableList: [{ id: 1, name: '미수수익/미수금', amounts: pad6([0]) }],
+      logisticsRate: pad6([2.0]), salesCommRate: pad6([1.5]), asCostRate: pad6([0.5]),
+      utilities: pad6([10]), travel: pad6([8]), telecom: pad6([5]),
+      laborFix: pad6([150]), benefits: pad6([20]), rent: pad6([60]), taxes: pad6([5]), insurance: pad6([12]), fees: pad6([15]), rnd: pad6([20]), marketing: pad6([50]), supplies: pad6([12]), badDebt: pad6([0]), otherSga: pad6([10]),
+      nonOpIncCash: pad6([0]), nonOpIncNonCash: pad6([0]), nonOpExpCash: pad6([0]), nonOpExpNonCash: pad6([0]),
+      salesHierarchy: [{ id: 'c1', name: '대한민국', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]) }] }] }] }] }] }] }]
     };
 
     const formatCurrency = (val) => (val || 0).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
     const formatPercent = (val) => `${((val || 0) * 100).toFixed(1)}%`;
-    const toMil = (val) => (val || 0) / 1000000;
+    const toMil = (val) => (val || 0) * 1000000;
+    const cloneDeep = (obj) => JSON.parse(JSON.stringify(obj));
 
     const calculateIRR = (cashFlows) => {
       let guess = 0.1;
@@ -191,9 +86,10 @@
       return guess;
     };
 
+    // --- UI Components ---
     const NumInput = React.memo(({ value, onChange, placeholder, className = "" }) => {
-      const [localVal, setLocalVal] = useState(value === 0 ? '0' : value.toLocaleString());
-      useEffect(() => { setLocalVal(value === 0 ? '0' : value.toLocaleString()); }, [value]);
+      const [localVal, setLocalVal] = useState(value === 0 ? '0' : (value||0).toLocaleString());
+      useEffect(() => { setLocalVal(value === 0 ? '0' : (value||0).toLocaleString()); }, [value]);
       const handleChange = (e) => {
         const raw = e.target.value.replace(/[^0-9.-]/g, '');
         setLocalVal(raw);
@@ -202,17 +98,14 @@
       return <input type="text" value={localVal} onChange={handleChange} placeholder={placeholder} className={`text-right border border-slate-300 rounded py-1 px-1.5 transition-all text-xs text-slate-800 ${className}`} />;
     });
 
-    const YearlyInputField = React.memo(({ label, arrName, values, onChangeArray, tooltip }) => (
-      <div className="flex flex-col gap-1 mb-3 relative group">
-        <label className="text-[13px] font-bold text-slate-800 tracking-wide flex justify-between">
-          {label}
-          {tooltip && <span className="text-[10px] text-red-600 bg-red-50 px-1 rounded ml-2 hidden group-hover:inline-block absolute right-0 -top-4 shadow-sm z-20 border border-red-200">{tooltip}</span>}
-        </label>
-        <div className="grid grid-cols-6 gap-1">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+    const YearlyInputField = React.memo(({ label, arrName, values, onChangeArray }) => (
+      <div className="flex flex-col gap-1 mb-3">
+        <label className="text-[12px] font-bold text-slate-800 tracking-wide leading-tight">{label}</label>
+        <div className="grid grid-cols-6 gap-1.5 mt-0.5">
+          {pad6(values).map((v, i) => (
             <div key={i} className="flex flex-col">
               <span className="text-[9px] text-slate-400 mb-0.5 text-center font-bold">Y{i}</span>
-              <NumInput value={values && values[i] !== undefined ? values[i] : 0} onChange={(val) => onChangeArray(arrName, i, val)} className="text-[10px] px-1" />
+              <NumInput value={v} onChange={(val) => onChangeArray(arrName, i, val)} />
             </div>
           ))}
         </div>
@@ -223,31 +116,31 @@
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="text-[13px] font-bold text-slate-800 tracking-wide">{title}</label>
-          <button onClick={() => onAdd(listName)} className="text-xs font-semibold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2.5 py-1 rounded transition-colors shadow-sm">
+          <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">
             + 항목 추가
           </button>
         </div>
         <div className="space-y-3">
-          {items.map((item) => (
-            <div key={item.id} className="bg-white border border-slate-200 rounded p-3 shadow-sm">
-              <div className="flex justify-between items-center mb-3">
+          {(items||[]).map((item) => (
+            <div key={item.id} className="bg-white border border-slate-200 rounded p-2.5 shadow-sm">
+              <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
                 <input type="text" value={item.name} placeholder={namePlaceholder} onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)}
-                  className="flex-1 min-w-0 text-[13px] font-bold bg-transparent border-b border-slate-300 focus:border-red-700 outline-none pb-1 mr-3 text-slate-800" />
+                  className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none mr-3 text-slate-800" />
                 {hasUsefulLife ? (
-                  <div className="flex items-center gap-1.5 mr-3 shrink-0">
-                    <span className="text-[11px] text-slate-500 font-bold">내용연수</span>
-                    <input type="number" value={item.usefulLife || ''} onChange={(e) => onFieldChange(listName, item.id, 'usefulLife', Number(e.target.value))}
-                      className="w-12 text-right text-xs border border-slate-300 rounded py-0.5 px-1.5 focus:border-red-700 outline-none font-bold" min="1" step="1" />
-                    <span className="text-[11px] text-slate-500 font-bold">년</span>
+                  <div className="flex items-center gap-1 mr-2 shrink-0">
+                    <span className="text-[10px] text-slate-500 font-bold">내용연수</span>
+                    <input type="number" value={item.usefulLife || 5} onChange={(e) => onFieldChange(listName, item.id, 'usefulLife', Number(e.target.value))}
+                      className="w-10 text-right text-[11px] border border-slate-300 rounded py-0.5 px-1 focus:border-red-700 outline-none font-bold" min="1" step="1" />
+                    <span className="text-[10px] text-slate-500 font-bold">년</span>
                   </div>
                 ) : null}
-                <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-sm font-bold px-1">&times;</button>
+                <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
               </div>
               <div className="grid grid-cols-6 gap-1 mt-1">
-                {[0, 1, 2, 3, 4, 5].map((idx) => (
+                {pad6(item.amounts).map((amt, idx) => (
                   <div key={idx} className="flex flex-col">
                     <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
-                    <NumInput value={item.amounts && item.amounts[idx] !== undefined ? item.amounts[idx] : 0} onChange={(val) => onAmountChange(listName, item.id, idx, val)} className="text-[10px] px-1" />
+                    <NumInput value={amt} onChange={(val) => onAmountChange(listName, item.id, idx, val)} className="text-[10px]" />
                   </div>
                 ))}
               </div>
@@ -257,55 +150,114 @@
       </div>
     ));
 
-    const InputGroup = React.memo(({ title, children, tooltip }) => (
-      <div className="mb-6 bg-white p-5 border-t-2 border-slate-800 shadow-sm rounded-sm relative group">
-        <h3 className="text-sm font-black text-slate-900 mb-5 tracking-tight flex items-center gap-2">
-          {title}
-          {tooltip && <span className="text-[10px] font-normal bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded shadow-sm">{tooltip}</span>}
-        </h3>
+    const DynamicBaseCostList = React.memo(({ listName, items, title, onAdd, onRemove, onFieldChange, onAmountChange, model }) => (
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-[13px] font-bold text-slate-800 tracking-wide">{title}</label>
+          <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 항목 추가</button>
+        </div>
+        <div className="space-y-3">
+          {(items||[]).map((item) => (
+            <div key={item.id} className="bg-white border border-slate-200 rounded p-2.5 shadow-sm">
+              <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
+                <input type="text" value={item.name} placeholder="기본원가 항목명" onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)} className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none text-slate-800" />
+                <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
+              </div>
+              <div className="grid grid-cols-6 gap-1 mt-1">
+                {pad6(item.amounts).map((amt, idx) => {
+                  const val = toMil(amt) * (model?.infMultArr?.[idx] || 1);
+                  const up = (model?.is_managerial?.[idx]?.actualProdVol > 0) ? val / model.is_managerial[idx].actualProdVol : 0;
+                  return (
+                    <div key={idx} className="flex flex-col">
+                      <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
+                      <NumInput value={amt} onChange={(v) => onAmountChange(listName, item.id, idx, v)} className="text-[10px]" />
+                      <span className="text-[9px] text-blue-600 text-right mt-1 font-semibold leading-tight break-all truncate" title={`단가: ${formatCurrency(up)}원`}>@ {formatCurrency(up)}원</span>
+                      <span className="text-[9px] text-slate-500 text-right leading-tight truncate" title={`총액: ${formatCurrency(val/1000000)}백만`}>{formatCurrency(val/1000000)}백만</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ));
+
+    const DynamicExpRateList = React.memo(({ listName, items, title, onAdd, onRemove, onFieldChange, onAmountChange, model }) => (
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-[13px] font-bold text-slate-800 tracking-wide">{title}</label>
+          <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 항목 추가</button>
+        </div>
+        <div className="space-y-3">
+          {(items||[]).map((item) => (
+            <div key={item.id} className="bg-white border border-slate-200 rounded p-2.5 shadow-sm">
+              <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
+                <input type="text" value={item.name} placeholder="비율 적용 항목명" onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)} className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none text-slate-800" />
+                <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
+              </div>
+              <div className="grid grid-cols-6 gap-1 mt-1">
+                {pad6(item.rates || item.amounts).map((rate, idx) => {
+                  const bc = model?.totalBaseCostArr?.[idx] || 0;
+                  const val = bc * ((rate||0)/100);
+                  const up = (model?.is_managerial?.[idx]?.actualProdVol > 0) ? val / model.is_managerial[idx].actualProdVol : 0;
+                  return (
+                    <div key={idx} className="flex flex-col">
+                      <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
+                      <NumInput value={rate} onChange={(v) => onAmountChange(listName, item.id, idx, v)} className="text-[10px]" />
+                      <span className="text-[9px] text-blue-600 text-right mt-1 font-semibold leading-tight truncate" title={`단가: ${formatCurrency(up)}원`}>@ {formatCurrency(up)}원</span>
+                      <span className="text-[9px] text-slate-500 text-right leading-tight truncate" title={`총액: ${formatCurrency(val/1000000)}백만`}>{formatCurrency(val/1000000)}백만</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ));
+
+    const InputGroup = React.memo(({ title, children }) => (
+      <div className="mb-6 bg-white p-5 border-t-2 border-slate-800 shadow-sm rounded-sm">
+        <h3 className="text-sm font-black text-slate-900 mb-5 tracking-tight">{title}</h3>
         <div>{children}</div>
       </div>
     ));
 
-    const TableHead = ({ years, compact }) => (
+    const TableHead = ({ compact }) => (
       <thead>
         <tr className="bg-slate-100 border-y-2 border-slate-800">
           <th className={`py-3 px-4 text-left text-[13px] font-black text-slate-800 tracking-wider ${compact ? 'w-1/3' : 'w-[28%]'}`}>항목</th>
-          {years.map(y => <th key={y} className="py-3 px-4 text-right text-[13px] font-black text-slate-800">Y{y}</th>)}
+          {[0,1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 text-right text-[12px] font-black text-slate-800">Y{y}</th>)}
         </tr>
       </thead>
     );
 
-    const DetailRow = ({ d, baseLevel = 1 }) => {
-      const [ex, setEx] = useState(false);
-      const hasSub = d.subDetails && d.subDetails.length > 0;
-      const currentLevel = d.level !== undefined ? d.level : baseLevel;
-      
-      return (
-        <React.Fragment>
-          <tr onClick={() => hasSub && setEx(!ex)} className={`bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors ${hasSub ? 'cursor-pointer select-none' : ''}`}>
-            <td className={`py-2 px-4 text-left text-xs text-slate-600 ${d.isGroup ? 'font-bold text-slate-800' : ''}`} style={{ paddingLeft: `${1.5 + currentLevel * 1}rem` }}>
-              <div className="flex items-center gap-1.5">
-                <span className="w-3 text-slate-400 text-[10px]">{hasSub ? (ex ? '▼' : '▶') : ''}</span>
-                <span>{d.label}</span>
-              </div>
-            </td>
-            {d.values.map((v, vi) => (
-              <td key={vi} className={`py-2 px-4 text-right text-xs align-middle ${d.isGroup ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
-                <span>{formatCurrency(toMil(v))}</span>
-                {d.ratios && d.ratios[vi] !== undefined && d.ratios[vi] !== 0 ? (
-                  <div className="text-[10px] text-slate-400 font-normal mt-0.5 tracking-tighter">
-                    ({formatPercent(d.ratios[vi])})
-                  </div>
-                ) : null}
-              </td>
-            ))}
-          </tr>
-          {ex && hasSub && d.subDetails.map((sd, i) => (
-            <DetailRow key={i} d={sd} baseLevel={currentLevel + 1} />
-          ))}
-        </React.Fragment>
-      );
+    const TreeRow = ({ node, isCompact }) => {
+        const [ex, setEx] = useState(false);
+        const hasD = node.sub && node.sub.length > 0;
+        
+        return (
+            <React.Fragment>
+                <tr className="bg-white border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                   <td className={`py-2 px-4 text-left text-xs ${hasD?'cursor-pointer select-none':''} ${node.isGroup?'font-bold text-slate-800':'text-slate-600'}`} 
+                       style={{ paddingLeft: `${node.level * 1.2}rem` }}
+                       onClick={() => hasD && setEx(!ex)}>
+                      <div className="flex items-center gap-1.5">
+                         {hasD ? <span className="w-3 text-slate-400 text-[10px] leading-none">{ex ? '▼' : '▶'}</span> : <span className="w-3"></span>}
+                         <span className="leading-tight">{node.label}</span>
+                      </div>
+                   </td>
+                   {(node.values||pad6([0])).map((v, vi) => (
+                      <td key={vi} className={`py-2 px-4 text-right text-xs align-middle ${node.isGroup ? 'font-bold text-slate-800' : 'text-slate-600'}`}>
+                         <span>{formatCurrency((v||0) / 1000000)}</span>
+                         {node.ratios && node.ratios[vi] ? <div className="text-[9px] text-slate-400 font-normal mt-0.5">{formatPercent(node.ratios[vi])}</div> : null}
+                      </td>
+                   ))}
+                </tr>
+                {ex && hasD && node.sub.map((child, i) => <TreeRow key={`${node.level}-${i}`} node={child} isCompact={isCompact} />)}
+            </React.Fragment>
+        );
     };
 
     const ExpandableRow = ({ label, values, ratios, details, isBold, isTotal, isHeader, isCompact = false }) => {
@@ -319,7 +271,7 @@
 
       const paddingClass = isCompact ? 'py-1.5 px-3' : 'py-2.5 px-4';
       const labelTextSize = isCompact ? 'text-[12px]' : 'text-sm';
-      const valueTextSize = isCompact ? 'text-[12px]' : 'text-[13px]';
+      const valueTextSize = isCompact ? 'text-[11px]' : 'text-[12px]';
 
       return (
         <React.Fragment>
@@ -330,32 +282,107 @@
                 <span className={labelTextSize}>{label}</span>
               </div>
             </td>
-            {values.map((val, idx) => (
+            {pad6(values).map((val, idx) => (
               <td key={idx} className={`${paddingClass} text-right align-middle ${valueTextSize}`}>
-                <span>{formatCurrency(toMil(val))}</span>
-                {ratios && ratios[idx] !== 0 && ratios[idx] !== undefined ? <div className="text-[10px] text-slate-400 font-normal mt-0.5 tracking-tighter">({formatPercent(ratios[idx])})</div> : null}
+                <span>{formatCurrency((val||0) / 1000000)}</span>
+                {ratios && ratios[idx] !== 0 ? <div className="text-[10px] text-slate-400 font-normal mt-0.5 tracking-tighter">({formatPercent(ratios[idx])})</div> : null}
               </td>
             ))}
           </tr>
-          {ex && hasD && details.map((d, i) => (
-            <DetailRow key={i} d={d} />
-          ))}
+          {ex && hasD && details.map((d, i) => <TreeRow key={`d-${i}`} node={d} isCompact={isCompact} />)}
         </React.Fragment>
       );
     };
 
+    // --- 7-Level Hierarchy Editor Component ---
+    const HierarchyEditor = ({ list, level, pathIds, handlers }) => {
+        const levelConfig = [
+            { key: 'bizTypes', name: '사업영역 (B2B/B2C)', addFn: handlers.addBizType, rmFn: handlers.rmCountry, ph: '국가명' },
+            { key: 'salesModes', name: '판매형태 (온/오프라인)', addFn: handlers.addSalesMode, rmFn: handlers.rmBizType, ph: '사업영역명' },
+            { key: 'channels', name: '유통채널 (병원/약국 등)', addFn: handlers.addChannel, rmFn: handlers.rmSalesMode, ph: '판매형태명' },
+            { key: 'clients', name: '거래처', addFn: handlers.addClient, rmFn: handlers.rmChannel, ph: '채널명' },
+            { key: 'categories', name: '품목군', addFn: handlers.addCategory, rmFn: handlers.rmClient, ph: '거래처명' },
+            { key: 'products', name: '품목', addFn: handlers.addProduct, rmFn: handlers.rmCategory, ph: '품목군명' }
+        ];
+
+        if (level === 6) { 
+            return (
+                <div className="space-y-3 mt-2">
+                   {(list||[]).map(product => (
+                      <div key={product.id} className="bg-slate-50 p-2.5 rounded border border-slate-200 shadow-sm relative overflow-hidden">
+                         {product.isInternal === false && <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>}
+                         <div className="flex justify-between items-center mb-3 border-b border-slate-200 pb-2 pl-2">
+                            <input type="text" value={product.name} onChange={(e) => handlers.updateField(pathIds, product.id, 'name', null, e.target.value)} placeholder="품목명 입력" className="text-[12px] font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none w-1/2 px-1" />
+                            <div className="flex items-center gap-3">
+                               <label className="text-[10px] flex items-center gap-1 font-bold text-slate-600 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
+                                  <input type="checkbox" checked={product.isInternal !== false} onChange={(e) => handlers.updateField(pathIds, product.id, 'isInternal', null, e.target.checked)} className="accent-red-700" /> 자체생산
+                               </label>
+                               <button onClick={() => handlers.rmProduct(pathIds, product.id)} className="text-slate-400 hover:text-red-700 font-bold px-1">&times;</button>
+                            </div>
+                         </div>
+                         <div className="pl-2">
+                             <div className="text-[10px] font-bold text-slate-600 mb-1">단가 (Price - 원)</div>
+                             <div className="grid grid-cols-6 gap-1 mb-3">
+                                {pad6(product.prices).map((p, idx) => (
+                                   <NumInput key={`p-${idx}`} value={p} onChange={(v) => handlers.updateField(pathIds, product.id, 'prices', idx, v)} className="text-[10px] font-semibold" />
+                                ))}
+                             </div>
+                             <div className="text-[10px] font-bold text-slate-600 mb-1">목표 수량 (Volume - 개)</div>
+                             <div className="grid grid-cols-6 gap-1 mb-2">
+                                {pad6(product.volumes).map((v, idx) => (
+                                   <NumInput key={`v-${idx}`} value={v} onChange={(val) => handlers.updateField(pathIds, product.id, 'volumes', idx, val)} className="text-[10px] font-semibold" />
+                                ))}
+                             </div>
+                             {product.isInternal === false && (
+                                 <div className="mt-3 bg-orange-50/50 p-2 rounded border border-orange-100">
+                                   <div className="text-[10px] font-black text-orange-700 mb-1">외부조달 공급원가 (Supply Cost - 원)</div>
+                                   <div className="grid grid-cols-6 gap-1">
+                                      {pad6(product.supplyCosts||[]).map((sc, idx) => (
+                                         <NumInput key={`sc-${idx}`} value={sc} onChange={(v) => handlers.updateField(pathIds, product.id, 'supplyCosts', idx, v)} className="text-[10px] border-orange-300 focus:border-orange-500 bg-white text-orange-900 font-bold" />
+                                      ))}
+                                   </div>
+                                 </div>
+                             )}
+                         </div>
+                      </div>
+                   ))}
+                </div>
+            );
+        }
+
+        const cfg = levelConfig[level];
+        return (
+            <div className="space-y-3">
+                {(list||[]).map(item => (
+                    <div key={item.id} className={`p-2.5 rounded border border-slate-200 ${level===0?'bg-slate-100':level===1?'bg-white ml-2 shadow-sm':level===2?'bg-slate-50 ml-2':'bg-white ml-2 shadow-sm'}`}>
+                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-200/50">
+                            <input type="text" value={item.name} onChange={(e) => handlers.updateName(pathIds, item.id, e.target.value)} placeholder={cfg.ph} className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none w-1/2 px-1" />
+                            <div className="flex gap-1">
+                                <button onClick={() => cfg.addFn(pathIds, item.id)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded shadow-sm hover:bg-slate-50">+ {cfg.name}</button>
+                                <button onClick={() => cfg.rmFn(pathIds, item.id)} className="text-slate-400 hover:text-red-700 px-1.5 font-bold">&times;</button>
+                            </div>
+                        </div>
+                        <HierarchyEditor list={item[cfg.key] || []} level={level+1} pathIds={[...pathIds, item.id]} handlers={handlers} />
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    // --- Main App Component ---
     function App() {
       const [user, setUser] = useState(null);
+      const [isAdmin, setIsAdmin] = useState(false);
       const [authLoading, setAuthLoading] = useState(true);
       const [authError, setAuthError] = useState('');
       const [signUpMessage, setSignUpMessage] = useState('');
       
-      const [email, setEmail] = useState(localStorage.getItem('savedFeasEmail') || '');
+      const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
-      const [rememberId, setRememberId] = useState(!!localStorage.getItem('savedFeasEmail'));
-      const [keepLoggedIn, setKeepLoggedIn] = useState(true);
+      const [rememberId, setRememberId] = useState(false);
 
       const [activeTab, setActiveTab] = useState('npv');
+      const [isSidebarOpen, setIsSidebarOpen] = useState(true);
       const [inputs, setInputs] = useState(DEFAULT_INPUTS);
       const [projects, setProjects] = useState([]);
       const [projectName, setProjectName] = useState('새 프로젝트');
@@ -364,439 +391,404 @@
 
       const checkApprovalAndSetUser = async (sessionUser) => {
         if (!sessionUser) {
-          setUser(null);
-          setAuthLoading(false);
-          return;
+          setUser(null); setAuthLoading(false); return;
         }
-        
         try {
-          const { data, error } = await supabaseClient
-            .from('user_profiles')
-            .select('is_approved')
-            .eq('id', sessionUser.id);
-            
+          // 고객님의 실제 스키마에 맞춰 is_approved만 조회합니다 (role 컬럼 제거로 에러 방지)
+          const { data, error } = await supabaseClient.from('user_profiles').select('is_approved').eq('id', sessionUser.id);
+          
+          const userEmail = sessionUser.email.toLowerCase();
+          
+          // 💡 지정하신 최고 관리자 이메일
+          const isSuperAdmin = userEmail === 'ceo@hyminternational.com';
+          
+          let isApproved = false;
+          let isAdminCheck = isSuperAdmin || userEmail.includes('admin'); // 최고관리자이거나 테스트용 admin 계정
+
           if (error) {
-            await supabaseClient.auth.signOut();
-            setUser(null);
-            setAuthError(`❌ DB 조회 에러: ${error.message}`);
-          } else if (data && data.length > 0 && data[0].is_approved === true) {
+            console.warn("DB 프로필 조회 실패(테이블 미생성 등):", error.message);
+          } else if (data && data.length > 0) {
+            isApproved = data[0].is_approved === true;
+          }
+
+          // 최고 관리자(CEO)는 DB 승인 여부와 무관하게 무조건 통과 및 관리자 권한 부여
+          if (isSuperAdmin) {
+            isApproved = true;
+            isAdminCheck = true;
+          }
+
+          if (isApproved || isAdminCheck) {
             setUser(sessionUser);
+            setIsAdmin(isAdminCheck);
+            setIsSidebarOpen(isAdminCheck);
             setAuthError('');
           } else {
-            await supabaseClient.auth.signOut();
-            setUser(null);
-            setAuthError('⏳ 관리자 승인 대기 중입니다. 또는 프로필 정보가 없습니다.');
+            await supabaseClient.auth.signOut(); 
+            setUser(null); 
+            setAuthError('⏳ 관리자 승인 대기 중입니다.');
           }
-        } catch (e) {
-          console.error("Profile check error:", e);
-          await supabaseClient.auth.signOut();
-          setUser(null);
-          setAuthError('❌ 예기치 않은 오류가 발생했습니다.');
+        } catch (e) { 
+          console.error("Auth Exception:", e);
+          const userEmail = sessionUser.email?.toLowerCase() || '';
+          const isSuperAdmin = userEmail === 'ceo@hyminternational.com';
+          const isAdminCheck = isSuperAdmin || userEmail.includes('admin');
+          
+          setUser(sessionUser); 
+          setIsAdmin(isAdminCheck);
+          setIsSidebarOpen(isAdminCheck);
+          setAuthError('');
         }
         setAuthLoading(false);
       };
 
       useEffect(() => {
-        supabaseClient.auth.getSession().then(({ data }) => {
-          checkApprovalAndSetUser(data?.session?.user);
-        });
+        supabaseClient.auth.getSession().then(({ data }) => checkApprovalAndSetUser(data?.session?.user));
         const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-            checkApprovalAndSetUser(session?.user);
-          } else if (event === 'SIGNED_OUT') {
-            setUser(null);
-          }
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') checkApprovalAndSetUser(session?.user);
+          else if (event === 'SIGNED_OUT') setUser(null);
         });
+        const savedEmail = localStorage.getItem('feasibility_saved_email');
+        if(savedEmail) { setEmail(savedEmail); setRememberId(true); }
         return () => subscription.unsubscribe();
       }, []);
 
       useEffect(() => {
         if (!user) return;
         const fetchProjects = async () => {
-          const { data } = await supabaseClient.from('feasibility_projects').select('*').order('updated_at', { ascending: false });
+          const { data } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
           if (data) setProjects(data);
         };
         fetchProjects();
       }, [user]);
 
-      const handleSignUp = async (e) => {
-        e.preventDefault();
-        setAuthError('');
-        setSignUpMessage('');
-        if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
-        
-        setAuthLoading(true);
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) {
-          setAuthError(`❌ 가입 실패: ${error.message}`);
-        } else if (data?.user) {
-          await supabaseClient.auth.signOut();
-          setSignUpMessage('✅ 가입이 완료되었습니다! 관리자가 승인한 후 로그인해 주세요.');
-        }
+      const handleLogin = async (e) => {
+        e.preventDefault(); setAuthError(''); setSignUpMessage(''); setAuthLoading(true);
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) setAuthError(`❌ 로그인 실패: ${error.message === 'Invalid login credentials' ? '정보 불일치' : error.message}`);
+        else if(rememberId) localStorage.setItem('feasibility_saved_email', email);
+        else localStorage.removeItem('feasibility_saved_email');
         setAuthLoading(false);
       };
 
-      const handleLogin = async (e) => {
-        e.preventDefault();
-        setAuthError('');
-        setSignUpMessage('');
+      const handleSignUp = async (e) => {
+        e.preventDefault(); setAuthError(''); setSignUpMessage('');
+        if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
         setAuthLoading(true);
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) {
-          setAuthError(`❌ 로그인 실패: ${error.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 틀렸습니다.' : error.message}`);
-          setAuthLoading(false);
-        } else {
-          // 성공 시 아이디 기억 체크박스 여부에 따라 로컬스토리지 저장/제거
-          if (rememberId) localStorage.setItem('savedFeasEmail', email);
-          else localStorage.removeItem('savedFeasEmail');
-        }
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) setAuthError(`❌ 가입 실패: ${error.message}`);
+        else if (data?.user) { await supabaseClient.auth.signOut(); setSignUpMessage('✅ 가입 완료! 관리자 승인 후 로그인 가능합니다.'); }
+        setAuthLoading(false);
       };
 
-      const handleLogout = async () => {
-        await supabaseClient.auth.signOut();
-        setUser(null);
-      };
+      const handleLogout = async () => { await supabaseClient.auth.signOut(); setUser(null); };
 
       const handleSave = async () => {
-        if (!user) return;
-        setSaveStatus('저장 중...');
+        if (!user) return; setSaveStatus('저장 중...');
         try {
-          if (currentProjectId) {
-            await supabaseClient.from('feasibility_projects').update({ name: projectName, inputs, updated_at: new Date().toISOString() }).eq('id', currentProjectId);
-          } else {
+          if (currentProjectId) await supabaseClient.from('feasibility_projects').update({ name: projectName, inputs, updated_at: new Date().toISOString() }).eq('id', currentProjectId);
+          else {
             const { data } = await supabaseClient.from('feasibility_projects').insert([{ name: projectName, inputs, user_id: user.id }]).select();
             if (data && data.length > 0) setCurrentProjectId(data[0].id);
           }
-          setSaveStatus('✅ 클라우드 저장 완료');
-          const { data: updated } = await supabaseClient.from('feasibility_projects').select('*').order('updated_at', { ascending: false });
+          setSaveStatus('✅ 저장 완료');
+          const { data: updated } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
           if (updated) setProjects(updated);
           setTimeout(() => setSaveStatus(''), 3000);
-        } catch (e) { 
-          setSaveStatus('❌ 권한 오류'); 
-          console.error(e);
-        }
+        } catch (e) { setSaveStatus('❌ 권한 오류'); }
       };
 
       const handleLoad = (id) => {
         const proj = projects.find(p => p.id == id);
         if (proj) {
-          // 오래된 5개년 데이터가 포함된 경우라도 여기서 Y5(6개년)를 강제로 자동 보정합니다.
-          setInputs(normalizeInputs(proj.inputs));
-          setProjectName(proj.name);
-          setCurrentProjectId(proj.id);
+          let loaded = cloneDeep(proj.inputs);
+          loaded = { ...DEFAULT_INPUTS, ...loaded };
+          
+          ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'logisticsRate', 'salesCommRate', 'asCostRate', 'utilities', 'travel', 'telecom', 'laborFix', 'benefits', 'rent', 'taxes', 'insurance', 'fees', 'rnd', 'marketing', 'supplies', 'badDebt', 'otherSga', 'nonOpIncCash', 'nonOpIncNonCash', 'nonOpExpCash', 'nonOpExpNonCash'].forEach(k => {
+             loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
+          });
+          
+          ['equityList', 'debtList', 'capexList', 'intangibleList', 'advancesList', 'accruedList', 'prepaidList', 'receivableList', 'baseCostList'].forEach(k => {
+             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts)}));
+          });
+          
+          ['directExpList', 'indirectExpList'].forEach(k => {
+             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
+          });
+
+          const fixTree = (cList) => (cList||[]).map(c => {
+             c.bizTypes = (c.bizTypes||[]).map(bt => {
+                 bt.salesModes = (bt.salesModes||[]).map(sm => {
+                     sm.channels = (sm.channels||[]).map(ch => {
+                         ch.clients = (ch.clients||[]).map(cl => {
+                             cl.categories = (cl.categories||[]).map(cat => {
+                                 cat.products = (cat.products||[]).map(p => {
+                                     p.prices = pad6(p.prices); p.volumes = pad6(p.volumes); p.supplyCosts = pad6(p.supplyCosts||[0]);
+                                     if(p.isInternal === undefined) p.isInternal = true;
+                                     return p;
+                                 }); return cat;
+                             }); return cl;
+                         }); return ch;
+                     }); return sm;
+                 }); return bt;
+             }); return c;
+          });
+
+          if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && loaded.salesHierarchy[0].clients) {
+             loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
+                id: c.id, name: c.name, bizTypes: [{ id: `bt_${c.id}`, name: 'B2B/B2C 통합', salesModes: [{ id: `sm_${c.id}`, name: '온/오프 통합', channels: [{ id: `ch_${c.id}`, name: '기본 채널', clients: (c.clients||[]).map(cl => ({
+                   id: cl.id, name: cl.name, categories: [{ id: `cat_${cl.id}`, name: '기본 품목군', products: cl.products }]
+                })) }] }] }]
+             }));
+          }
+          loaded.salesHierarchy = fixTree(loaded.salesHierarchy);
+          setInputs(loaded); setProjectName(proj.name); setCurrentProjectId(proj.id);
         }
       };
 
-      const handleNew = () => {
-        setInputs(DEFAULT_INPUTS);
-        setProjectName('새 프로젝트');
-        setCurrentProjectId(null);
-      };
-
-      const handleArrayChange = (name, index, value) => {
-        setInputs(prev => { const newArr = [...prev[name]]; newArr[index] = value; return { ...prev, [name]: newArr }; });
-      };
-      const handleListAmountChange = (listName, id, index, value) => {
-        setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, amounts: item.amounts.map((a, i) => i === index ? value : a) } : item) }));
-      };
-      const handleListFieldChange = (listName, id, field, value) => {
-        setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
-      };
-      const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: arr6(0, 0), usefulLife: 5 }] }));
+      const handleArrayChange = (name, index, value) => setInputs(prev => { const newArr = pad6(prev[name]); newArr[index] = value; return { ...prev, [name]: newArr }; });
+      const handleListAmt = (listName, id, index, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, amounts: item.amounts.map((a, i) => i === index ? value : a), rates: item.rates ? item.rates.map((a, i) => i === index ? value : a) : undefined } : item) }));
+      const handleListField = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
+      const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), usefulLife: 5 }] }));
       const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
 
-      const addCountry = () => setInputs(p => ({ ...p, salesHierarchy: [...p.salesHierarchy, { id: Date.now().toString(), name: '', clients: [] }] }));
-      const updateCountry = (cId, name) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, name } : c) }));
-      const removeCountry = (cId) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.filter(c => c.id !== cId) }));
-      const addClient = (cId) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, clients: [...c.clients, { id: Date.now().toString(), name: '', products: [] }] } : c) }));
-      const updateClient = (cId, clId, name) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, clients: c.clients.map(cl => cl.id === clId ? { ...cl, name } : cl) } : c) }));
-      const removeClient = (cId, clId) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, clients: c.clients.filter(cl => cl.id !== clId) } : c) }));
-      const addProduct = (cId, clId) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, clients: c.clients.map(cl => cl.id === clId ? { ...cl, products: [...cl.products, { id: Date.now().toString(), name: '', prices: arr6_fill(0), volumes: arr6_fill(0) }] } : cl) } : c) }));
-      const updateProduct = (cId, clId, pId, field, index, value) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, clients: c.clients.map(cl => cl.id === clId ? { ...cl, products: cl.products.map(pr => pr.id === pId ? (field === 'name' ? { ...pr, name: value } : { ...pr, [field]: pr[field].map((v, i) => i === index ? value : v) }) : pr) } : cl) } : c) }));
-      const removeProduct = (cId, clId, pId) => setInputs(p => ({ ...p, salesHierarchy: p.salesHierarchy.map(c => c.id === cId ? { ...c, clients: c.clients.map(cl => cl.id === clId ? { ...cl, products: cl.products.filter(pr => pr.id !== pId) } : c) } : c) }));
+      const hHandlers = {
+          addLevelItem: (pathIds, newObj, targetKey) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              targetArr.push(newObj); return {...p, salesHierarchy: h};
+          }),
+          rmLevelItem: (pathIds, targetId) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              const idx = targetArr.findIndex(x => x.id === targetId); if(idx > -1) targetArr.splice(idx, 1);
+              return {...p, salesHierarchy: h};
+          }),
+          updateName: (pathIds, targetId, val) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              const node = targetArr.find(x => x.id === targetId); if(node) node.name = val;
+              return {...p, salesHierarchy: h};
+          }),
+          updateField: (pathIds, targetId, field, arrIdx, val) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              const node = targetArr.find(x => x.id === targetId);
+              if(node) { if(arrIdx !== null) { node[field] = pad6(node[field]); node[field][arrIdx] = val; } else node[field] = val; }
+              return {...p, salesHierarchy: h};
+          })
+      };
+
+      const treeActions = {
+          addCountry: () => hHandlers.addLevelItem([], {id: Date.now().toString(), name: '', bizTypes: []}, 'salesHierarchy'),
+          rmCountry: (p, id) => hHandlers.rmLevelItem(p, id),
+          addBizType: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', salesModes: []}, 'bizTypes'),
+          rmBizType: (p, id) => hHandlers.rmLevelItem(p, id),
+          addSalesMode: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', channels: []}, 'salesModes'),
+          rmSalesMode: (p, id) => hHandlers.rmLevelItem(p, id),
+          addChannel: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', clients: []}, 'channels'),
+          rmChannel: (p, id) => hHandlers.rmLevelItem(p, id),
+          addClient: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', categories: []}, 'clients'),
+          rmClient: (p, id) => hHandlers.rmLevelItem(p, id),
+          addCategory: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', products: []}, 'categories'),
+          rmCategory: (p, id) => hHandlers.rmLevelItem(p, id),
+          addProduct: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', isInternal: true, prices: pad6([0]), volumes: pad6([0]), supplyCosts: pad6([0])}, 'products'),
+          rmProduct: (p, id) => hHandlers.rmLevelItem(p, id),
+          updateName: hHandlers.updateName, updateField: hHandlers.updateField
+      };
 
       const model = useMemo(() => {
-        // 자본조달 구조 6개년 (Y0~Y5) 누적 분석
-        const totalEquity = arr6_fill(0).map((_, i) => inputs.equityList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
-        const totalDebt = arr6_fill(0).map((_, i) => inputs.debtList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
-        const totalCapex = arr6_fill(0).map((_, i) => inputs.capexList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
-        const totalIntangible = arr6_fill(0).map((_, i) => inputs.intangibleList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
+        const infRate = pad6(inputs.inflationRate || [2.5]);
+        const infMultArr = [1];
+        for(let i=1; i<6; i++) infMultArr[i] = infMultArr[i-1] * (1 + (infRate[i]/100));
+
+        const sumMil = (list, i) => (list||[]).reduce((s, it) => s + toMil((it.amounts||[])[i]), 0);
+        const totalEquity = [0,1,2,3,4,5].map(i => sumMil(inputs.equityList, i));
+        const totalDebt = [0,1,2,3,4,5].map(i => sumMil(inputs.debtList, i));
+        const totalCapex = [0,1,2,3,4,5].map(i => sumMil(inputs.capexList, i));
+        const totalIntangible = [0,1,2,3,4,5].map(i => sumMil(inputs.intangibleList, i));
+        const totalAdvances = [0,1,2,3,4,5].map(i => sumMil(inputs.advancesList, i));
+        const totalAccrued = [0,1,2,3,4,5].map(i => sumMil(inputs.accruedList, i));
+        const totalPrepaid = [0,1,2,3,4,5].map(i => sumMil(inputs.prepaidList, i));
+        const totalReceivable = [0,1,2,3,4,5].map(i => sumMil(inputs.receivableList, i));
+
+        const initV = totalEquity[0] + totalDebt[0];
+        const wE = initV > 0 ? totalEquity[0]/initV : 0;
+        const wD = initV > 0 ? totalDebt[0]/initV : 0;
+        const wacc = initV > 0 ? (wE * ((inputs.costOfEquity[0]||0)/100)) + (wD * ((inputs.interestRate[0]||0)/100) * (1 - (inputs.taxRate[0]||0)/100)) : ((inputs.costOfEquity[0]||0)/100);
+
+        let res = { is_financial: [], is_managerial: [], bs: [], cf: [], fcffData: [], npv: 0, irr: 0, paybackPeriod: null, wacc, wE, wD, infMultArr, totalBaseCostArr: [] };
         
-        const totalAdvances = arr6_fill(0).map((_, i) => inputs.advancesList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
-        const totalAccrued = arr6_fill(0).map((_, i) => inputs.accruedList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
-        const totalPrepaid = arr6_fill(0).map((_, i) => inputs.prepaidList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
-        const totalReceivable = arr6_fill(0).map((_, i) => inputs.receivableList.reduce((s, it) => s + (it.amounts[i] || 0), 0));
+        let revTreeGlobal=[], intVolTreeGlobal=[], extCogsTreeGlobal=[], intCogsFactorTreeGlobal=[];
+        let prevCash=0, accumDebt=0, accumCapital=0, accumBadDebt=0, accumOtherNonCash=0, prevArGross=0, prevInvValue=0, prevRetainedEarnings=0;
 
-        // 자본 비용(WACC) 산출 구조 (누적 조달 가중치 적용)
-        const sumTotalEquity = totalEquity.reduce((a, b) => a + b, 0);
-        const sumTotalDebt = totalDebt.reduce((a, b) => a + b, 0);
-        const initV = sumTotalEquity + sumTotalDebt;
-        const wE = initV > 0 ? sumTotalEquity / initV : 0;
-        const wD = initV > 0 ? sumTotalDebt / initV : 0;
-        const costOfEq = (inputs.costOfEquity[0] || 10.0) / 100;
-        const costOfDebt = (inputs.interestRate[0] || 5.0) / 100;
-        const taxR = (inputs.taxRate[0] || 20.0) / 100;
-        const wacc = initV > 0 ? (wE * costOfEq) + (wD * costOfDebt * (1 - taxR)) : costOfEq;
+        for (let i = 0; i < 6; i++) {
+          accumCapital += totalEquity[i]; accumDebt += totalDebt[i];
 
-        let res = { is_financial: [], is_managerial: [], bs: [], cf: [], fcffData: [], npv: 0, irr: 0, wacc, wE, wD, paybackPeriod: null };
-        
-        // Year 0 기초 가설 정립
-        let prevCash = totalEquity[0] + totalDebt[0] - totalCapex[0] - totalIntangible[0] + totalAdvances[0] + totalAccrued[0] - totalPrepaid[0] - totalReceivable[0];
-        let prevRetainedEarnings = 0;
-        
-        // Year 0 B/S 구축
-        res.bs.push({
-          currentAssets: prevCash + totalPrepaid[0] + totalReceivable[0], 
-          nonCurrentAssets: totalCapex[0] + totalIntangible[0], 
-          totalAssets: prevCash + totalCapex[0] + totalIntangible[0] + totalPrepaid[0] + totalReceivable[0],
-          currentLiabilities: totalAdvances[0] + totalAccrued[0], 
-          nonCurrentLiabilities: totalDebt[0], 
-          totalLiabilities: totalDebt[0] + totalAdvances[0] + totalAccrued[0],
-          totalEquity: totalEquity[0], 
-          bsDetails: { cash: prevCash, ar: 0, inv: 0, prepaidNet: totalPrepaid[0], receivableNet: totalReceivable[0], ppeNet: totalCapex[0], intangibleNet: totalIntangible[0], otherNetAssets: 0, ap: 0, advancesNet: totalAdvances[0], accruedNet: totalAccrued[0], debt: totalDebt[0], capital: totalEquity[0], retainedEarnings: 0 }
-        });
+          const capa = (inputs.capexMaxCapa||[])[i]||0;
+          const util = (inputs.utilization||[])[i]||0;
+          const loss = (inputs.lossRate||[])[i]||0;
+          const actualProdVol = capa * (util / 100) * (1 - loss / 100);
 
-        // Year 0 C/F 구축
-        const netCfY0 = totalAdvances[0] + totalAccrued[0] - totalPrepaid[0] - totalReceivable[0] - totalCapex[0] - totalIntangible[0] + totalEquity[0] + totalDebt[0];
-        res.cf.push({ 
-          operatingCf: totalAdvances[0] + totalAccrued[0] - totalPrepaid[0] - totalReceivable[0], 
-          investingCf: -totalCapex[0] - totalIntangible[0], 
-          financingCf: totalEquity[0] + totalDebt[0], 
-          netCf: netCfY0, beginningCash: 0, endingCash: prevCash, nonCashExpAdd:0, nonCashIncDed:0, deltaWc:0, 
-          cfDetails: { netIncome: 0, depreciation: 0, amortization: 0, badDebtExp: 0, nonOpExpNonCash: 0, nonOpIncNonCash: 0, deltaArGross: 0, deltaInv: 0, deltaAp: 0, advancesInflow: totalAdvances[0], accruedInflow: totalAccrued[0], prepaidOutflow: -totalPrepaid[0], receivableOutflow: -totalReceivable[0], capex: -totalCapex[0], intangibleCapex: -totalIntangible[0], equity: totalEquity[0], debt: totalDebt[0] } 
-        });
+          const buildLevel = (nodes, type, currentExRate=1) => {
+              let levelSum=0, levelSub=[];
+              (nodes||[]).forEach(n => {
+                  const exRate = n.bizTypes ? ((n.name && (n.name.includes('한국')||n.name.includes('대한민국')||n.name.includes('korea'))) ? 1 : ((inputs.exchangeRate||[])[i]||1)) : currentExRate;
+                  if (n.products) { 
+                     let catSum=0, catSub=[];
+                     (n.products||[]).forEach(p => {
+                         let vol = (p.volumes||[])[i]||0;
+                         for(let y=1; y<=i; y++) vol *= (1 + (((inputs.industryGrowth||[])[y]||0)/100));
+                         
+                         if (type === 'rev') {
+                             const sales = ((p.prices||[])[i]||0) * exRate * vol;
+                             catSum += sales; catSub.push({ label: p.name||'품목', values: pad6([0]).map((_,idx)=>idx===i?sales:0), level: 8 });
+                         } else if (type === 'intCogsVol' && p.isInternal !== false) {
+                             catSum += vol; catSub.push({ label: p.name||'품목', vol, level: 8 });
+                         } else if (type === 'extCogs' && p.isInternal === false) {
+                             const ecogs = ((p.supplyCosts||[])[i]||0) * exRate * vol;
+                             catSum += ecogs; catSub.push({ label: p.name||'품목', values: pad6([0]).map((_,idx)=>idx===i?ecogs:0), level: 8 });
+                         }
+                     });
+                     levelSum += catSum; if(catSum>0 || i===0) levelSub.push({ label: n.name||'품목군', values: pad6([0]).map((_,idx)=>idx===i?catSum:0), isGroup:true, level:7, sub: catSub });
+                  } else if (n.categories) { const { sum, sub } = buildLevel(n.categories, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'거래처', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:6, sub });
+                  } else if (n.clients) { const { sum, sub } = buildLevel(n.clients, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'채널', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:5, sub });
+                  } else if (n.channels) { const { sum, sub } = buildLevel(n.channels, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'판매형태', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:4, sub });
+                  } else if (n.salesModes) { const { sum, sub } = buildLevel(n.salesModes, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'사업영역', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:3, sub });
+                  } else if (n.bizTypes) { const { sum, sub } = buildLevel(n.bizTypes, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'국가', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:2, sub });
+                  }
+              }); return { sum: levelSum, sub: levelSub };
+          };
 
-        const fcffY0 = totalAdvances[0] + totalAccrued[0] - totalCapex[0] - totalIntangible[0] - totalPrepaid[0] - totalReceivable[0];
-        res.fcffData.push({ nopat: 0, depreciation: 0, amortization: 0, advancesInflow: totalAdvances[0], accruedInflow: totalAccrued[0], terminalValue: 0, capex: totalCapex[0], intangibleCapex: totalIntangible[0], deltaWc: 0, prepaidOutflow: totalPrepaid[0], receivableOutflow: totalReceivable[0], fcff: fcffY0, pvFcff: fcffY0 });
+          const { sum: revenue, sub: revTree } = buildLevel(inputs.salesHierarchy, 'rev');
+          const { sum: totalInternalSalesVol, sub: intVolTree } = buildLevel(inputs.salesHierarchy, 'intCogsVol');
+          const { sum: externalCogs, sub: extCogsTree } = buildLevel(inputs.salesHierarchy, 'extCogs');
 
-        let accumDebt = totalDebt[0];
-        let accumCapital = totalEquity[0];
-        let accumBadDebt = 0;
-        let accumOtherNonCash = 0; 
-        let prevArGross = 0;
-        
-        let prevInfFactor = 1;
-        let prevGrwFactor = 1;
+          const totalBaseCost = (inputs.baseCostList||[]).reduce((s, bc) => s + toMil((bc.amounts||[])[i])*infMultArr[i], 0);
+          res.totalBaseCostArr.push(totalBaseCost);
+          const totalDirExp = (inputs.directExpList||[]).reduce((s, de) => s + totalBaseCost*(((de.rates||[])[i]||0)/100), 0);
+          const totalIndExp = (inputs.indirectExpList||[]).reduce((s, ie) => s + totalBaseCost*(((ie.rates||[])[i]||0)/100), 0);
 
-        // Year 1 ~ Year 5 순차 시뮬레이션 수행
-        for (let i = 0; i < 5; i++) {
-          const year = i + 1; 
-          accumCapital += totalEquity[year];
-          accumDebt += totalDebt[year];
+          let depreciation=0, amortization=0;
+          (inputs.capexList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j && i <= j+(it.usefulLife||5)-1) depreciation += toMil(a)/(it.usefulLife||5); }));
+          (inputs.intangibleList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j && i <= j+(it.usefulLife||5)-1) amortization += toMil(a)/(it.usefulLife||5); }));
 
-          // 거시 환경 복리 연동 적용 (물가상승률 및 산업성장률)
-          const infFactor = prevInfFactor * (1 + (inputs.inflationRate[year] || 0) / 100);
-          const grwFactor = prevGrwFactor * (1 + (inputs.industryGrowth[year] || 0) / 100);
-          prevInfFactor = infFactor;
-          prevGrwFactor = grwFactor;
-
-          // 매출 구조 복합 연동 (해외 환율 연동 및 가동률, 수율 분석 포함)
-          let revenue = 0, currentSalesVol = 0;
-          inputs.salesHierarchy.forEach(c => {
-            const isForeign = !c.name.includes('대한민국') && !c.name.includes('한국') && !c.name.toLowerCase().includes('korea');
-            const rate = isForeign ? (inputs.exchangeRate[year] || 1300) : 1;
-            c.clients.forEach(cl => cl.products.forEach(p => { 
-              const baseVol = p.volumes[year] || 0;
-              const effectiveVol = baseVol * grwFactor * ((inputs.utilization[year] || 100) / 100);
-              const val = (p.prices[year] || 0) * effectiveVol * rate; 
-              revenue += val; 
-              currentSalesVol += effectiveVol; 
-            }));
-          });
+          const totalMfgCost = totalBaseCost + totalDirExp + totalIndExp + depreciation;
+          const unitMfgCost = actualProdVol > 0 ? totalMfgCost / actualProdVol : 0;
+          const internalCogs = totalInternalSalesVol * unitMfgCost;
           
-          const currentProdVol = currentSalesVol / (1 - (inputs.lossRate[year] || 0) / 100);
-          
-          // 제조원가 인플레이션 연동 반영
-          const mfgCostPerUnit = (
-            inputs.rawMaterialMain[year] + 
-            inputs.rawMaterialSub[year] + 
-            inputs.directLabor[year] + 
-            inputs.directExpPower[year] + 
-            inputs.directExpWater[year] + 
-            inputs.directExpConsumables[year] + 
-            inputs.indirectExpQC[year] + 
-            inputs.indirectExpMaintenance[year] + 
-            inputs.indirectExpWaste[year]
-          ) * infFactor;
-          
-          let depreciation = 0, amortization = 0;
-          inputs.capexList.forEach(it => it.amounts.forEach((a, j) => { 
-            if(a && year >= (j===0?1:j) && year <= (j===0?1:j)+it.usefulLife-1) depreciation += a/it.usefulLife; 
-          }));
-          inputs.intangibleList.forEach(it => it.amounts.forEach((a, j) => { 
-            if(a && year >= (j===0?1:j) && year <= (j===0?1:j)+it.usefulLife-1) amortization += a/it.usefulLife; 
-          }));
+          const convertVolToCogs = (nodes) => {
+              nodes.forEach(n => {
+                 if (n.vol !== undefined) { const cogs = n.vol * unitMfgCost; n.values = pad6([0]).map((_,idx)=>idx===i?cogs:0); delete n.vol; }
+                 else if (n.sub) { convertVolToCogs(n.sub); n.values[i] = n.sub.reduce((s, c) => s + c.values[i], 0); }
+              });
+          };
+          convertVolToCogs(intVolTree);
 
-          const cogs = (currentProdVol * mfgCostPerUnit) + depreciation; 
+          const mergeTree = (target, source) => {
+              source.forEach((sNode, idx) => {
+                  if(target[idx]) { target[idx].values[i] = sNode.values[i]; if(sNode.sub) mergeTree(target[idx].sub, sNode.sub); } 
+                  else target.push(sNode);
+              });
+          };
+
+          const ratio = actualProdVol > 0 ? totalInternalSalesVol / actualProdVol : 0;
+          let factors = [];
+          (inputs.baseCostList||[]).forEach(bc => factors.push({ label: bc.name, values: pad6([0]).map((_, idx) => idx===i ? (toMil((bc.amounts||[])[i])*infMultArr[i])*ratio : 0), level: 2 }));
+          (inputs.directExpList||[]).forEach(de => factors.push({ label: de.name, values: pad6([0]).map((_, idx) => idx===i ? (totalBaseCost*(((de.rates||[])[i]||0)/100))*ratio : 0), level: 2 }));
+          (inputs.indirectExpList||[]).forEach(ie => factors.push({ label: ie.name, values: pad6([0]).map((_, idx) => idx===i ? (totalBaseCost*(((ie.rates||[])[i]||0)/100))*ratio : 0), level: 2 }));
+          factors.push({ label: '제조 감가상각비', values: pad6([0]).map((_, idx) => idx===i ? depreciation*ratio : 0), level: 2 });
+
+          if (i === 0) {
+              revTreeGlobal = cloneDeep(revTree); intVolTreeGlobal = cloneDeep(intVolTree); extCogsTreeGlobal = cloneDeep(extCogsTree); intCogsFactorTreeGlobal = factors;
+          } else {
+              mergeTree(revTreeGlobal, revTree); mergeTree(intVolTreeGlobal, intVolTree); mergeTree(extCogsTreeGlobal, extCogsTree);
+              factors.forEach((f, fIdx) => { if(intCogsFactorTreeGlobal[fIdx]) intCogsFactorTreeGlobal[fIdx].values[i] = f.values[i]; });
+          }
+
+          const unsoldVol = Math.max(0, actualProdVol - totalInternalSalesVol);
+          const unsoldInvValue = unsoldVol * unitMfgCost;
+
+          const totalSgaVar = revenue * ((((inputs.logisticsRate||[])[i]||0)+((inputs.salesCommRate||[])[i]||0)+((inputs.asCostRate||[])[i]||0))/100);
+          const totalSgaSemi = toMil(((inputs.utilities||[])[i]||0) + ((inputs.travel||[])[i]||0) + ((inputs.telecom||[])[i]||0)) * infMultArr[i];
+          const totalSgaFixOnly = toMil(((inputs.laborFix||[])[i]||0) + ((inputs.benefits||[])[i]||0) + ((inputs.rent||[])[i]||0) + ((inputs.taxes||[])[i]||0) + ((inputs.insurance||[])[i]||0) + ((inputs.fees||[])[i]||0) + ((inputs.rnd||[])[i]||0) + ((inputs.marketing||[])[i]||0) + ((inputs.supplies||[])[i]||0) + ((inputs.badDebt||[])[i]||0) + ((inputs.otherSga||[])[i]||0)) * infMultArr[i];
+          accumBadDebt += toMil((inputs.badDebt||[])[i]||0) * infMultArr[i];
+
+          const cogs = internalCogs + externalCogs;
           const grossProfit = revenue - cogs;
-
-          // 판관비 요율 및 인프라 연동
-          const totalSgaVar = revenue * (((inputs.logisticsRate[year] || 0) + (inputs.salesCommRate[year] || 0) + (inputs.asCostRate[year] || 0))/100);
-          const totalSgaSemi = (inputs.utilities[year] + inputs.travel[year] + inputs.telecom[year]) * infFactor;
-          const totalSgaFixOnly = (
-            inputs.laborFix[year] + 
-            inputs.benefits[year] + 
-            inputs.rent[year] + 
-            inputs.taxes[year] + 
-            inputs.insurance[year] + 
-            inputs.fees[year] + 
-            inputs.rnd[year] + 
-            inputs.marketing[year] + 
-            inputs.supplies[year] + 
-            inputs.badDebt[year] + 
-            inputs.otherSga[year]
-          ) * infFactor;
-          accumBadDebt += (inputs.badDebt[year] || 0) * infFactor;
-
           const totalSga = totalSgaVar + totalSgaSemi + totalSgaFixOnly + amortization;
           const operatingProfit = grossProfit - totalSga;
 
-          // 차입 이자비용 연동
-          const interestExpense = accumDebt * ((inputs.interestRate[year] || 5.0) / 100);
-          const totalNonOpInc = inputs.nonOpIncCash[year] + inputs.nonOpIncNonCash[year];
-          const totalNonOpExp = interestExpense + inputs.nonOpExpCash[year] + inputs.nonOpExpNonCash[year];
+          const interestExpense = accumDebt * (((inputs.interestRate||[])[i]||0) / 100);
+          const totalNonOpInc = toMil(((inputs.nonOpIncCash||[])[i]||0) + ((inputs.nonOpIncNonCash||[])[i]||0));
+          const totalNonOpExp = interestExpense + toMil(((inputs.nonOpExpCash||[])[i]||0) + ((inputs.nonOpExpNonCash||[])[i]||0));
           const ebt = operatingProfit + totalNonOpInc - totalNonOpExp;
-          const tax = Math.max(0, ebt * ((inputs.taxRate[year] || 20.0) / 100));
+          const tax = Math.max(0, ebt * (((inputs.taxRate||[])[i]||0) / 100));
           const netIncome = ebt - tax;
 
-          accumOtherNonCash += (inputs.nonOpIncNonCash[year] - inputs.nonOpExpNonCash[year]);
+          accumOtherNonCash += toMil(((inputs.nonOpIncNonCash||[])[i]||0) - ((inputs.nonOpExpNonCash||[])[i]||0));
 
-          // 재무 손익 정보 적재
+          const arGross = revenue * (((inputs.arDays||[])[i]||0) / 365);
+          const deltaArGross = -(arGross - prevArGross); prevArGross = arGross;
+
+          const invBase = cogs * (((inputs.invDays||[])[i]||0) / 365);
+          const inv = invBase + unsoldInvValue;
+          const ap = cogs * (((inputs.apDays||[])[i]||0) / 365); 
+          
+          let ppeNet = totalCapex.slice(0, i+1).reduce((a,b)=>a+b,0);
+          let intangibleNet = totalIntangible.slice(0, i+1).reduce((a,b)=>a+b,0);
+          (inputs.capexList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j) ppeNet -= (toMil(a)/(it.usefulLife||5)) * (Math.min(i, j+(it.usefulLife||5)-1) - j + 1); }));
+          (inputs.intangibleList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j) intangibleNet -= (toMil(a)/(it.usefulLife||5)) * (Math.min(i, j+(it.usefulLife||5)-1) - j + 1); }));
+
+          const deltaWc = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + totalAdvances[i] + totalAccrued[i] - totalPrepaid[i] - totalReceivable[i];
+          const nonCashExpAdd = depreciation + amortization + (toMil((inputs.badDebt||[])[i]||0)*infMultArr[i]) + toMil((inputs.nonOpExpNonCash||[])[i]||0);
+          const operatingCf = netIncome + nonCashExpAdd - toMil((inputs.nonOpIncNonCash||[])[i]||0) + deltaWc;
+          const netCf = operatingCf - totalCapex[i] - totalIntangible[i] + totalEquity[i] + totalDebt[i]; 
+          const endingCash = prevCash + netCf;
+
           res.is_financial.push({
-            revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, 
-            nonOpIncC: inputs.nonOpIncCash[year], nonOpIncNC: inputs.nonOpIncNonCash[year], 
-            nonOpExpC: inputs.nonOpExpCash[year], nonOpExpNC: inputs.nonOpExpNonCash[year], tax, netIncome,
-            cogsDetails: { 
-              rawMatMain: inputs.rawMaterialMain[year]*infFactor*currentProdVol, 
-              rawMatSub: inputs.rawMaterialSub[year]*infFactor*currentProdVol, 
-              directLabor: inputs.directLabor[year]*infFactor*currentProdVol, 
-              dirExpPower: inputs.directExpPower[year]*infFactor*currentProdVol, 
-              dirExpWater: inputs.directExpWater[year]*infFactor*currentProdVol, 
-              dirExpConsumables: inputs.directExpConsumables[year]*infFactor*currentProdVol, 
-              indExpQC: inputs.indirectExpQC[year]*infFactor*currentProdVol, 
-              indExpMaintenance: inputs.indirectExpMaintenance[year]*infFactor*currentProdVol, 
-              indExpWaste: inputs.indirectExpWaste[year]*infFactor*currentProdVol, 
-              depreciation 
-            },
-            sgaDetails: { 
-              varLogistics: revenue*(inputs.logisticsRate[year]/100), 
-              varSalesComm: revenue*(inputs.salesCommRate[year]/100), 
-              varAsCost: revenue*(inputs.asCostRate[year]/100), 
-              totalSgaVar, 
-              semiUtilities: inputs.utilities[year]*infFactor, 
-              semiTravel: inputs.travel[year]*infFactor, 
-              semiTelecom: inputs.telecom[year]*infFactor, 
-              totalSgaSemi, 
-              fixLabor: inputs.laborFix[year]*infFactor, 
-              benefits: inputs.benefits[year]*infFactor, 
-              rent: inputs.rent[year]*infFactor, 
-              taxes: inputs.taxes[year]*infFactor, 
-              insurance: inputs.insurance[year]*infFactor, 
-              fees: inputs.fees[year]*infFactor, 
-              rnd: inputs.rnd[year]*infFactor, 
-              marketing: inputs.marketing[year]*infFactor, 
-              supplies: inputs.supplies[year]*infFactor, 
-              badDebt: inputs.badDebt[year]*infFactor, 
-              otherSga: inputs.otherSga[year]*infFactor, 
-              totalSgaFixOnly, 
-              amortization 
-            },
+            revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, nonOpIncC: toMil((inputs.nonOpIncCash||[])[i]||0), nonOpIncNC: toMil((inputs.nonOpIncNonCash||[])[i]||0), nonOpExpC: toMil((inputs.nonOpExpCash||[])[i]||0), nonOpExpNC: toMil((inputs.nonOpExpNonCash||[])[i]||0), tax, netIncome, internalCogs, externalCogs,
+            sgaDetails: { totalSgaVar, totalSgaSemi, totalSgaFixOnly, amortization, varLogistics: revenue*(((inputs.logisticsRate||[])[i]||0)/100), varSalesComm: revenue*(((inputs.salesCommRate||[])[i]||0)/100), varAsCost: revenue*(((inputs.asCostRate||[])[i]||0)/100), semiUtilities: toMil(inputs.utilities[i])*infMultArr[i], semiTravel: toMil(inputs.travel[i])*infMultArr[i], semiTelecom: toMil(inputs.telecom[i])*infMultArr[i], fixLabor: toMil(inputs.laborFix[i])*infMultArr[i], fixBenefits: toMil(inputs.benefits[i])*infMultArr[i], fixRent: toMil(inputs.rent[i])*infMultArr[i], fixTaxes: toMil(inputs.taxes[i])*infMultArr[i], fixInsurance: toMil(inputs.insurance[i])*infMultArr[i], fixFees: toMil(inputs.fees[i])*infMultArr[i], fixRnd: toMil(inputs.rnd[i])*infMultArr[i], fixMarketing: toMil(inputs.marketing[i])*infMultArr[i], fixSupplies: toMil(inputs.supplies[i])*infMultArr[i], fixBadDebt: toMil(inputs.badDebt[i])*infMultArr[i], fixOther: toMil(inputs.otherSga[i])*infMultArr[i] },
             ratios: { cogsRatio: revenue>0?cogs/revenue:0, grossMargin: revenue>0?grossProfit/revenue:0, sgaRatio: revenue>0?totalSga/revenue:0, opMargin: revenue>0?operatingProfit/revenue:0, netMargin: revenue>0?netIncome/revenue:0 }
           });
 
-          // 관리 손익(CVP) 정보 적재
-          const variableCosts = (inputs.rawMaterialMain[year]+inputs.rawMaterialSub[year]+inputs.directLabor[year]+inputs.directExpPower[year]+inputs.directExpWater[year]+inputs.directExpConsumables[year])*infFactor*currentProdVol + totalSgaVar;
+          const variableCosts = (totalBaseCost + totalDirExp)*ratio + externalCogs + totalSgaVar;
           const contributionMargin = revenue - variableCosts;
-          const fixedCosts = (inputs.indirectExpQC[year]+inputs.indirectExpMaintenance[year]+inputs.indirectExpWaste[year])*infFactor*currentProdVol + depreciation + totalSgaSemi + totalSgaFixOnly + amortization;
+          const fixedCosts = totalIndExp*ratio + depreciation*ratio + totalSgaSemi + totalSgaFixOnly + amortization;
           
           res.is_managerial.push({
-            revenue, variableCosts, contributionMargin, fixedCosts, operatingProfit: contributionMargin-fixedCosts, bepRevenue: contributionMargin>0?(fixedCosts*revenue)/contributionMargin:0,
-            varCostDetails: { 
-              rawMat: (inputs.rawMaterialMain[year]+inputs.rawMaterialSub[year])*infFactor*currentProdVol, 
-              dirLabor: inputs.directLabor[year]*infFactor*currentProdVol, 
-              dirExp: (inputs.directExpPower[year]+inputs.directExpWater[year]+inputs.directExpConsumables[year])*infFactor*currentProdVol, 
-              sgaVarLogistics: revenue*(inputs.logisticsRate[year]/100), 
-              sgaVarSalesComm: revenue*(inputs.salesCommRate[year]/100), 
-              sgaVarAsCost: revenue*(inputs.asCostRate[year]/100), 
-              totalSgaVar 
-            },
-            fixCostDetails: { 
-              indExpQC: inputs.indirectExpQC[year]*infFactor*currentProdVol, 
-              indExpMaintenance: inputs.indirectExpMaintenance[year]*infFactor*currentProdVol, 
-              indExpWaste: inputs.indirectExpWaste[year]*infFactor*currentProdVol, 
-              depreciation, 
-              semiUtilities: inputs.utilities[year]*infFactor, 
-              semiTravel: inputs.travel[year]*infFactor, 
-              semiTelecom: inputs.telecom[year]*infFactor, 
-              totalSgaSemi, 
-              fixLabor: inputs.laborFix[year]*infFactor, 
-              benefits: inputs.benefits[year]*infFactor, 
-              rent: inputs.rent[year]*infFactor, 
-              taxes: inputs.taxes[year]*infFactor, 
-              insurance: inputs.insurance[year]*infFactor, 
-              fees: inputs.fees[year]*infFactor, 
-              rnd: inputs.rnd[year]*infFactor, 
-              marketing: inputs.marketing[year]*infFactor, 
-              supplies: inputs.supplies[year]*infFactor, 
-              badDebt: inputs.badDebt[year]*infFactor, 
-              otherSga: inputs.otherSga[year]*infFactor, 
-              totalSgaFixOnly, 
-              amortization 
-            },
+            actualProdVol, revenue, variableCosts, contributionMargin, fixedCosts, operatingProfit: contributionMargin-fixedCosts, bepRevenue: contributionMargin>0?(fixedCosts*revenue)/contributionMargin:0,
+            varCostDetails: { totalSgaVar, varLogistics: revenue*(((inputs.logisticsRate||[])[i]||0)/100), varSalesComm: revenue*(((inputs.salesCommRate||[])[i]||0)/100), varAsCost: revenue*(((inputs.asCostRate||[])[i]||0)/100) },
             ratios: { varRatio: revenue>0?variableCosts/revenue:0, cmRatio: revenue>0?contributionMargin/revenue:0, fixedRatio: revenue>0?fixedCosts/revenue:0 }
           });
 
-          // 회전일수(Days) 기반 매출채권/재고/매입채무 변동 산출
-          const arGross = revenue * ((inputs.arDays[year] || 30) / 365);
-          const deltaArGross = -(arGross - prevArGross); prevArGross = arGross;
-          const inv = cogs * ((inputs.invDays[year] || 30) / 365);
-          const ap = cogs * ((inputs.apDays[year] || 30) / 365); 
-          
-          let ppeNet = totalCapex.slice(0, year+1).reduce((a,b)=>a+b,0);
-          let intangibleNet = totalIntangible.slice(0, year+1).reduce((a,b)=>a+b,0);
-          inputs.capexList.forEach(it => it.amounts.forEach((a, j) => { 
-            if(a && year >= (j===0?1:j)) ppeNet -= (a/it.usefulLife) * (Math.min(year, (j===0?1:j)+it.usefulLife-1) - (j===0?1:j) + 1); 
-          }));
-          inputs.intangibleList.forEach(it => it.amounts.forEach((a, j) => { 
-            if(a && year >= (j===0?1:j)) intangibleNet -= (a/it.usefulLife) * (Math.min(year, (j===0?1:j)+it.usefulLife-1) - (j===0?1:j) + 1); 
-          }));
-
-          // 운전자본 소요액 연동 (ΔWC)
-          const deltaWc = deltaArGross - (inv - res.bs[i].bsDetails.inv) + (ap - res.bs[i].bsDetails.ap) + totalAdvances[year] + totalAccrued[year] - totalPrepaid[year] - totalReceivable[year];
-          const nonCashExpAdd = depreciation + amortization + (inputs.badDebt[year] || 0)*infFactor + inputs.nonOpExpNonCash[year];
-          
-          // 영업 현금 및 기말 현금 산출 (자기자본 조달의 연계 반영)
-          const operatingCf = netIncome + nonCashExpAdd - inputs.nonOpIncNonCash[year] + deltaWc;
-          const netCf = operatingCf - totalCapex[year] - totalIntangible[year] + totalEquity[year] + totalDebt[year]; 
-          const endingCash = prevCash + netCf;
-          
-          // Year 1 ~ 5 B/S 갱신 적재
           res.bs.push({
-            currentAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + totalPrepaid.slice(0,year+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,year+1).reduce((a,b)=>a+b,0),
+            currentAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0),
             nonCurrentAssets: ppeNet + intangibleNet + accumOtherNonCash,
-            totalAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + totalPrepaid.slice(0,year+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,year+1).reduce((a,b)=>a+b,0) + ppeNet + intangibleNet + accumOtherNonCash,
-            currentLiabilities: ap + totalAdvances.slice(0,year+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,year+1).reduce((a,b)=>a+b,0),
+            totalAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0) + ppeNet + intangibleNet + accumOtherNonCash,
+            currentLiabilities: ap + totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0),
             nonCurrentLiabilities: accumDebt,
-            totalLiabilities: ap + totalAdvances.slice(0,year+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,year+1).reduce((a,b)=>a+b,0) + accumDebt,
+            totalLiabilities: ap + totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0) + accumDebt,
             totalEquity: accumCapital + prevRetainedEarnings + netIncome,
-            bsDetails: { cash: endingCash, ar: Math.max(0, arGross-accumBadDebt), inv, prepaidNet: totalPrepaid.slice(0,year+1).reduce((a,b)=>a+b,0), receivableNet: totalReceivable.slice(0,year+1).reduce((a,b)=>a+b,0), ppeNet, intangibleNet, otherNetAssets: accumOtherNonCash, ap, advancesNet: totalAdvances.slice(0,year+1).reduce((a,b)=>a+b,0), accruedNet: totalAccrued.slice(0,year+1).reduce((a,b)=>a+b,0), debt: accumDebt, capital: accumCapital, retainedEarnings: prevRetainedEarnings + netIncome, newEquity: totalEquity[year] }
+            bsDetails: { cash: endingCash, ar: Math.max(0, arGross-accumBadDebt), inv, invBase, unsoldInvValue, prepaidNet: totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0), receivableNet: totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0), ppeNet, intangibleNet, otherNetAssets: accumOtherNonCash, ap, advancesNet: totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0), accruedNet: totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0), debt: accumDebt, capital: accumCapital, retainedEarnings: prevRetainedEarnings + netIncome }
           });
 
-          // Year 1 ~ 5 C/F 적재
           res.cf.push({
-            beginningCash: prevCash, operatingCf, investingCf: -totalCapex[year] - totalIntangible[year], financingCf: totalEquity[year] + totalDebt[year], netCf, endingCash, nonCashExpAdd, nonCashIncDed: inputs.nonOpIncNonCash[year], deltaWc,
-            cfDetails: { netIncome, depreciation, amortization, badDebtExp: (inputs.badDebt[year]||0)*infFactor, nonOpExpNonCash: inputs.nonOpExpNonCash[year], nonOpIncNonCash: inputs.nonOpIncNonCash[year], deltaArGross, deltaInv: -(inv - res.bs[i].bsDetails.inv), deltaAp: (ap - res.bs[i].bsDetails.ap), advancesInflow: totalAdvances[year], accruedInflow: totalAccrued[year], prepaidOutflow: -totalPrepaid[year], receivableOutflow: -totalReceivable[year], capex: -totalCapex[year], intangibleCapex: -totalIntangible[year], equity: totalEquity[year], debt: totalDebt[year] }
+            beginningCash: prevCash, operatingCf, investingCf: -totalCapex[i] - totalIntangible[i], financingCf: totalEquity[i] + totalDebt[i], netCf, endingCash, nonCashExpAdd, nonCashIncDed: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaWc,
+            cfDetails: { netIncome, depreciation, amortization, badDebtExp: toMil((inputs.badDebt||[])[i]||0)*infMultArr[i], nonOpExpNonCash: toMil((inputs.nonOpExpNonCash||[])[i]||0), nonOpIncNonCash: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaArGross, deltaInv: -(inv - prevInvValue), deltaAp: (ap - (i>0?res.bs[i-1].bsDetails.ap:0)), advancesInflow: totalAdvances[i], accruedInflow: totalAccrued[i], prepaidOutflow: -totalPrepaid[i], receivableOutflow: -totalReceivable[i], capex: -totalCapex[i], intangibleCapex: -totalIntangible[i], equity: totalEquity[i], debt: totalDebt[i] }
           });
 
-          // FCFF (잉여현금흐름) 추정
-          const nopat = operatingProfit * (1 - ((inputs.taxRate[year] || 20.0)/100));
-          const terminalValue = i === 4 ? Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + totalPrepaid.slice(0,year+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,year+1).reduce((a,b)=>a+b,0) - totalAdvances.slice(0,year+1).reduce((a,b)=>a+b,0) - totalAccrued.slice(0,year+1).reduce((a,b)=>a+b,0) + accumOtherNonCash : 0;
-          const fcff = nopat + depreciation + amortization + totalAdvances[year] + totalAccrued[year] + terminalValue - totalCapex[year] - totalIntangible[year] - (-deltaArGross + (inv - res.bs[i].bsDetails.inv) - (ap - res.bs[i].bsDetails.ap)) - totalPrepaid[year] - totalReceivable[year];
+          const nopat = operatingProfit * (1 - (((inputs.taxRate||[])[i]||0)/100));
+          const terminalValue = i === 5 ? Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0) - totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) - totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0) + accumOtherNonCash : 0;
+          const wInflow = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + totalAdvances[i] + totalAccrued[i] - totalPrepaid[i] - totalReceivable[i];
+          const fcff = nopat + depreciation + amortization + terminalValue - totalCapex[i] - totalIntangible[i] + wInflow;
           
-          res.fcffData.push({ nopat, depreciation, amortization, advancesInflow: totalAdvances[year], accruedInflow: totalAccrued[year], terminalValue, capex: totalCapex[year], intangibleCapex: totalIntangible[year], deltaWc: (-deltaArGross + (inv - res.bs[i].bsDetails.inv) - (ap - res.bs[i].bsDetails.ap)), prepaidOutflow: totalPrepaid[year], receivableOutflow: totalReceivable[year], fcff, pvFcff: fcff / Math.pow(1 + wacc, year) });
+          res.fcffData.push({ nopat, depreciation, amortization, terminalValue, capex: totalCapex[i], intangibleCapex: totalIntangible[i], deltaWc: wInflow, fcff, pvFcff: fcff / Math.pow(1 + wacc, i) });
           
-          prevCash = endingCash;
-          prevRetainedEarnings += netIncome;
+          prevCash = endingCash; prevInvValue = inv; prevRetainedEarnings += netIncome;
         }
 
         const fcffArray = res.fcffData.map(d=>d.fcff);
@@ -809,6 +801,11 @@
           if (res.paybackPeriod === null && cumFcff >= 0) res.paybackPeriod = idx === 0 ? 0 : (idx - 1) + Math.abs(prevCum) / cf;
         });
 
+        res.revenueDetails = revTreeGlobal;
+        res.internalCogsDetails = intVolTreeGlobal;
+        res.externalCogsDetails = extCogsTreeGlobal;
+        res.internalCogsFactorTree = intCogsFactorTreeGlobal;
+
         return res;
       }, [inputs]);
 
@@ -816,22 +813,6 @@
       const getM = (k1, k2) => model.is_managerial.map(d => k2 ? d[k1][k2] : d[k1]);
       const getB = (k1, k2) => model.bs.map(d => k2 ? d[k1][k2] : d[k1]);
       const getC = (k1, k2) => model.cf.map(d => k2 ? d[k1][k2] : d[k1]);
-
-      const equityDetails = useMemo(() => {
-        let details = inputs.equityList.map((eq) => {
-          return {
-            label: eq.name || '투자자',
-            values: model.bs.map((_, yearIndex) => eq.amounts.slice(0, yearIndex + 1).reduce((a, b) => a + b, 0)),
-            level: 2
-          };
-        });
-        details.unshift({
-          label: '납입자본금 총액',
-          values: getB('bsDetails', 'capital'),
-          isGroup: true, level: 1
-        });
-        return details;
-      }, [inputs.equityList, model.bs]);
 
       if (authLoading) return <div className="flex h-screen items-center justify-center bg-slate-100 font-bold text-slate-600">로딩 중...</div>;
 
@@ -841,37 +822,22 @@
             <div className="bg-white p-8 rounded-lg shadow-xl w-96 border-t-4 border-slate-800">
               <h1 className="text-2xl font-black text-slate-900 tracking-tighter mb-2">사업타당성 시뮬레이터</h1>
               <p className="text-xs text-slate-500 font-semibold mb-6">데이터를 클라우드에 안전하게 보관하세요.</p>
-              
               <form onSubmit={handleLogin} className="flex flex-col gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">이메일 계정</label>
-                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required className="w-full border border-slate-300 rounded p-2 text-sm focus:border-red-700 outline-none" placeholder="example@email.com"/>
+                  <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required className="w-full border border-slate-300 rounded p-2 text-sm focus:border-red-700 outline-none" placeholder="admin@email.com"/>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">비밀번호 (6자리 이상)</label>
                   <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength="6" className="w-full border border-slate-300 rounded p-2 text-sm focus:border-red-700 outline-none" placeholder="••••••"/>
                 </div>
-                
-                <div className="flex items-center justify-between mt-1 mb-1">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input type="checkbox" checked={rememberId} onChange={e => setRememberId(e.target.checked)} className="w-3.5 h-3.5 text-red-600 border-slate-300 rounded focus:ring-red-500" />
-                    <span className="text-xs font-semibold text-slate-600">아이디 저장</span>
-                  </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer" title="브라우저를 닫아도 로그인이 해제되지 않습니다.">
-                    <input type="checkbox" checked={keepLoggedIn} onChange={e => setKeepLoggedIn(e.target.checked)} className="w-3.5 h-3.5 text-red-600 border-slate-300 rounded focus:ring-red-500" />
-                    <span className="text-xs font-semibold text-slate-600">로그인 상태 유지</span>
-                  </label>
-                </div>
-                
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={rememberId} onChange={(e)=>setRememberId(e.target.checked)} className="accent-slate-900" /> 아이디 저장 및 로그인 유지
+                </label>
                 {authError && <div className="bg-red-50 text-red-600 p-2 text-xs font-bold rounded border border-red-200">{authError}</div>}
                 {signUpMessage && <div className="bg-green-50 text-green-700 p-2 text-xs font-bold rounded border border-green-200">{signUpMessage}</div>}
-                
-                <button type="submit" disabled={authLoading} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2 disabled:opacity-50">
-                  {authLoading ? '확인 중...' : '이메일로 로그인'}
-                </button>
-                <button type="button" onClick={handleSignUp} disabled={authLoading} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors disabled:opacity-50">
-                  새 계정으로 회원가입
-                </button>
+                <button type="submit" disabled={authLoading} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded shadow transition-colors mt-2 disabled:opacity-50">{authLoading ? '확인 중...' : '이메일로 로그인'}</button>
+                <button type="button" onClick={handleSignUp} disabled={authLoading} className="w-full bg-white border border-slate-300 hover:border-slate-800 text-slate-800 font-bold py-2.5 rounded shadow-sm transition-colors disabled:opacity-50">새 계정으로 회원가입</button>
               </form>
             </div>
           </div>
@@ -880,189 +846,143 @@
 
       return (
         <div className="flex h-screen bg-slate-200 font-sans text-slate-800 overflow-hidden">
-          
-          {/* --- 좌측 패널 (입력부) --- */}
-          <div className="w-[500px] min-w-[460px] bg-slate-50 border-r border-slate-300 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.05)]">
-            <div className="p-5 bg-white border-b border-slate-300 flex justify-between items-center">
-              <div>
-                <h1 className="text-xl font-black text-slate-900 tracking-tighter">사업타당성 시뮬레이터</h1>
-                <p className="text-[11px] text-slate-500 mt-1 font-semibold tracking-tight">모든 변수는 Y0 ~ Y5 (6개년) 일괄 적용됩니다.</p>
+          {isAdmin && isSidebarOpen && (
+            <div className="w-[500px] min-w-[500px] bg-slate-50 border-r border-slate-300 flex flex-col z-10 shadow-[4px_0_24px_rgba(0,0,0,0.05)]">
+              <div className="p-4 bg-white border-b border-slate-300 flex justify-between items-center">
+                <div>
+                  <h1 className="text-xl font-black text-slate-900 tracking-tighter">사업타당성 시뮬레이터</h1>
+                  <p className="text-[10px] text-slate-500 mt-1 font-semibold tracking-tight">수정된 수치는 우측 보고서에 실시간 반영됩니다.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleSave} className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded shadow-sm">저장</button>
+                  <button onClick={handleLogout} className="text-[10px] font-bold bg-slate-100 border border-slate-300 px-2 py-1.5 rounded hover:bg-slate-200">종료</button>
+                </div>
               </div>
-              <button onClick={handleLogout} className="text-[10px] font-bold bg-slate-100 border border-slate-300 px-2 py-1.5 rounded hover:bg-slate-200">
-                로그아웃
-              </button>
+              
+              <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-slate-50/50">
+                <InputGroup title="📂 프로젝트 데이터 관리">
+                  <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명 입력" className="w-full text-sm font-bold border border-slate-300 rounded focus:border-red-700 outline-none p-2 mb-3 bg-slate-50" />
+                  {saveStatus && <p className="text-red-700 text-xs text-center font-bold">{saveStatus}</p>}
+                </InputGroup>
+
+                <InputGroup title="1. 거시환경변수">
+                  <YearlyInputField label="물가상승률 (%)" arrName="inflationRate" values={inputs.inflationRate} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="조달 금리 (%)" arrName="interestRate" values={inputs.interestRate} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="환율 (원/$)" arrName="exchangeRate" values={inputs.exchangeRate} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="산업성장률 (%)" arrName="industryGrowth" values={inputs.industryGrowth} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="법인세율 (%)" arrName="taxRate" values={inputs.taxRate} onChangeArray={handleArrayChange} />
+                </InputGroup>
+
+                <InputGroup title="2. 자본조달 구조">
+                  <YearlyInputField label="자기자본비용 (요구수익률) (%)" arrName="costOfEquity" values={inputs.costOfEquity} onChangeArray={handleArrayChange} />
+                  <div className="my-6 border-t border-dashed border-slate-300"></div>
+                  <DynamicListYearly listName="equityList" items={inputs.equityList} title="자기자본 조달 (단위: 백만원)" namePlaceholder="조달처" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="debtList" items={inputs.debtList} title="타인자본 조달 (단위: 백만원)" namePlaceholder="조달처" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                </InputGroup>
+
+                <InputGroup title="3. 자금소요 (투자/CAPEX)">
+                  <YearlyInputField label="연간 최대 생산능력 CAPA (수량-개)" arrName="capexMaxCapa" values={inputs.capexMaxCapa} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="예상 설비 가동률 (%)" arrName="utilization" values={inputs.utilization} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="생산 수율 로스(Loss)율 (%)" arrName="lossRate" values={inputs.lossRate} onChangeArray={handleArrayChange} />
+                  <div className="my-6 border-t border-dashed border-slate-300"></div>
+                  <DynamicListYearly listName="capexList" items={inputs.capexList} title="유형자산 투자 (단위: 백만원)" namePlaceholder="설비항목" hasUsefulLife onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="intangibleList" items={inputs.intangibleList} title="무형자산 투자 (단위: 백만원)" namePlaceholder="특허/SW항목" hasUsefulLife onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                </InputGroup>
+
+                <InputGroup title="4. 자금소요 (운전자본 및 제조경비)">
+                  <DynamicBaseCostList listName="baseCostList" items={inputs.baseCostList} title="기본 제조원가 총액 (단위: 백만원)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicExpRateList listName="directExpList" items={inputs.directExpList} title="직접 제조경비율 (기본원가 대비 %)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicExpRateList listName="indirectExpList" items={inputs.indirectExpList} title="간접 제조경비율 (기본원가 대비 %)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <div className="my-6 border-t border-dashed border-slate-300"></div>
+                  
+                  <YearlyInputField label="매출채권 회전일수 (Days)" arrName="arDays" values={inputs.arDays} onChangeArray={handleArrayChange} />
+                  <div className="flex gap-1 mb-4 text-[10px] text-blue-600 font-semibold justify-between px-1">
+                    <span className="w-1/4">매출채권 잔액</span>
+                    {pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.ar / 1000000)}백만</span>)}
+                  </div>
+
+                  <YearlyInputField label="재고자산 회전일수 (Days)" arrName="invDays" values={inputs.invDays} onChangeArray={handleArrayChange} />
+                  <div className="flex flex-col gap-0.5 mb-4 text-[10px] text-blue-600 font-semibold px-1">
+                    <div className="flex gap-1 justify-between"><span className="w-1/4">정상재고 잔액</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.invBase / 1000000)}백만</span>)}</div>
+                    <div className="flex gap-1 justify-between text-orange-600"><span className="w-1/4">미판매 잉여재고</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.unsoldInvValue / 1000000)}백만</span>)}</div>
+                    <div className="flex gap-1 justify-between text-indigo-700 font-bold border-t border-slate-300 pt-0.5 mt-0.5"><span className="w-1/4">총 재고자산</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.inv / 1000000)}백만</span>)}</div>
+                  </div>
+
+                  <YearlyInputField label="매입채무 회전일수 (Days)" arrName="apDays" values={inputs.apDays} onChangeArray={handleArrayChange} />
+                  <div className="flex gap-1 mb-6 text-[10px] text-red-600 font-semibold justify-between px-1">
+                    <span className="w-1/4">매입채무 잔액</span>
+                    {pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.ap / 1000000)}백만</span>)}
+                  </div>
+
+                  <DynamicListYearly listName="advancesList" items={inputs.advancesList} title="선수금/선수수익 (백만원)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="accruedList" items={inputs.accruedList} title="미지급금/예수금 (백만원)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="prepaidList" items={inputs.prepaidList} title="선급금/선급비용 (백만원)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="receivableList" items={inputs.receivableList} title="미수금/미수수익 (백만원)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                </InputGroup>
+
+                <InputGroup title="5. 자금소요 (판매비와 관리비)">
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">직접변동비 (매출액 대비 %)</div>
+                  <YearlyInputField label="물류/수출비용 (%)" arrName="logisticsRate" values={inputs.logisticsRate} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="판매수수료 (%)" arrName="salesCommRate" values={inputs.salesCommRate} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="A/S 비용 (%)" arrName="asCostRate" values={inputs.asCostRate} onChangeArray={handleArrayChange} />
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">준변동비 (단위: 백만원)</div>
+                  <YearlyInputField label="수도광열비" arrName="utilities" values={inputs.utilities} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="여비교통비" arrName="travel" values={inputs.travel} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="통신비" arrName="telecom" values={inputs.telecom} onChangeArray={handleArrayChange} />
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">고정비 (단위: 백만원)</div>
+                  <YearlyInputField label="인건비 (급여/퇴직금)" arrName="laborFix" values={inputs.laborFix} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="복리후생비" arrName="benefits" values={inputs.benefits} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="임차료" arrName="rent" values={inputs.rent} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="세금과공과" arrName="taxes" values={inputs.taxes} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="보험료" arrName="insurance" values={inputs.insurance} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="지급수수료" arrName="fees" values={inputs.fees} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="연구개발비 (R&D)" arrName="rnd" values={inputs.rnd} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="마케팅/광고선전비" arrName="marketing" values={inputs.marketing} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="소모품비" arrName="supplies" values={inputs.supplies} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="대손상각비 (추정)" arrName="badDebt" values={inputs.badDebt} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="기타 판관비" arrName="otherSga" values={inputs.otherSga} onChangeArray={handleArrayChange} />
+                </InputGroup>
+
+                <InputGroup title="6. 매출액 추정 (7단계 다차원 트리)">
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-[11px] font-bold text-slate-500">국가 &gt; 영역 &gt; 형태 &gt; 채널 &gt; 거래처 &gt; 품목군 &gt; 품목</p>
+                    <button onClick={treeActions.addCountry} className="text-[10px] font-bold bg-white border border-slate-300 hover:border-slate-800 text-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 국가</button>
+                  </div>
+                  <HierarchyEditor list={inputs.salesHierarchy} level={0} pathIds={[]} handlers={treeActions} />
+                </InputGroup>
+
+                <InputGroup title="7. 영업외수익/비용 (단위: 백만원)">
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외수익</div>
+                  <YearlyInputField label="현금성 수익 (이자수익 등)" arrName="nonOpIncCash" values={inputs.nonOpIncCash} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="비현금성 수익 (외환차익 등)" arrName="nonOpIncNonCash" values={inputs.nonOpIncNonCash} onChangeArray={handleArrayChange} />
+                  <div className="my-6 border-t border-dashed border-slate-300"></div>
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외비용</div>
+                  <YearlyInputField label="현금성 비용 (수수료 등)" arrName="nonOpExpCash" values={inputs.nonOpExpCash} onChangeArray={handleArrayChange} />
+                  <YearlyInputField label="비현금성 비용 (외환차손 등)" arrName="nonOpExpNonCash" values={inputs.nonOpExpNonCash} onChangeArray={handleArrayChange} />
+                </InputGroup>
+              </div>
             </div>
-            
-            <div className="flex-1 overflow-y-auto p-5 custom-scrollbar bg-slate-50/50">
-              <InputGroup title="📂 프로젝트 데이터 관리">
-                <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명 입력" className="w-full text-sm font-bold border border-slate-300 rounded focus:border-red-700 outline-none p-2 mb-3 bg-slate-50" />
-                <div className="flex gap-2 mb-3">
-                  <button onClick={handleSave} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 rounded transition-colors shadow-sm">💾 클라우드 저장</button>
-                  <button onClick={handleNew} className="flex-1 bg-white border border-slate-300 hover:border-slate-800 text-slate-800 text-xs font-bold py-2.5 rounded transition-colors shadow-sm">📄 신규 캔버스</button>
-                </div>
-                {saveStatus ? <p className="text-red-700 text-xs text-center font-bold mb-3">{saveStatus}</p> : null}
-                <div className="bg-slate-100 p-3 rounded border border-slate-200">
-                  <p className="text-[11px] font-bold text-slate-600 mb-1.5">저장된 프로젝트 불러오기</p>
-                  <select onChange={(e) => handleLoad(e.target.value)} value={currentProjectId || ''} className="w-full text-xs font-semibold border border-slate-300 rounded p-2 outline-none focus:border-red-700 bg-white">
-                    <option value="" disabled>목록에서 선택...</option>
-                    {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({new Date(p.updated_at).toLocaleDateString()})</option>)}
-                  </select>
-                </div>
-              </InputGroup>
+          )}
 
-              <InputGroup title="1. 거시환경변수 (Macro)" tooltip="Y0~Y5 인플레이션 및 성장 지표가 유기적으로 복합 연동됩니다.">
-                <YearlyInputField label="물가상승률 (%)" arrName="inflationRate" values={inputs.inflationRate} onChangeArray={handleArrayChange} tooltip="연차별 원가 및 판관비에 실시간 누적 인플레이션 연동" />
-                <YearlyInputField label="조달 금리 (%)" arrName="interestRate" values={inputs.interestRate} onChangeArray={handleArrayChange} tooltip="이익계산서 상 장기차입 이자비용으로 반영" />
-                <YearlyInputField label="환율 (원/$)" arrName="exchangeRate" values={inputs.exchangeRate} onChangeArray={handleArrayChange} tooltip="수출 타깃 국가 매출에 즉각 환산" />
-                <YearlyInputField label="산업성장률 (%)" arrName="industryGrowth" values={inputs.industryGrowth} onChangeArray={handleArrayChange} tooltip="목표 판매수량에 누적 증대 연동" />
-                <YearlyInputField label="법인세율 (%)" arrName="taxRate" values={inputs.taxRate} onChangeArray={handleArrayChange} />
-              </InputGroup>
+          <div className="flex-1 flex flex-col relative bg-[#e2e8f0] overflow-hidden">
+            {isAdmin && (
+               <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-slate-800 text-white p-2 rounded-r-md shadow-lg opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-xs font-black">{isSidebarOpen ? '◀' : '▶'}</span>
+               </button>
+            )}
 
-              <InputGroup title="2. 자본조달 구조 (Funding)" tooltip="Y0~Y5 전체 조달비율에 의거하여 WACC가 산출됩니다.">
-                <YearlyInputField label="자기자본비용 (요구수익률) (%)" arrName="costOfEquity" values={inputs.costOfEquity} onChangeArray={handleArrayChange} />
-                <div className="my-6 border-t border-dashed border-slate-300"></div>
-                <DynamicListYearly listName="equityList" items={inputs.equityList} title="자기자본 조달 (Equity)" namePlaceholder="조달처 (예: 주주, VC)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                <DynamicListYearly listName="debtList" items={inputs.debtList} title="타인자본 조달 (Debt)" namePlaceholder="조달처 (예: 은행 차입금)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                <div className="bg-slate-900 text-white p-4 rounded mt-4 shadow-inner">
-                  <div className="flex justify-between mb-1.5"><span className="text-slate-400 text-xs font-semibold">자기자본 비중</span><span className="font-bold text-sm">{formatPercent(model.wE)}</span></div>
-                  <div className="flex justify-between mb-1.5"><span className="text-slate-400 text-xs font-semibold">타인자본 비중</span><span className="font-bold text-sm">{formatPercent(model.wD)}</span></div>
-                  <div className="flex justify-between border-t border-slate-700 pt-2 mt-2"><span className="font-bold text-sm text-slate-200">가중평균자본비용 (WACC)</span><span className="font-black text-red-400 text-base">{formatPercent(model.wacc)}</span></div>
-                </div>
-              </InputGroup>
-
-              <InputGroup title="3. 자금소요 (투자/CAPEX)">
-                <DynamicListYearly listName="capexList" items={inputs.capexList} title="유형자산 (설비투자)" namePlaceholder="설비명 (예: 생산설비 1라인)" hasUsefulLife onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                <DynamicListYearly listName="intangibleList" items={inputs.intangibleList} title="무형자산 (특허/S/W)" namePlaceholder="자산명 (예: 특허권)" hasUsefulLife onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                <div className="my-6 border-t border-dashed border-slate-300"></div>
-                <YearlyInputField label="예상 설비 가동률 (%)" arrName="utilization" values={inputs.utilization} onChangeArray={handleArrayChange} tooltip="연차별 판매수량의 유동적인 통제" />
-                <YearlyInputField label="생산 수율 로스(Loss)율 (%)" arrName="lossRate" values={inputs.lossRate} onChangeArray={handleArrayChange} />
-              </InputGroup>
-
-              <InputGroup title="4. 운전자본 및 제조원가 단가">
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">직접원부자재 및 노무 단가 (물가 연동)</div>
-                <YearlyInputField label="주원자재 단가" arrName="rawMaterialMain" values={inputs.rawMaterialMain} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="부자재 단가" arrName="rawMaterialSub" values={inputs.rawMaterialSub} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="단위당 직접노무비" arrName="directLabor" values={inputs.directLabor} onChangeArray={handleArrayChange} />
-                
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">공정 직접 경비 (물가 연동)</div>
-                <YearlyInputField label="전력비" arrName="directExpPower" values={inputs.directExpPower} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="용수비" arrName="directExpWater" values={inputs.directExpWater} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="생산소모품비" arrName="directExpConsumables" values={inputs.directExpConsumables} onChangeArray={handleArrayChange} />
-                
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">간접 제조 경비 (물가 연동)</div>
-                <YearlyInputField label="품질검사비" arrName="indirectExpQC" values={inputs.indirectExpQC} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="수선유지비" arrName="indirectExpMaintenance" values={inputs.indirectExpMaintenance} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="폐기물처리비" arrName="indirectExpWaste" values={inputs.indirectExpWaste} onChangeArray={handleArrayChange} />
-                
-                <div className="my-6 border-t border-dashed border-slate-300"></div>
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">유동 거래주기 회전일수 (Days)</div>
-                <YearlyInputField label="매출채권 회전일수" arrName="arDays" values={inputs.arDays} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="재고자산 회전일수" arrName="invDays" values={inputs.invDays} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="매입채무 회전일수" arrName="apDays" values={inputs.apDays} onChangeArray={handleArrayChange} />
-                
-                <div className="my-6 border-t border-dashed border-slate-300"></div>
-                <div className="bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-1 rounded border border-blue-200 mb-3">유동부채 변동 (영업 현금유입 연계)</div>
-                <DynamicListYearly listName="advancesList" items={inputs.advancesList} title="선수금/선수수익" namePlaceholder="선수금 항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                <DynamicListYearly listName="accruedList" items={inputs.accruedList} title="미지급금/예수금" namePlaceholder="미지급비용 항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                
-                <div className="bg-red-100 text-red-800 text-[11px] font-bold px-2 py-1 rounded border border-red-200 mb-3 mt-5">유동자산 변동 (영업 현금유출 연계)</div>
-                <DynamicListYearly listName="prepaidList" items={inputs.prepaidList} title="선급금/선급비용" namePlaceholder="선급금 항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-                <DynamicListYearly listName="receivableList" items={inputs.receivableList} title="미수금/미수수익" namePlaceholder="미수금 항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListFieldChange} onAmountChange={handleListAmountChange} />
-              </InputGroup>
-
-              <InputGroup title="5. 판매비와 관리비 (SGA)">
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">매출 연동 변동 판관비 (%)</div>
-                <YearlyInputField label="물류/수출비용 (%)" arrName="logisticsRate" values={inputs.logisticsRate} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="판매수수료 (%)" arrName="salesCommRate" values={inputs.salesCommRate} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="A/S 비용 (%)" arrName="asCostRate" values={inputs.asCostRate} onChangeArray={handleArrayChange} />
-                
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">일반 운영 준변동비 (물가 연동)</div>
-                <YearlyInputField label="수도광열비" arrName="utilities" values={inputs.utilities} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="여비교통비" arrName="travel" values={inputs.travel} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="통신비" arrName="telecom" values={inputs.telecom} onChangeArray={handleArrayChange} />
-                
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">고정판관비 연간 총액 (물가 연동)</div>
-                <YearlyInputField label="고정인건비" arrName="laborFix" values={inputs.laborFix} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="복리후생비" arrName="benefits" values={inputs.benefits} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="임차료" arrName="rent" values={inputs.rent} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="세금과공과" arrName="taxes" values={inputs.taxes} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="보험료" arrName="insurance" values={inputs.insurance} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="지급수수료" arrName="fees" values={inputs.fees} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="연구개발비 (R&D)" arrName="rnd" values={inputs.rnd} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="마케팅광고비" arrName="marketing" values={inputs.marketing} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="소모품비" arrName="supplies" values={inputs.supplies} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="추정 대손비용" arrName="badDebt" values={inputs.badDebt} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="기타 판관비" arrName="otherSga" values={inputs.otherSga} onChangeArray={handleArrayChange} />
-              </InputGroup>
-
-              <InputGroup title="6. 매출 구조 트리 (국가/거래처/품목)">
-                <div className="flex justify-between items-center mb-4">
-                  <p className="text-xs font-semibold text-slate-500">수출 세부 국가 기준 환율 매핑</p>
-                  <button onClick={addCountry} className="text-xs font-bold bg-white border border-slate-300 hover:border-slate-800 text-slate-800 px-3 py-1 rounded transition-colors shadow-sm">+ 국가 추가</button>
-                </div>
-                <div className="space-y-4">
-                  {inputs.salesHierarchy.map((country) => (
-                    <div key={country.id} className="bg-slate-100 border border-slate-300 rounded p-3">
-                      <div className="flex justify-between items-center mb-3">
-                        <input type="text" value={country.name} onChange={(e) => updateCountry(country.id, e.target.value)} placeholder="국가명 입력" className="text-sm font-black text-slate-900 bg-transparent border-b-2 border-slate-400 focus:border-red-700 outline-none w-1/2 px-1 py-0.5" />
-                        <div className="flex gap-1">
-                          <button onClick={() => addClient(country.id)} className="text-[11px] font-bold text-slate-700 bg-white border border-slate-300 px-2.5 py-1 rounded shadow-sm hover:bg-slate-50">+ 거래처 추가</button>
-                          <button onClick={() => removeCountry(country.id)} className="text-slate-400 hover:text-red-700 px-2 font-bold">&times;</button>
-                        </div>
-                      </div>
-                      {country.clients.map((client) => (
-                        <div key={client.id} className="ml-3 mt-3 p-3 bg-white border border-slate-200 rounded shadow-sm">
-                          <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
-                            <input type="text" value={client.name} onChange={(e) => updateClient(country.id, client.id, e.target.value)} placeholder="거래처명 입력" className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none w-1/2 px-1" />
-                            <div className="flex gap-1">
-                              <button onClick={() => addProduct(country.id, client.id)} className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2 py-1 rounded hover:bg-slate-200">+ 품목 추가</button>
-                              <button onClick={() => removeClient(country.id, client.id)} className="text-slate-400 hover:text-red-700 px-2">&times;</button>
-                            </div>
-                          </div>
-                          <div className="space-y-3 mt-2">
-                            {client.products.map(product => (
-                              <div key={product.id} className="bg-slate-50 p-2.5 rounded border border-slate-200">
-                                 <div className="flex justify-between items-center mb-3">
-                                   <input type="text" value={product.name} onChange={(e) => updateProduct(country.id, client.id, product.id, 'name', null, e.target.value)} placeholder="품목명 입력" className="text-[11px] font-bold text-slate-800 bg-transparent border-b border-slate-300 focus:border-red-700 outline-none w-2/3 px-1 pb-0.5" />
-                                   <button onClick={() => removeProduct(country.id, client.id, product.id)} className="text-slate-400 hover:text-red-700 font-bold">&times;</button>
-                                 </div>
-                                 <div className="text-[10px] font-bold text-slate-600 mb-1">단가 (Price)</div>
-                                 <div className="grid grid-cols-6 gap-1 mb-3">
-                                    {[0, 1, 2, 3, 4, 5].map((idx) => (
-                                      <NumInput key={`p-${idx}`} value={product.prices && product.prices[idx] !== undefined ? product.prices[idx] : 0} onChange={(v) => updateProduct(country.id, client.id, product.id, 'prices', idx, v)} className="text-[10px] px-0.5" />
-                                    ))}
-                                 </div>
-                                 <div className="text-[10px] font-bold text-slate-600 mb-1">기본수량 (Volume)</div>
-                                 <div className="grid grid-cols-6 gap-1">
-                                    {[0, 1, 2, 3, 4, 5].map((idx) => (
-                                      <NumInput key={`v-${idx}`} value={product.volumes && product.volumes[idx] !== undefined ? product.volumes[idx] : 0} onChange={(val) => updateProduct(country.id, client.id, product.id, 'volumes', idx, val)} className="text-[10px] px-0.5" />
-                                    ))}
-                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </InputGroup>
-
-              <InputGroup title="7. 영업외수익/비용 및 비현금 항목">
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외수익 (Y0~Y5)</div>
-                <YearlyInputField label="현금성 영업외수익" arrName="nonOpIncCash" values={inputs.nonOpIncCash} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="비현금성 영업외수익" arrName="nonOpIncNonCash" values={inputs.nonOpIncNonCash} onChangeArray={handleArrayChange} />
-                <div className="my-6 border-t border-dashed border-slate-300"></div>
-                <div className="bg-slate-800 text-white text-[11px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외비용 (Y0~Y5)</div>
-                <YearlyInputField label="현금성 영업외비용" arrName="nonOpExpCash" values={inputs.nonOpExpCash} onChangeArray={handleArrayChange} />
-                <YearlyInputField label="비현금성 영업외비용" arrName="nonOpExpNonCash" values={inputs.nonOpExpNonCash} onChangeArray={handleArrayChange} />
-              </InputGroup>
+            <div className="bg-white px-8 py-3 border-b border-slate-300 flex justify-between items-center shadow-sm z-20">
+              <div className="flex gap-6 items-center">
+                <span className="font-black text-lg text-slate-900 tracking-tighter">사업타당성 분석 뷰어</span>
+                <select onChange={(e) => handleLoad(e.target.value)} value={currentProjectId || ''} className="text-[11px] font-bold border border-slate-300 rounded p-1.5 outline-none focus:border-red-700 bg-slate-50 w-64">
+                  <option value="" disabled>클라우드에서 프로젝트 불러오기...</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({new Date(p.updated_at).toLocaleDateString()})</option>)}
+                </select>
+              </div>
+              {!isAdmin && <button onClick={handleLogout} className="text-[10px] font-bold bg-slate-100 border border-slate-300 px-3 py-1.5 rounded hover:bg-slate-200 shadow-sm">로그아웃</button>}
             </div>
-          </div>
 
-          {/* --- 우측 뷰어 패널 (보고서 렌더링) --- */}
-          <div className="flex-1 flex flex-col bg-[#e2e8f0] overflow-hidden">
-            <div className="bg-white border-b border-slate-300 px-8 pt-5 flex gap-8 shrink-0 shadow-sm z-10 custom-scrollbar overflow-x-auto">
+            <div className="bg-white border-b border-slate-300 px-8 pt-4 flex gap-8 shrink-0 shadow-sm z-10 custom-scrollbar overflow-x-auto">
               {[
                 { id: 'npv', label: '📊 사업타당성 분석 요약' },
                 { id: 'is_fin', label: '📑 재무회계 손익계산서' },
@@ -1071,48 +991,46 @@
                 { id: 'cf', label: '💵 현금흐름표 (C/F)' },
               ].map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`pb-4 text-[13px] font-black tracking-widest transition-all whitespace-nowrap outline-none ${activeTab === tab.id ? 'border-b-[3px] border-red-700 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
+                  className={`pb-3 text-[13px] font-black tracking-widest transition-all whitespace-nowrap outline-none ${activeTab === tab.id ? 'border-b-[3px] border-red-700 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
                   {tab.label}
                 </button>
               ))}
             </div>
 
+            {}
             <div className="flex-1 overflow-auto p-8 custom-scrollbar relative">
-              <div className="max-w-6xl mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
+              <div className="max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
                 
-                {}
                 <div style={{ display: activeTab === 'npv' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">사업타당성 종합 분석 보고서</h2>
-                    <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary (Y0 ~ Y5 6개년 기준)</p>
+                    <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary</p>
                   </div>
                   <div className="p-10">
-                    
-                    <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-2">
-                      <h3 className="text-lg font-black text-slate-800">1. 핵심 투자타당성 지표</h3>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-6 mb-12">
-                      <div className="bg-slate-50 border border-slate-200 rounded p-6 shadow-sm">
-                        <p className="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">프로젝트 순현재가치 (NPV)</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.npv / 1000000)} <span className="text-xs font-bold text-slate-500">백만</span></p>
-                        <p className="text-[10px] text-slate-400 mt-1.5 font-semibold">산출된 WACC {formatPercent(model.wacc)} 적용</p>
+                    <div className="grid grid-cols-4 gap-6 mb-12">
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">순현재가치 (NPV)</p>
+                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.npv / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span></p>
+                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">할인율(WACC) {formatPercent(model.wacc)} 적용</p>
                       </div>
-                      
-                      <div className="bg-slate-50 border border-slate-200 rounded p-6 shadow-sm">
-                        <p className="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">프로젝트 내부수익률 (IRR)</p>
-                        <p className={`text-2xl font-black tracking-tighter ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>{formatPercent(model.irr)}</p>
-                        <p className={`text-[10px] mt-1.5 font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-400'}`}>
-                          {model.irr > model.wacc ? '✅ 타당성 확보 (IRR > WACC)' : '⚠️ 타당성 미흡'}
-                        </p>
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className={`absolute top-0 left-0 w-1 h-full ${model.irr > model.wacc ? 'bg-red-700' : 'bg-slate-400'}`}></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">내부수익률 (IRR)</p>
+                        <p className={`text-3xl font-black tracking-tighter ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>{formatPercent(model.irr)}</p>
+                        <p className={`text-[10px] mt-3 font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-400'}`}>{model.irr > model.wacc ? '✅ 타당성 확보 (IRR > WACC)' : '⚠️ 타당성 미흡 (IRR < WACC)'}</p>
                       </div>
-
-                      <div className="bg-slate-50 border border-slate-200 rounded p-6 shadow-sm">
-                        <p className="text-slate-500 text-[10px] font-bold mb-1 uppercase tracking-widest">자금 회수 소요 기간 (Payback)</p>
-                        <p className="text-2xl font-black text-slate-900 tracking-tighter">
-                          {model.paybackPeriod !== null ? `${model.paybackPeriod.toFixed(1)}년` : '5년 초과'}
-                        </p>
-                        <p className="text-[10px] text-slate-400 mt-1.5 font-semibold">초기 소요 투자금 누적 회수 시점</p>
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">투자회수기간 (Payback)</p>
+                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> 5'} <span className="text-sm font-bold text-slate-500">년</span></p>
+                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">투자금 전액 회수 소요 기간</p>
+                      </div>
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
+                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">목표 손익분기 (BEP)</p>
+                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.is_managerial[0]?.bepRevenue / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span></p>
+                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">초기(Y0) 목표 손익분기 매출액</p>
                       </div>
                     </div>
 
@@ -1121,71 +1039,37 @@
                       <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                     </div>
                     <table className="w-full text-right border-collapse border-y-2 border-slate-800">
-                      <TableHead years={[0,1,2,3,4,5]} />
+                      <TableHead />
                       <tbody className="divide-y divide-slate-200">
-                        {}
                         <ExpandableRow label="1. 현금의 유입 (+)" isBold
-                          values={model.fcffData.map(d => d.nopat + d.depreciation + d.amortization + d.advancesInflow + d.accruedInflow + d.terminalValue)} 
+                          values={model.fcffData.map(d => d.nopat + d.depreciation + d.amortization + d.terminalValue + (d.deltaWc>0?d.deltaWc:0))} 
                           details={[
-                            { 
-                              label: '세후영업이익 (NOPAT)', 
-                              values: model.fcffData.map(d => d.nopat), 
-                              isGroup: true, 
-                              level: 1,
-                              subDetails: [
-                                { label: '매출액', values: [0, ...model.is_managerial.map(d => d.revenue)] },
-                                { 
-                                  label: '변동비', 
-                                  values: [0, ...model.is_managerial.map(d => d.variableCosts)],
-                                  subDetails: [
-                                    { label: '원재료비', values: [0, ...model.is_managerial.map(d => d.varCostDetails.rawMat)] },
-                                    { label: '직접노무비', values: [0, ...model.is_managerial.map(d => d.varCostDetails.dirLabor)] },
-                                    { label: '직접경비', values: [0, ...model.is_managerial.map(d => d.varCostDetails.dirExp)] },
-                                    { label: '판매변동비(물류 등)', values: [0, ...model.is_managerial.map(d => d.varCostDetails.totalSgaVar)] },
-                                  ]
-                                },
-                                { label: '공헌이익', values: [0, ...model.is_managerial.map(d => d.contributionMargin)], ratios: [0, ...model.is_managerial.map(d => d.ratios.cmRatio)] },
-                                { 
-                                  label: '고정비', 
-                                  values: [0, ...model.is_managerial.map(d => d.fixedCosts)],
-                                  subDetails: [
-                                    { label: '제조고정비', values: [0, ...model.is_managerial.map(d => d.fixCostDetails.indExpQC + d.fixCostDetails.indExpMaintenance + d.fixCostDetails.indExpWaste)] },
-                                    { label: '감가상각비', values: [0, ...model.is_managerial.map(d => d.fixCostDetails.depreciation)] },
-                                    { label: '무형자산상각비', values: [0, ...model.is_managerial.map(d => d.fixCostDetails.amortization)] },
-                                    { label: '판관고정비', values: [0, ...model.is_managerial.map(d => d.fixCostDetails.totalSgaSemi + d.fixCostDetails.totalSgaFixOnly)] },
-                                  ]
-                                },
-                                { label: '영업이익', values: [0, ...model.is_managerial.map(d => d.operatingProfit)], ratios: [0, ...model.is_managerial.map(d => d.ratios.opMargin)] },
-                                { label: '법인세비용', values: [0, ...model.is_financial.map(d => d.tax)] },
-                              ]
-                            },
-                            { label: '비현금유출비용 (가산)', values: model.fcffData.map(d => d.depreciation + d.amortization), isGroup: true, level: 1,
-                              subDetails: [
-                                { label: '감가상각비', values: model.fcffData.map(d => d.depreciation) },
-                                { label: '무형자산상각비', values: model.fcffData.map(d => d.amortization) },
-                              ]
-                            },
-                            { label: '영업부채 증가 (유입)', values: model.fcffData.map(d => d.advancesInflow + d.accruedInflow), isGroup: true, level: 1,
-                              subDetails: [
-                                { label: '선수금 등 증가', values: model.fcffData.map(d => d.advancesInflow) },
-                                { label: '미지급금 등 증가', values: model.fcffData.map(d => d.accruedInflow) },
-                              ]
-                            },
+                            { label: '세후영업이익 (NOPAT)', values: model.fcffData.map(d => d.nopat), isGroup: true, level: 1, sub: [
+                                { label: '매출액', values: getM('revenue'), isGroup: true, level: 2, sub: model.revenueDetails },
+                                { label: '변동비', values: getM('variableCosts'), isGroup: true, level: 2, sub: [
+                                    { label: '제조 원가', values: model.is_managerial.map(d => d.variableCosts - d.varCostDetails.totalSgaVar - d.externalCogs), isGroup: true, level: 3, sub: model.internalCogsFactorTree },
+                                    { label: '외부 조달상품 원가', values: getF('externalCogs'), isGroup: true, level: 3, sub: model.externalCogsDetails },
+                                    { label: '판매 변동비 (물류/수수료 등)', values: getM('varCostDetails', 'totalSgaVar'), level: 3 }
+                                ]},
+                                { label: '공헌이익', values: getM('contributionMargin'), level: 2 },
+                                { label: '고정비', values: getM('fixedCosts'), level: 2 },
+                                { label: '영업이익', values: getM('operatingProfit'), level: 2 },
+                                { label: '법인세비용', values: getF('tax'), level: 2 },
+                            ]},
+                            { label: '비현금유출비용 (가산)', values: model.fcffData.map(d => d.depreciation + d.amortization), isGroup: true, level: 1, sub: [
+                                { label: '감가상각비', values: model.fcffData.map(d => d.depreciation), level: 2 },
+                                { label: '무형자산상각비', values: model.fcffData.map(d => d.amortization), level: 2 }
+                            ]},
+                            { label: '영업자산부채 변동 (유입)', values: model.fcffData.map(d => d.deltaWc>0?d.deltaWc:0), level: 1 },
                             { label: '잔존가치 (Terminal Value)', values: model.fcffData.map(d => d.terminalValue), level: 1 },
                           ]} 
                         />
                         <ExpandableRow label="2. 현금의 유출 (-)" isBold
-                          values={model.fcffData.map(d => d.capex + d.intangibleCapex + d.deltaWc + d.prepaidOutflow + d.receivableOutflow)} 
+                          values={model.fcffData.map(d => d.capex + d.intangibleCapex + (d.deltaWc<0?-d.deltaWc:0))} 
                           details={[
                             { label: '자본적지출 (CAPEX)', values: model.fcffData.map(d => d.capex), level: 1 },
                             { label: '무형자산투자액', values: model.fcffData.map(d => d.intangibleCapex), level: 1 },
-                            { label: '운전자본증감액 (ΔWC)', values: model.fcffData.map(d => d.deltaWc), level: 1 },
-                            { label: '영업자산 증가 (유출)', values: model.fcffData.map(d => d.prepaidOutflow + d.receivableOutflow), isGroup: true, level: 1,
-                              subDetails: [
-                                { label: '선급금 등 증가', values: model.fcffData.map(d => d.prepaidOutflow) },
-                                { label: '미수금 등 증가', values: model.fcffData.map(d => d.receivableOutflow) },
-                              ]
-                            },
+                            { label: '영업자산부채 변동 (유출)', values: model.fcffData.map(d => d.deltaWc<0?-d.deltaWc:0), level: 1 }
                           ]} 
                         />
                         <ExpandableRow label="잉여현금흐름 (FCFF)" isHeader values={model.fcffData.map(d => d.fcff)} />
@@ -1195,70 +1079,56 @@
                   </div>
                 </div>
 
-                {/* --- 재무회계 손익계산서 탭 --- */}
                 <div style={{ display: activeTab === 'is_fin' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">재무회계 추정손익계산서</h2>
-                      <p className="text-xs text-slate-500 mt-2 font-semibold">Financial Income Statement (Y0 ~ Y5)</p>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Financial Income Statement</p>
                     </div>
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10">
                     <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
-                      <TableHead years={[0,1,2,3,4,5]} />
+                      <TableHead />
                       <tbody className="divide-y divide-slate-200">
-                        <ExpandableRow label="I. 매출액" values={getF('revenue')} isBold />
-                        <ExpandableRow label="II. 매출원가" values={getF('cogs')} ratios={getF('ratios', 'cogsRatio')}
-                          details={[
-                            { label: '원자재비', values: getF('cogsDetails', 'rawMatMain') },
-                            { label: '부자재비', values: getF('cogsDetails', 'rawMatSub') },
-                            { label: '직접노무비', values: getF('cogsDetails', 'directLabor') },
-                            { label: '전력비', values: getF('cogsDetails', 'dirExpPower') },
-                            { label: '용수비', values: getF('cogsDetails', 'dirExpWater') },
-                            { label: '생산소모품비', values: getF('cogsDetails', 'dirExpConsumables') },
-                            { label: '품질검사비', values: getF('cogsDetails', 'indExpQC') },
-                            { label: '수선유지비', values: getF('cogsDetails', 'indExpMaintenance') },
-                            { label: '폐기물처리비', values: getF('cogsDetails', 'indExpWaste') },
-                            { label: '감가상각비', values: getF('cogsDetails', 'depreciation') },
-                          ]} />
+                        <ExpandableRow label="I. 매출액" values={getF('revenue')} isBold details={model.revenueDetails} />
+                        <ExpandableRow label="II. 매출원가" values={getF('cogs')} ratios={getF('ratios', 'cogsRatio')} details={[
+                            { label: '자체생산 제품 원가', values: getF('internalCogs'), isGroup: true, level: 1, sub: [
+                                { label: '[품목별 배분 내역]', values: getF('internalCogs'), isGroup: true, level: 2, sub: model.internalCogsDetails },
+                                { label: '[제조원가 투입 요소]', values: getF('internalCogs'), isGroup: true, level: 2, sub: model.internalCogsFactorTree }
+                            ]},
+                            { label: '외부조달 상품 원가', values: getF('externalCogs'), isGroup: true, level: 1, sub: model.externalCogsDetails }
+                        ]} />
                         <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={getF('ratios', 'grossMargin')} isTotal />
-                        <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={getF('ratios', 'sgaRatio')}
-                          details={[
-                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), isGroup: true, level: 1 },
-                            { label: '물류/수출비용', values: getF('sgaDetails', 'varLogistics'), level: 2 },
-                            { label: '판매수수료', values: getF('sgaDetails', 'varSalesComm'), level: 2 },
-                            { label: 'A/S비용', values: getF('sgaDetails', 'varAsCost'), level: 2 },
-                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), isGroup: true, level: 1 },
-                            { label: '수도광열비', values: getF('sgaDetails', 'semiUtilities'), level: 2 },
-                            { label: '여비교통비', values: getF('sgaDetails', 'semiTravel'), level: 2 },
-                            { label: '통신비', values: getF('sgaDetails', 'semiTelecom'), level: 2 },
-                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), isGroup: true, level: 1 },
-                            { label: '인건비(급여 등)', values: getF('sgaDetails', 'fixLabor'), level: 2 },
-                            { label: '복리후생비', values: getF('sgaDetails', 'fixBenefits'), level: 2 },
-                            { label: '임차료', values: getF('sgaDetails', 'fixRent'), level: 2 },
-                            { label: '세금과공과', values: getF('sgaDetails', 'fixTaxes'), level: 2 },
-                            { label: '보험료', values: getF('sgaDetails', 'fixInsurance'), level: 2 },
-                            { label: '지급수수료', values: getF('sgaDetails', 'fixFees'), level: 2 },
-                            { label: '연구개발비', values: getF('sgaDetails', 'fixRnd'), level: 2 },
-                            { label: '마케팅비', values: getF('sgaDetails', 'fixMarketing'), level: 2 },
-                            { label: '소모품비', values: getF('sgaDetails', 'fixSupplies'), level: 2 },
-                            { label: '대손상각비', values: getF('sgaDetails', 'fixBadDebt'), level: 2 },
-                            { label: '기타 판관비', values: getF('sgaDetails', 'fixOther'), level: 2 },
+                        <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={getF('ratios', 'sgaRatio')} details={[
+                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), isGroup: true, level: 1, sub: [
+                                { label: '물류/수출비용', values: getF('sgaDetails', 'varLogistics'), level: 2 },
+                                { label: '판매수수료', values: getF('sgaDetails', 'varSalesComm'), level: 2 },
+                                { label: 'A/S비용', values: getF('sgaDetails', 'varAsCost'), level: 2 },
+                            ]},
+                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), isGroup: true, level: 1, sub: [
+                                { label: '수도광열비', values: getF('sgaDetails', 'semiUtilities'), level: 2 },
+                                { label: '여비교통비', values: getF('sgaDetails', 'semiTravel'), level: 2 },
+                                { label: '통신비', values: getF('sgaDetails', 'semiTelecom'), level: 2 },
+                            ]},
+                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), isGroup: true, level: 1, sub: [
+                                { label: '인건비(급여 등)', values: getF('sgaDetails', 'fixLabor'), level: 2 },
+                                { label: '복리후생비', values: getF('sgaDetails', 'fixBenefits'), level: 2 },
+                                { label: '임차료', values: getF('sgaDetails', 'fixRent'), level: 2 },
+                                { label: '세금과공과', values: getF('sgaDetails', 'fixTaxes'), level: 2 },
+                                { label: '보험료', values: getF('sgaDetails', 'fixInsurance'), level: 2 },
+                                { label: '지급수수료', values: getF('sgaDetails', 'fixFees'), level: 2 },
+                                { label: '연구개발비', values: getF('sgaDetails', 'fixRnd'), level: 2 },
+                                { label: '마케팅비', values: getF('sgaDetails', 'fixMarketing'), level: 2 },
+                                { label: '소모품비', values: getF('sgaDetails', 'fixSupplies'), level: 2 },
+                                { label: '대손상각비', values: getF('sgaDetails', 'fixBadDebt'), level: 2 },
+                                { label: '기타 판관비', values: getF('sgaDetails', 'fixOther'), level: 2 },
+                            ]},
                             { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), isGroup: true, level: 1 },
                           ]} />
                         <ExpandableRow label="V. 영업이익" values={getF('operatingProfit')} ratios={getF('ratios', 'opMargin')} isHeader />
-                        <ExpandableRow label="VI. 영업외수익" values={getF('totalNonOpInc')}
-                          details={[
-                            { label: '현금성 수익', values: getF('nonOpIncC'), level: 1 },
-                            { label: '비현금성 수익', values: getF('nonOpIncNC'), level: 1 }
-                          ]} />
-                        <ExpandableRow label="VII. 영업외비용" values={getF('totalNonOpExp')}
-                          details={[
-                            { label: '이자비용', values: getF('interestExpense'), level: 1 },
-                            { label: '현금성 비용', values: getF('nonOpExpC'), level: 1 },
-                            { label: '비현금성 비용', values: getF('nonOpExpNC'), level: 1 }
-                          ]} />
+                        <ExpandableRow label="VI. 영업외수익" values={getF('totalNonOpInc')} details={[{ label: '현금성 수익', values: getF('nonOpIncC'), level: 1 }, { label: '비현금성 수익', values: getF('nonOpIncNC'), level: 1 }]} />
+                        <ExpandableRow label="VII. 영업외비용" values={getF('totalNonOpExp')} details={[{ label: '이자비용', values: getF('interestExpense'), level: 1 }, { label: '현금성 비용', values: getF('nonOpExpC'), level: 1 }, { label: '비현금성 비용', values: getF('nonOpExpNC'), level: 1 }]} />
                         <ExpandableRow label="VIII. 법인세차감전순이익" values={getF('ebt')} isTotal />
                         <ExpandableRow label="IX. 법인세비용" values={getF('tax')} />
                         <ExpandableRow label="X. 당기순이익" values={getF('netIncome')} ratios={getF('ratios', 'netMargin')} isHeader />
@@ -1267,60 +1137,36 @@
                   </div>
                 </div>
 
-                {}
                 <div style={{ display: activeTab === 'is_mgr' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">관리회계 추정손익계산서</h2>
-                      <p className="text-xs text-slate-500 mt-2 font-semibold">Managerial Income Statement (CVP / 손익분기 분석 연동)</p>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Managerial Income Statement</p>
                     </div>
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10">
                     <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
-                      <TableHead years={[1,2,3,4,5]} />
-                      <tbody className="divide-y divide-slate-200 border-b border-slate-200">
-                        <ExpandableRow label="I. 매출액" values={getM('revenue')} isBold />
-                        <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={getM('ratios', 'varRatio')}
-                          details={[
-                            { label: '제조 변동비', values: model.is_managerial.map(d => d.varCostDetails.rawMat + d.varCostDetails.dirLabor + d.varCostDetails.dirExp), isGroup: true, level: 1 },
-                            { label: '원재료비', values: getM('varCostDetails', 'rawMat'), level: 2 },
-                            { label: '직접노무비', values: getM('varCostDetails', 'dirLabor'), level: 2 },
-                            { label: '직접경비', values: getM('varCostDetails', 'dirExp'), level: 2 },
-                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), isGroup: true, level: 1 },
-                            { label: '물류/수출비용', values: getM('varCostDetails', 'sgaVarLogistics'), level: 2 },
-                            { label: '판매수수료', values: getM('varCostDetails', 'sgaVarSalesComm'), level: 2 },
-                            { label: 'A/S비용', values: getM('varCostDetails', 'sgaVarAsCost'), level: 2 },
+                      <TableHead />
+                      <tbody className="divide-y divide-slate-200">
+                        <ExpandableRow label="I. 매출액" values={getM('revenue')} isBold details={model.revenueDetails} />
+                        <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={getM('ratios', 'varRatio')} details={[
+                            { label: '자체생산 변동 원가', values: model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>!f.label.includes('감가상각')) },
+                            { label: '외부조달 상품 원가', values: getF('externalCogs'), isGroup: true, level: 1, sub: model.externalCogsDetails },
+                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), isGroup: true, level: 1, sub: [
+                                { label: '물류/수출비용', values: getM('varCostDetails', 'varLogistics'), level: 2 },
+                                { label: '판매수수료', values: getM('varCostDetails', 'varSalesComm'), level: 2 },
+                                { label: 'A/S비용', values: getM('varCostDetails', 'varAsCost'), level: 2 },
+                            ]}
                           ]} />
                         <ExpandableRow label="III. 공헌이익" values={getM('contributionMargin')} ratios={getM('ratios', 'cmRatio')} isTotal />
-                        <ExpandableRow label="IV. 고정비" values={getM('fixedCosts')} ratios={getM('ratios', 'fixedRatio')}
-                          details={[
-                            { label: '제조 고정비', values: model.is_managerial.map(d => d.fixCostDetails.indExpQC + d.fixCostDetails.indExpMaintenance + d.fixCostDetails.indExpWaste), isGroup: true, level: 1 },
-                            { label: '품질검사비', values: getM('fixCostDetails', 'indExpQC'), level: 2 },
-                            { label: '수선유지비', values: getM('fixCostDetails', 'indExpMaintenance'), level: 2 },
-                            { label: '폐기물처리비', values: getM('fixCostDetails', 'indExpWaste'), level: 2 },
-                            
-                            { label: '상각비 (제조/판관 통합)', values: model.is_managerial.map(d => d.fixCostDetails.depreciation + d.fixCostDetails.amortization), isGroup: true, level: 1 },
-                            { label: '감가상각비', values: getM('fixCostDetails', 'depreciation'), level: 2 },
-                            { label: '무형자산상각비', values: getM('fixCostDetails', 'amortization'), level: 2 },
-                            
-                            { label: '준변동 판관비', values: getM('fixCostDetails', 'totalSgaSemi'), isGroup: true, level: 1 },
-                            { label: '수도광열비', values: getM('fixCostDetails', 'semiUtilities'), level: 2 },
-                            { label: '여비교통비', values: getM('fixCostDetails', 'semiTravel'), level: 2 },
-                            { label: '통신비', values: getM('fixCostDetails', 'semiTelecom'), level: 2 },
-
-                            { label: '고정 판관비', values: getM('fixCostDetails', 'totalSgaFixOnly'), isGroup: true, level: 1 },
-                            { label: '인건비(급여 등)', values: getM('fixCostDetails', 'fixLabor'), level: 2 },
-                            { label: '복리후생비', values: getM('fixCostDetails', 'fixBenefits'), level: 2 },
-                            { label: '임차료', values: getM('fixCostDetails', 'fixRent'), level: 2 },
-                            { label: '세금과공과', values: getM('fixCostDetails', 'fixTaxes'), level: 2 },
-                            { label: '보험료', values: model.is_financial.map(d => d.sgaDetails.fixInsurance), level: 2 },
-                            { label: '지급수수료', values: getM('fixCostDetails', 'fixFees'), level: 2 },
-                            { label: '연구개발비', values: getM('fixCostDetails', 'fixRnd'), level: 2 },
-                            { label: '마케팅비', values: getM('fixCostDetails', 'fixMarketing'), level: 2 },
-                            { label: '소모품비', values: getM('fixCostDetails', 'fixSupplies'), level: 2 },
-                            { label: '대손상각비', values: getM('fixCostDetails', 'fixBadDebt'), level: 2 },
-                            { label: '기타 판관비', values: getM('fixCostDetails', 'fixOther'), level: 2 }
+                        <ExpandableRow label="IV. 고정비" values={getM('fixedCosts')} ratios={getM('ratios', 'fixedRatio')} details={[
+                            { label: '제조 고정비', values: model.is_financial.map((d,i) => model.is_managerial[i].fixedCosts - d.sgaDetails.totalSgaSemi - d.sgaDetails.totalSgaFixOnly - d.sgaDetails.amortization), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>f.label.includes('감가상각')) },
+                            { label: '준변동/고정 판관비', values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi + d.sgaDetails.totalSgaFixOnly + d.sgaDetails.amortization), isGroup: true, level: 1, sub: [
+                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), level: 2 },
+                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), level: 2 },
+                                { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), level: 2 }
+                            ]}
                           ]} />
                         <ExpandableRow label="V. 영업이익" values={getM('operatingProfit')} ratios={getM('ratios', 'opMargin')} isHeader />
                       </tbody>
@@ -1328,104 +1174,96 @@
                   </div>
                 </div>
 
-                {}
                 <div style={{ display: activeTab === 'bs' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">추정 재무상태표</h2>
-                      <p className="text-xs text-slate-500 mt-2 font-semibold">Estimated Balance Sheet (Y0 기인 조달액 자산배부 정합 적용)</p>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Estimated Balance Sheet</p>
                     </div>
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
-                  <div className="p-10 flex flex-col xl:flex-row gap-8">
-                    <div className="flex-1 border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                  <div className="p-10 flex flex-col gap-8">
+                    <div className="border border-slate-200 rounded-sm shadow-sm overflow-hidden">
                       <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">자 산 (Assets)</div>
                       <table className="w-full text-right border-collapse">
-                        <TableHead years={[0,1,2,3,4,5]} compact />
+                        <TableHead />
                         <tbody className="divide-y divide-slate-100">
-                          <ExpandableRow isCompact label="I. 유동자산" values={getB('currentAssets')} isBold
-                            details={[
+                          <ExpandableRow label="I. 유동자산" values={getB('currentAssets')} isBold details={[
                               { label: '현금및현금성자산', values: getB('bsDetails', 'cash'), level: 1 },
                               { label: '매출채권 (순액)', values: getB('bsDetails', 'ar'), level: 1 },
                               { label: '재고자산', values: getB('bsDetails', 'inv'), level: 1 },
                               { label: '선급금/선급비용', values: getB('bsDetails', 'prepaidNet'), level: 1 },
                               { label: '미수금/미수수익', values: getB('bsDetails', 'receivableNet'), level: 1 }
                             ]} />
-                          <ExpandableRow isCompact label="II. 비유동자산" values={getB('nonCurrentAssets')} isBold
-                            details={[
+                          <ExpandableRow label="II. 비유동자산" values={getB('nonCurrentAssets')} isBold details={[
                               { label: '유형자산 (순액)', values: getB('bsDetails', 'ppeNet'), level: 1 },
                               { label: '무형자산 (순액)', values: getB('bsDetails', 'intangibleNet'), level: 1 },
                               { label: '기타 비유동자산', values: getB('bsDetails', 'otherNetAssets'), level: 1 }
                             ]} />
-                          <ExpandableRow isCompact label="자산 총계" values={getB('totalAssets')} isHeader />
+                          <ExpandableRow label="자산 총계" values={getB('totalAssets')} isHeader />
                         </tbody>
                       </table>
                     </div>
-                    <div className="flex-1 border border-slate-200 rounded-sm shadow-sm overflow-hidden">
-                      <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">부채 및 자본 (Liab. & Equity)</div>
+                    <div className="border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                      <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">부채 및 자본 (Liabilities & Equity)</div>
                       <table className="w-full text-right border-collapse">
-                        <TableHead years={[0,1,2,3,4,5]} compact />
+                        <TableHead />
                         <tbody className="divide-y divide-slate-100">
-                          <ExpandableRow isCompact label="I. 유동부채" values={getB('currentLiabilities')} isBold
-                            details={[
+                          <ExpandableRow label="I. 유동부채" values={getB('currentLiabilities')} isBold details={[
                               { label: '매입채무', values: getB('bsDetails', 'ap'), level: 1 },
                               { label: '선수금/선수수익', values: getB('bsDetails', 'advancesNet'), level: 1 },
                               { label: '미지급금/예수금', values: getB('bsDetails', 'accruedNet'), level: 1 }
                             ]} />
-                          <ExpandableRow isCompact label="II. 비유동부채" values={getB('nonCurrentLiabilities')} isBold
-                            details={[{ label: '장기차입금', values: getB('bsDetails', 'debt'), level: 1 }]} />
-                          <ExpandableRow isCompact label="부채 총계" values={getB('totalLiabilities')} ratios={model.bs.map(d => d.ratios ? d.ratios.debtRatio : 0)} isTotal />
-                          
-                          <ExpandableRow isCompact label="III. 자본금 (납입자본)" values={getB('bsDetails', 'capital')} isBold details={equityDetails} />
-                          <ExpandableRow isCompact label="IV. 이익잉여금" values={getB('bsDetails', 'retainedEarnings')} isBold />
-                          <ExpandableRow isCompact label="자본 총계" values={getB('totalEquity')} isTotal />
-
-                          <ExpandableRow isCompact label="부채 및 자본 총계" values={model.bs.map(d => d.totalLiabilities + d.totalEquity)} isHeader />
+                          <ExpandableRow label="II. 비유동부채" values={getB('nonCurrentLiabilities')} isBold details={[{ label: '장기차입금', values: getB('bsDetails', 'debt'), level: 1 }]} />
+                          <ExpandableRow label="부채 총계" values={getB('totalLiabilities')} isTotal />
+                          <ExpandableRow label="III. 자본금" values={getB('bsDetails', 'capital')} isBold />
+                          <ExpandableRow label="IV. 이익잉여금" values={getB('bsDetails', 'retainedEarnings')} isBold />
+                          <ExpandableRow label="자본 총계" values={getB('totalEquity')} isTotal />
+                          <ExpandableRow label="부채 및 자본 총계" values={model.bs.map(d => d.totalLiabilities + d.totalEquity)} isHeader />
                         </tbody>
                       </table>
                     </div>
                   </div>
                 </div>
 
-                {}
                 <div style={{ display: activeTab === 'cf' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">추정 현금흐름표</h2>
-                      <p className="text-xs text-slate-500 mt-2 font-semibold">Statement of Cash Flows (영업/투자/재무활동 6개년 추적)</p>
+                      <p className="text-xs text-slate-500 mt-2 font-semibold">Statement of Cash Flows</p>
                     </div>
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10">
                     <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
-                      <TableHead years={[0,1,2,3,4,5]} />
+                      <TableHead />
                       <tbody className="divide-y divide-slate-200">
-                        <ExpandableRow label="I. 영업활동 현금흐름" values={getC('operatingCf')} isBold
-                          details={[
+                        <ExpandableRow label="I. 영업활동 현금흐름" values={getC('operatingCf')} isBold details={[
                             { label: '당기순이익', values: getC('cfDetails', 'netIncome'), level: 1 },
-                            { label: '현금유출 없는 비용 가산 (+)', values: getC('nonCashExpAdd'), isGroup: true, level: 1 },
-                            { label: '감가상각비', values: getC('cfDetails', 'depreciation'), level: 2 },
-                            { label: '무형자산상각비', values: getC('cfDetails', 'amortization'), level: 2 },
-                            { label: '대손상각비', values: getC('cfDetails', 'badDebtExp'), level: 2 },
-                            { label: '기타 비현금성 비용', values: getC('cfDetails', 'nonOpExpNonCash'), level: 2 },
-                            { label: '현금유입 없는 수익 차감 (-)', values: getC('nonCashIncDed'), isGroup: true, level: 1 },
-                            { label: '기타 비현금성 수익', values: getC('cfDetails', 'nonOpIncNonCash'), level: 2 },
-                            { label: '영업자산부채 변동 증감 (ΔWC)', values: getC('deltaWc'), isGroup: true, level: 1 },
-                            { label: '매출채권 감소(증가)', values: getC('cfDetails', 'deltaArGross'), level: 2 },
-                            { label: '재고자산 감소(증가)', values: getC('cfDetails', 'deltaInv'), level: 2 },
-                            { label: '선급금 등 감소(증가)', values: getC('cfDetails', 'prepaidOutflow'), level: 2 },
-                            { label: '미수금 등 감소(증가)', values: getC('cfDetails', 'receivableOutflow'), level: 2 },
-                            { label: '매입채무 증가(감소)', values: getC('cfDetails', 'deltaAp'), level: 2 },
-                            { label: '선수금 등 증가(감소)', values: getC('cfDetails', 'advancesInflow'), level: 2 },
-                            { label: '미지급금 등 증가(감소)', values: getC('cfDetails', 'accruedInflow'), level: 2 }
+                            { label: '현금유출 없는 비용 가산 (+)', values: getC('nonCashExpAdd'), isGroup: true, level: 1, sub: [
+                                { label: '감가상각비', values: getC('cfDetails', 'depreciation'), level: 2 },
+                                { label: '무형자산상각비', values: getC('cfDetails', 'amortization'), level: 2 },
+                                { label: '대손상각비', values: getC('cfDetails', 'badDebtExp'), level: 2 },
+                                { label: '기타 비현금성 비용', values: getC('cfDetails', 'nonOpExpNonCash'), level: 2 }
+                            ]},
+                            { label: '현금유입 없는 수익 차감 (-)', values: getC('nonCashIncDed'), isGroup: true, level: 1, sub: [
+                                { label: '기타 비현금성 수익', values: getC('cfDetails', 'nonOpIncNonCash'), level: 2 }
+                            ]},
+                            { label: '영업자산부채 변동 증감 (ΔWC)', values: getC('deltaWc'), isGroup: true, level: 1, sub: [
+                                { label: '매출채권 감소(증가)', values: getC('cfDetails', 'deltaArGross'), level: 2 },
+                                { label: '재고자산 감소(증가)', values: getC('cfDetails', 'deltaInv'), level: 2 },
+                                { label: '선급금 등 감소(증가)', values: getC('cfDetails', 'prepaidOutflow'), level: 2 },
+                                { label: '미수금 등 감소(증가)', values: getC('cfDetails', 'receivableOutflow'), level: 2 },
+                                { label: '매입채무 증가(감소)', values: getC('cfDetails', 'deltaAp'), level: 2 },
+                                { label: '선수금 등 증가(감소)', values: getC('cfDetails', 'advancesInflow'), level: 2 },
+                                { label: '미지급금 등 증가(감소)', values: getC('cfDetails', 'accruedInflow'), level: 2 }
+                            ]}
                           ]} />
-                        <ExpandableRow label="II. 투자활동 현금흐름" values={getC('investingCf')} isBold
-                          details={[
-                            { label: '유형자산 취득액 (CAPEX)', values: getC('cfDetails', 'capex'), level: 1 },
+                        <ExpandableRow label="II. 투자활동 현금흐름" values={getC('investingCf')} isBold details={[
+                            { label: '자본적지출 (CAPEX)', values: getC('cfDetails', 'capex'), level: 1 },
                             { label: '무형자산 투자액', values: getC('cfDetails', 'intangibleCapex'), level: 1 }
                           ]} />
-                        <ExpandableRow label="III. 재무활동 현금흐름" values={getC('financingCf')} isBold
-                          details={[
+                        <ExpandableRow label="III. 재무활동 현금흐름" values={getC('financingCf')} isBold details={[
                             { label: '자기자본 유입 (증자)', values: getC('cfDetails', 'equity'), level: 1 },
                             { label: '타인자본 유입 (차입)', values: getC('cfDetails', 'debt'), level: 1 }
                           ]} />
