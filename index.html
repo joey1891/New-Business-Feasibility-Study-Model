@@ -36,6 +36,55 @@
     const arr6 = (y0, yRem) => [y0, ...Array(5).fill(yRem)];
     const arr6_fill = (val) => Array(6).fill(val);
 
+    // 과거 저장된 5개년 데이터를 6개년 데이터로 자동 보정(Migration)해주는 안전 함수 추가
+    const pad6 = (arr, fallback = 0) => {
+      if (!arr || !Array.isArray(arr)) return Array(6).fill(fallback);
+      if (arr.length >= 6) return arr;
+      const res = [...arr];
+      const last = res.length > 0 ? res[res.length - 1] : fallback;
+      while (res.length < 6) res.push(last); // 부족한 부분은 마지막 년도 값으로 복사 연장
+      return res;
+    };
+
+    const normalizeInputs = (raw) => {
+      if (!raw) return DEFAULT_INPUTS;
+      const p = { ...raw };
+      const p6 = (key, fallback = 0) => { p[key] = pad6(p[key], fallback); };
+      
+      p6('inflationRate'); p6('interestRate', 5); p6('exchangeRate', 1300); p6('industryGrowth'); p6('taxRate', 20); p6('costOfEquity', 10);
+      p6('utilization', 100); p6('lossRate');
+      p6('rawMaterialMain'); p6('rawMaterialSub'); p6('directLabor'); p6('directExpPower'); p6('directExpWater'); p6('directExpConsumables');
+      p6('indirectExpQC'); p6('indirectExpMaintenance'); p6('indirectExpWaste');
+      p6('arDays', 30); p6('invDays', 30); p6('apDays', 30);
+      p6('logisticsRate'); p6('salesCommRate'); p6('asCostRate');
+      p6('utilities'); p6('travel'); p6('telecom');
+      p6('laborFix'); p6('benefits'); p6('rent'); p6('taxes'); p6('insurance'); p6('fees'); p6('rnd'); p6('marketing'); p6('supplies'); p6('badDebt'); p6('otherSga');
+      p6('nonOpIncCash'); p6('nonOpIncNonCash'); p6('nonOpExpCash'); p6('nonOpExpNonCash');
+
+      const padList = (list) => (list || []).map(item => ({ ...item, amounts: pad6(item.amounts, 0) }));
+      p.equityList = padList(p.equityList);
+      p.debtList = padList(p.debtList);
+      p.capexList = padList(p.capexList);
+      p.intangibleList = padList(p.intangibleList);
+      p.advancesList = padList(p.advancesList);
+      p.accruedList = padList(p.accruedList);
+      p.prepaidList = padList(p.prepaidList);
+      p.receivableList = padList(p.receivableList);
+
+      p.salesHierarchy = (p.salesHierarchy || []).map(c => ({
+        ...c,
+        clients: (c.clients || []).map(cl => ({
+          ...cl,
+          products: (cl.products || []).map(pr => ({
+            ...pr,
+            prices: pad6(pr.prices, 0),
+            volumes: pad6(pr.volumes, 0)
+          }))
+        }))
+      }));
+      return p;
+    };
+
     const DEFAULT_INPUTS = {
       // 거시 변수 6개년 (Y0~Y5)
       inflationRate: [0, 2.5, 2.5, 2.5, 2.5, 2.5], 
@@ -160,10 +209,10 @@
           {tooltip && <span className="text-[10px] text-red-600 bg-red-50 px-1 rounded ml-2 hidden group-hover:inline-block absolute right-0 -top-4 shadow-sm z-20 border border-red-200">{tooltip}</span>}
         </label>
         <div className="grid grid-cols-6 gap-1">
-          {values.map((v, i) => (
+          {[0, 1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex flex-col">
               <span className="text-[9px] text-slate-400 mb-0.5 text-center font-bold">Y{i}</span>
-              <NumInput value={v} onChange={(val) => onChangeArray(arrName, i, val)} className="text-[10px] px-1" />
+              <NumInput value={values && values[i] !== undefined ? values[i] : 0} onChange={(val) => onChangeArray(arrName, i, val)} className="text-[10px] px-1" />
             </div>
           ))}
         </div>
@@ -195,10 +244,10 @@
                 <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-sm font-bold px-1">&times;</button>
               </div>
               <div className="grid grid-cols-6 gap-1 mt-1">
-                {item.amounts.map((amt, idx) => (
+                {[0, 1, 2, 3, 4, 5].map((idx) => (
                   <div key={idx} className="flex flex-col">
                     <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
-                    <NumInput value={amt} onChange={(val) => onAmountChange(listName, item.id, idx, val)} className="text-[10px] px-1" />
+                    <NumInput value={item.amounts && item.amounts[idx] !== undefined ? item.amounts[idx] : 0} onChange={(val) => onAmountChange(listName, item.id, idx, val)} className="text-[10px] px-1" />
                   </div>
                 ))}
               </div>
@@ -431,7 +480,8 @@
       const handleLoad = (id) => {
         const proj = projects.find(p => p.id == id);
         if (proj) {
-          setInputs(proj.inputs);
+          // 오래된 5개년 데이터가 포함된 경우라도 여기서 Y5(6개년)를 강제로 자동 보정합니다.
+          setInputs(normalizeInputs(proj.inputs));
           setProjectName(proj.name);
           setCurrentProjectId(proj.id);
         }
@@ -978,14 +1028,14 @@
                                  </div>
                                  <div className="text-[10px] font-bold text-slate-600 mb-1">단가 (Price)</div>
                                  <div className="grid grid-cols-6 gap-1 mb-3">
-                                    {product.prices.map((p, idx) => (
-                                      <NumInput key={`p-${idx}`} value={p} onChange={(v) => updateProduct(country.id, client.id, product.id, 'prices', idx, v)} className="text-[10px] px-0.5" />
+                                    {[0, 1, 2, 3, 4, 5].map((idx) => (
+                                      <NumInput key={`p-${idx}`} value={product.prices && product.prices[idx] !== undefined ? product.prices[idx] : 0} onChange={(v) => updateProduct(country.id, client.id, product.id, 'prices', idx, v)} className="text-[10px] px-0.5" />
                                     ))}
                                  </div>
                                  <div className="text-[10px] font-bold text-slate-600 mb-1">기본수량 (Volume)</div>
                                  <div className="grid grid-cols-6 gap-1">
-                                    {product.volumes.map((v, idx) => (
-                                      <NumInput key={`v-${idx}`} value={v} onChange={(val) => updateProduct(country.id, client.id, product.id, 'volumes', idx, val)} className="text-[10px] px-0.5" />
+                                    {[0, 1, 2, 3, 4, 5].map((idx) => (
+                                      <NumInput key={`v-${idx}`} value={product.volumes && product.volumes[idx] !== undefined ? product.volumes[idx] : 0} onChange={(val) => updateProduct(country.id, client.id, product.id, 'volumes', idx, val)} className="text-[10px] px-0.5" />
                                     ))}
                                  </div>
                               </div>
