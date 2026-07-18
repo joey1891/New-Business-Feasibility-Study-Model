@@ -61,7 +61,7 @@
       utilities: pad6([10]), travel: pad6([8]), telecom: pad6([5]),
       laborFix: pad6([150]), benefits: pad6([20]), rent: pad6([60]), taxes: pad6([5]), insurance: pad6([12]), fees: pad6([15]), rnd: pad6([20]), marketing: pad6([50]), supplies: pad6([12]), badDebt: pad6([0]), otherSga: pad6([10]),
       nonOpIncCash: pad6([0]), nonOpIncNonCash: pad6([0]), nonOpExpCash: pad6([0]), nonOpExpNonCash: pad6([0]),
-      salesHierarchy: [{ id: 'c1', name: '대한민국', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]) }] }] }] }] }] }] }]
+      salesHierarchy: [{ id: 'c1', name: '대한민국', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0]) }] }] }] }] }] }] }]
     };
 
     const formatCurrency = (val) => (val || 0).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
@@ -86,7 +86,6 @@
       return guess;
     };
 
-    // --- UI Components ---
     const NumInput = React.memo(({ value, onChange, placeholder, className = "" }) => {
       const [localVal, setLocalVal] = useState(value === 0 ? '0' : (value||0).toLocaleString());
       useEffect(() => { setLocalVal(value === 0 ? '0' : (value||0).toLocaleString()); }, [value]);
@@ -294,7 +293,6 @@
       );
     };
 
-    // --- 7-Level Hierarchy Editor Component ---
     const HierarchyEditor = ({ list, level, pathIds, handlers }) => {
         const levelConfig = [
             { key: 'bizTypes', name: '사업영역 (B2B/B2C)', addFn: handlers.addBizType, rmFn: handlers.rmCountry, ph: '국가명' },
@@ -369,7 +367,6 @@
         );
     };
 
-    // --- Main App Component ---
     function App() {
       const [user, setUser] = useState(null);
       const [isAdmin, setIsAdmin] = useState(false);
@@ -394,16 +391,11 @@
           setUser(null); setAuthLoading(false); return;
         }
         try {
-          // 고객님의 실제 스키마에 맞춰 is_approved만 조회합니다 (role 컬럼 제거로 에러 방지)
           const { data, error } = await supabaseClient.from('user_profiles').select('is_approved').eq('id', sessionUser.id);
-          
           const userEmail = sessionUser.email.toLowerCase();
-          
-          // 💡 지정하신 최고 관리자 이메일
           const isSuperAdmin = userEmail === 'ceo@hyminternational.com';
-          
           let isApproved = false;
-          let isAdminCheck = isSuperAdmin || userEmail.includes('admin'); // 최고관리자이거나 테스트용 admin 계정
+          let isAdminCheck = isSuperAdmin || userEmail.includes('admin');
 
           if (error) {
             console.warn("DB 프로필 조회 실패(테이블 미생성 등):", error.message);
@@ -411,7 +403,6 @@
             isApproved = data[0].is_approved === true;
           }
 
-          // 최고 관리자(CEO)는 DB 승인 여부와 무관하게 무조건 통과 및 관리자 권한 부여
           if (isSuperAdmin) {
             isApproved = true;
             isAdminCheck = true;
@@ -522,7 +513,10 @@
                          ch.clients = (ch.clients||[]).map(cl => {
                              cl.categories = (cl.categories||[]).map(cat => {
                                  cat.products = (cat.products||[]).map(p => {
-                                     p.prices = pad6(p.prices); p.volumes = pad6(p.volumes); p.supplyCosts = pad6(p.supplyCosts||[0]);
+                                     p.prices = pad6(p.prices); 
+                                     p.volumes = pad6(p.volumes); 
+                                     p.supplyCosts = pad6(p.supplyCosts||[0]);
+                                     p.purchaseVolumes = pad6(p.purchaseVolumes||[0]);
                                      if(p.isInternal === undefined) p.isInternal = true;
                                      return p;
                                  }); return cat;
@@ -577,7 +571,12 @@
               const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
               pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
               const node = targetArr.find(x => x.id === targetId);
-              if(node) { if(arrIdx !== null) { node[field] = pad6(node[field]); node[field][arrIdx] = val; } else node[field] = val; }
+              if(node) { 
+                 if(arrIdx !== null) { 
+                    node[field] = pad6(node[field] || [0]); 
+                    node[field][arrIdx] = val; 
+                 } else node[field] = val; 
+              }
               return {...p, salesHierarchy: h};
           })
       };
@@ -595,7 +594,7 @@
           rmClient: (p, id) => hHandlers.rmLevelItem(p, id),
           addCategory: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', products: []}, 'categories'),
           rmCategory: (p, id) => hHandlers.rmLevelItem(p, id),
-          addProduct: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', isInternal: true, prices: pad6([0]), volumes: pad6([0]), supplyCosts: pad6([0])}, 'products'),
+          addProduct: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', isInternal: true, prices: pad6([0]), volumes: pad6([0]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0])}, 'products'),
           rmProduct: (p, id) => hHandlers.rmLevelItem(p, id),
           updateName: hHandlers.updateName, updateField: hHandlers.updateField
       };
@@ -712,6 +711,38 @@
           const unsoldVol = Math.max(0, actualProdVol - totalInternalSalesVol);
           const unsoldInvValue = unsoldVol * unitMfgCost;
 
+          let unsoldExtInvValue = 0;
+          const calcExtInv = (nodes, currentExRate=1) => {
+              (nodes||[]).forEach(n => {
+                  const exRate = n.bizTypes ? ((n.name && (n.name.includes('한국')||n.name.includes('대한민국')||n.name.includes('korea'))) ? 1 : ((inputs.exchangeRate||[])[i]||1)) : currentExRate;
+                  if (n.products) {
+                      (n.products||[]).forEach(p => {
+                          if (p.isInternal === false) {
+                              let sVol = (p.volumes||[])[i]||0;
+                              let pVol = (p.purchaseVolumes||[])[i]||0;
+                              
+                              // 판매 수량 계산 시 적용했던 산업성장률을 매입 수량에도 동일하게 반영 (비율 유지)
+                              for(let y=1; y<=i; y++) {
+                                  const g = 1 + (((inputs.industryGrowth||[])[y]||0)/100);
+                                  sVol *= g;
+                                  pVol *= g;
+                              }
+                              const sc = ((p.supplyCosts||[])[i]||0) * exRate;
+                              
+                              // 총 공급받은수량(매입) - 목표수량(판매) = 미판매 잉여수량
+                              const unsoldExtVol = Math.max(0, pVol - sVol);
+                              unsoldExtInvValue += unsoldExtVol * sc;
+                          }
+                      });
+                  } else if (n.categories) { calcExtInv(n.categories, exRate); }
+                    else if (n.clients) { calcExtInv(n.clients, exRate); }
+                    else if (n.channels) { calcExtInv(n.channels, exRate); }
+                    else if (n.salesModes) { calcExtInv(n.salesModes, exRate); }
+                    else if (n.bizTypes) { calcExtInv(n.bizTypes, exRate); }
+              });
+          };
+          calcExtInv(inputs.salesHierarchy);
+
           const totalSgaVar = revenue * ((((inputs.logisticsRate||[])[i]||0)+((inputs.salesCommRate||[])[i]||0)+((inputs.asCostRate||[])[i]||0))/100);
           const totalSgaSemi = toMil(((inputs.utilities||[])[i]||0) + ((inputs.travel||[])[i]||0) + ((inputs.telecom||[])[i]||0)) * infMultArr[i];
           const totalSgaFixOnly = toMil(((inputs.laborFix||[])[i]||0) + ((inputs.benefits||[])[i]||0) + ((inputs.rent||[])[i]||0) + ((inputs.taxes||[])[i]||0) + ((inputs.insurance||[])[i]||0) + ((inputs.fees||[])[i]||0) + ((inputs.rnd||[])[i]||0) + ((inputs.marketing||[])[i]||0) + ((inputs.supplies||[])[i]||0) + ((inputs.badDebt||[])[i]||0) + ((inputs.otherSga||[])[i]||0)) * infMultArr[i];
@@ -735,7 +766,7 @@
           const deltaArGross = -(arGross - prevArGross); prevArGross = arGross;
 
           const invBase = cogs * (((inputs.invDays||[])[i]||0) / 365);
-          const inv = invBase + unsoldInvValue;
+          const inv = invBase + unsoldInvValue + unsoldExtInvValue;
           const ap = cogs * (((inputs.apDays||[])[i]||0) / 365); 
           
           let ppeNet = totalCapex.slice(0, i+1).reduce((a,b)=>a+b,0);
@@ -773,7 +804,7 @@
             nonCurrentLiabilities: accumDebt,
             totalLiabilities: ap + totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0) + accumDebt,
             totalEquity: accumCapital + prevRetainedEarnings + netIncome,
-            bsDetails: { cash: endingCash, ar: Math.max(0, arGross-accumBadDebt), inv, invBase, unsoldInvValue, prepaidNet: totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0), receivableNet: totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0), ppeNet, intangibleNet, otherNetAssets: accumOtherNonCash, ap, advancesNet: totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0), accruedNet: totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0), debt: accumDebt, capital: accumCapital, retainedEarnings: prevRetainedEarnings + netIncome }
+            bsDetails: { cash: endingCash, ar: Math.max(0, arGross-accumBadDebt), inv, invBase, unsoldInvValue, unsoldExtInvValue, prepaidNet: totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0), receivableNet: totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0), ppeNet, intangibleNet, otherNetAssets: accumOtherNonCash, ap, advancesNet: totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0), accruedNet: totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0), debt: accumDebt, capital: accumCapital, retainedEarnings: prevRetainedEarnings + netIncome }
           });
 
           res.cf.push({
@@ -938,7 +969,7 @@
                                    <div className="text-[9px] text-orange-500 font-bold mb-0.5 text-center">Y{i}</div>
                                    <NumInput value={vol} onChange={(v) => treeActions.updateField(p.pathIds, p.id, 'purchaseVolumes', i, v)} className="text-[10px] text-center border-orange-200 focus:border-orange-500 font-bold text-slate-800" placeholder="매입수량" />
                                    <div className="text-[8px] text-slate-500 mt-1 truncate text-right">@ {formatCurrency(cost)}원</div>
-                                   <div className="text-[9px] text-red-600 font-bold mt-0.5 truncate text-right" title="총 공급비용">{formatCurrency(totalCost / 1000000)}백만</div>
+                                   <div className="text-[9px] text-red-600 font-bold mt-0.5 truncate text-right" title={`${formatCurrency(totalCost)}원`}>{(totalCost / 1000000).toLocaleString('ko-KR', {maximumFractionDigits:2})}백만</div>
                                  </div>
                               )})}
                            </div>
@@ -958,8 +989,8 @@
                   <YearlyInputField label="재고자산 회전일수 (Days)" arrName="invDays" values={inputs.invDays} onChangeArray={handleArrayChange} />
                   <div className="flex flex-col gap-0.5 mb-4 text-[10px] text-blue-600 font-semibold px-1">
                     <div className="flex gap-1 justify-between"><span className="w-1/4">정상재고 잔액</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.invBase / 1000000)}백만</span>)}</div>
-                    <div className="flex gap-1 justify-between text-orange-600"><span className="w-1/4">미판매 잉여재고 (자체생산)</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.unsoldInvValue / 1000000)}백만</span>)}</div>
-                    <div className="flex gap-1 justify-between text-red-600"><span className="w-1/4">미판매 잉여재고 (외부조달)</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.unsoldExtInvValue / 1000000)}백만</span>)}</div>
+                    <div className="flex gap-1 justify-between text-orange-600"><span className="w-1/4">미판매 잉여재고 (자체생산)</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{(model.bs[i]?.bsDetails?.unsoldInvValue / 1000000).toLocaleString('ko-KR', {maximumFractionDigits:1})}백만</span>)}</div>
+                    <div className="flex gap-1 justify-between text-red-600"><span className="w-1/4">미판매 잉여재고 (외부조달)</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{(model.bs[i]?.bsDetails?.unsoldExtInvValue / 1000000).toLocaleString('ko-KR', {maximumFractionDigits:2})}백만</span>)}</div>
                     <div className="flex gap-1 justify-between text-indigo-700 font-bold border-t border-slate-300 pt-0.5 mt-0.5"><span className="w-1/4">총 재고자산</span>{pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.inv / 1000000)}백만</span>)}</div>
                   </div>
 
