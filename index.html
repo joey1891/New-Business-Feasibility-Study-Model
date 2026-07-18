@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>사업타당성 시뮬레이터 (컨설팅 펌 스타일)</title>
+  <title>사업타당성 </title>
   
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -111,13 +111,50 @@
 
     const NumInput = React.memo(({ value, onChange, placeholder, className = "" }) => {
       const [localVal, setLocalVal] = useState(value === 0 ? '0' : (value||0).toLocaleString());
-      useEffect(() => { setLocalVal(value === 0 ? '0' : (value||0).toLocaleString()); }, [value]);
+      const [isEditing, setIsEditing] = useState(false);
+
+      useEffect(() => { 
+        if (!isEditing) setLocalVal(value === 0 ? '0' : (value||0).toLocaleString()); 
+      }, [value, isEditing]);
+
       const handleChange = (e) => {
-        const raw = e.target.value.replace(/[^0-9.-]/g, '');
+        // 숫자, 쉼표, 소수점 및 사칙연산 기호(+, -, *, /, (, )) 허용
+        const raw = e.target.value.replace(/[^0-9.,+\-*/()\s]/g, '');
         setLocalVal(raw);
-        if (raw !== '' && raw !== '-' && raw !== '.') onChange(Number(raw));
       };
-      return <input type="text" value={localVal} onChange={handleChange} placeholder={placeholder} className={`text-right border border-slate-300 rounded py-1 px-1.5 transition-all text-xs text-slate-800 ${className}`} />;
+
+      const applyCalculation = () => {
+        setIsEditing(false);
+        try {
+          // 쉼표를 제거하고 수식만 추출
+          const expr = localVal.replace(/,/g, '');
+          if (expr.trim() === '') { onChange(0); setLocalVal('0'); return; }
+          
+          // 보안을 위해 숫자와 수식 관련 기호만 남김
+          const cleanExpr = expr.replace(/[^0-9.+\-*/()\s]/g, '');
+          
+          // 자바스크립트 엔진을 통한 수식 계산 (안전한 문자열만 실행)
+          const result = new Function('return ' + cleanExpr)();
+          const finalNum = (isNaN(result) || !isFinite(result)) ? 0 : Number(result);
+          
+          onChange(finalNum);
+          setLocalVal(finalNum === 0 ? '0' : finalNum.toLocaleString());
+        } catch (e) {
+          // 수식 오류 시 기존 정상 값으로 롤백
+          setLocalVal(value === 0 ? '0' : (value||0).toLocaleString());
+        }
+      };
+
+      return <input 
+        type="text" 
+        value={localVal} 
+        onFocus={() => setIsEditing(true)}
+        onChange={handleChange} 
+        onBlur={applyCalculation}
+        onKeyDown={(e) => { if(e.key === 'Enter') e.target.blur(); }}
+        placeholder={placeholder} 
+        className={`text-right border border-slate-300 rounded py-1 px-1.5 transition-all text-xs outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 focus:bg-orange-50 ${isEditing ? 'text-blue-700 font-bold' : 'text-slate-800'} ${className}`} 
+      />;
     });
 
     const YearlyInputField = React.memo(({ label, arrName, values, onChangeArray }) => (
