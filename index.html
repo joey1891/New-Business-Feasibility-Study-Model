@@ -562,8 +562,8 @@
       useEffect(() => {
         if (!user) return;
         const fetchProjects = async () => {
-          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public').order('updated_at', { ascending: false });
-          if (!isAdmin) query.eq('is_public', true);
+          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
+          if (!isAdmin) query.or(`is_public.eq.true,user_id.eq.${user.id}`);
           const { data } = await query;
           if (data) setProjects(data);
         };
@@ -600,8 +600,8 @@
             if (data && data.length > 0) setCurrentProjectId(data[0].id);
           }
           setSaveStatus('✅ 저장 완료');
-          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public').order('updated_at', { ascending: false });
-          if (!isAdmin) query.eq('is_public', true);
+          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
+          if (!isAdmin) query.or(`is_public.eq.true,user_id.eq.${user.id}`);
           const { data: updated } = await query;
           if (updated) setProjects(updated);
           setTimeout(() => setSaveStatus(''), 3000);
@@ -613,7 +613,9 @@
         try {
           await supabaseClient.from('feasibility_projects').delete().eq('id', currentProjectId);
           setInputs(DEFAULT_INPUTS); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false);
-          const { data: updated } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public').order('updated_at', { ascending: false });
+          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
+          if (!isAdmin) query.or(`is_public.eq.true,user_id.eq.${user.id}`);
+          const { data: updated } = await query;
           if (updated) setProjects(updated);
         } catch (e) { alert('삭제 권한이 없습니다.'); }
       };
