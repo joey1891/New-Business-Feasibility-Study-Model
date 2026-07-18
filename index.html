@@ -61,7 +61,7 @@
       utilities: pad6([10]), travel: pad6([8]), telecom: pad6([5]),
       laborFix: pad6([150]), benefits: pad6([20]), rent: pad6([60]), taxes: pad6([5]), insurance: pad6([12]), fees: pad6([15]), rnd: pad6([20]), marketing: pad6([50]), supplies: pad6([12]), badDebt: pad6([0]), otherSga: pad6([10]),
       nonOpIncCash: pad6([0]), nonOpIncNonCash: pad6([0]), nonOpExpCash: pad6([0]), nonOpExpNonCash: pad6([0]),
-      salesHierarchy: [{ id: 'c1', name: '대한민국', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0]) }] }] }] }] }] }] }]
+      salesHierarchy: [{ id: 'rt1', name: '제품/상품 판매', countries: [{ id: 'c1', name: '대한민국', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0]) }] }] }] }] }] }] }] }, { id: 'rt2', name: '서비스 용역 매출', countries: [] }]
     };
 
     const formatCurrency = (val) => (val || 0).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
@@ -293,8 +293,10 @@
       );
     };
 
+    // --- 7-Level Hierarchy Editor Component ---
     const HierarchyEditor = ({ list, level, pathIds, handlers }) => {
         const levelConfig = [
+            { key: 'countries', name: '국가', addFn: handlers.addCountry, rmFn: handlers.rmRevType, ph: '매출 유형명 (예: 제품/상품 판매)' },
             { key: 'bizTypes', name: '사업영역 (B2B/B2C)', addFn: handlers.addBizType, rmFn: handlers.rmCountry, ph: '국가명' },
             { key: 'salesModes', name: '판매형태 (온/오프라인)', addFn: handlers.addSalesMode, rmFn: handlers.rmBizType, ph: '사업영역명' },
             { key: 'channels', name: '유통채널 (병원/약국 등)', addFn: handlers.addChannel, rmFn: handlers.rmSalesMode, ph: '판매형태명' },
@@ -303,7 +305,7 @@
             { key: 'products', name: '품목', addFn: handlers.addProduct, rmFn: handlers.rmCategory, ph: '품목군명' }
         ];
 
-        if (level === 6) { 
+        if (level === 7) { 
             return (
                 <div className="space-y-3 mt-2">
                    {(list||[]).map(product => (
@@ -506,33 +508,36 @@
              if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
           });
 
-          const fixTree = (cList) => (cList||[]).map(c => {
-             c.bizTypes = (c.bizTypes||[]).map(bt => {
-                 bt.salesModes = (bt.salesModes||[]).map(sm => {
-                     sm.channels = (sm.channels||[]).map(ch => {
-                         ch.clients = (ch.clients||[]).map(cl => {
-                             cl.categories = (cl.categories||[]).map(cat => {
-                                 cat.products = (cat.products||[]).map(p => {
-                                     p.prices = pad6(p.prices); 
-                                     p.volumes = pad6(p.volumes); 
-                                     p.supplyCosts = pad6(p.supplyCosts||[0]);
-                                     p.purchaseVolumes = pad6(p.purchaseVolumes||[0]);
-                                     if(p.isInternal === undefined) p.isInternal = true;
-                                     return p;
-                                 }); return cat;
-                             }); return cl;
-                         }); return ch;
-                     }); return sm;
-                 }); return bt;
-             }); return c;
+          const fixTree = (cList) => (cList||[]).map(rt => {
+             rt.countries = (rt.countries||[]).map(c => {
+                 c.bizTypes = (c.bizTypes||[]).map(bt => {
+                     bt.salesModes = (bt.salesModes||[]).map(sm => {
+                         sm.channels = (sm.channels||[]).map(ch => {
+                             ch.clients = (ch.clients||[]).map(cl => {
+                                 cl.categories = (cl.categories||[]).map(cat => {
+                                     cat.products = (cat.products||[]).map(p => {
+                                         p.prices = pad6(p.prices); p.volumes = pad6(p.volumes); p.supplyCosts = pad6(p.supplyCosts||[0]);
+                                         p.purchaseVolumes = pad6(p.purchaseVolumes||[0]);
+                                         if(p.isInternal === undefined) p.isInternal = true;
+                                         return p;
+                                     }); return cat;
+                                 }); return cl;
+                             }); return ch;
+                         }); return sm;
+                     }); return bt;
+                 }); return c;
+             }); return rt;
           });
 
-          if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && loaded.salesHierarchy[0].clients) {
-             loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
-                id: c.id, name: c.name, bizTypes: [{ id: `bt_${c.id}`, name: 'B2B/B2C 통합', salesModes: [{ id: `sm_${c.id}`, name: '온/오프 통합', channels: [{ id: `ch_${c.id}`, name: '기본 채널', clients: (c.clients||[]).map(cl => ({
-                   id: cl.id, name: cl.name, categories: [{ id: `cat_${cl.id}`, name: '기본 품목군', products: cl.products }]
-                })) }] }] }]
-             }));
+          if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && !loaded.salesHierarchy[0].countries) {
+             if (loaded.salesHierarchy[0].clients) {
+                 loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
+                    id: c.id, name: c.name, bizTypes: [{ id: `bt_${c.id}`, name: 'B2B/B2C 통합', salesModes: [{ id: `sm_${c.id}`, name: '온/오프 통합', channels: [{ id: `ch_${c.id}`, name: '기본 채널', clients: (c.clients||[]).map(cl => ({
+                       id: cl.id, name: cl.name, categories: [{ id: `cat_${cl.id}`, name: '기본 품목군', products: cl.products }]
+                    })) }] }] }]
+                 }));
+             }
+             loaded.salesHierarchy = [{ id: 'rt_legacy', name: '제품/상품 판매', countries: loaded.salesHierarchy }];
           }
           loaded.salesHierarchy = fixTree(loaded.salesHierarchy);
           setInputs(loaded); setProjectName(proj.name); setCurrentProjectId(proj.id);
@@ -548,41 +553,38 @@
       const hHandlers = {
           addLevelItem: (pathIds, newObj, targetKey) => setInputs(p => {
               const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              const keys = ['countries', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
               pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
               targetArr.push(newObj); return {...p, salesHierarchy: h};
           }),
           rmLevelItem: (pathIds, targetId) => setInputs(p => {
               const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              const keys = ['countries', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
               pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
               const idx = targetArr.findIndex(x => x.id === targetId); if(idx > -1) targetArr.splice(idx, 1);
               return {...p, salesHierarchy: h};
           }),
           updateName: (pathIds, targetId, val) => setInputs(p => {
               const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              const keys = ['countries', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
               pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
               const node = targetArr.find(x => x.id === targetId); if(node) node.name = val;
               return {...p, salesHierarchy: h};
           }),
           updateField: (pathIds, targetId, field, arrIdx, val) => setInputs(p => {
               const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              const keys = ['countries', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
               pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
               const node = targetArr.find(x => x.id === targetId);
-              if(node) { 
-                 if(arrIdx !== null) { 
-                    node[field] = pad6(node[field] || [0]); 
-                    node[field][arrIdx] = val; 
-                 } else node[field] = val; 
-              }
+              if(node) { if(arrIdx !== null) { node[field] = pad6(node[field]); node[field][arrIdx] = val; } else node[field] = val; }
               return {...p, salesHierarchy: h};
           })
       };
 
       const treeActions = {
-          addCountry: () => hHandlers.addLevelItem([], {id: Date.now().toString(), name: '', bizTypes: []}, 'salesHierarchy'),
+          addRevType: () => hHandlers.addLevelItem([], {id: Date.now().toString(), name: '', countries: []}, 'salesHierarchy'),
+          rmRevType: (p, id) => hHandlers.rmLevelItem(p, id),
+          addCountry: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', bizTypes: []}, 'countries'),
           rmCountry: (p, id) => hHandlers.rmLevelItem(p, id),
           addBizType: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', salesModes: []}, 'bizTypes'),
           rmBizType: (p, id) => hHandlers.rmLevelItem(p, id),
@@ -658,6 +660,7 @@
                   } else if (n.channels) { const { sum, sub } = buildLevel(n.channels, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'판매형태', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:4, sub });
                   } else if (n.salesModes) { const { sum, sub } = buildLevel(n.salesModes, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'사업영역', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:3, sub });
                   } else if (n.bizTypes) { const { sum, sub } = buildLevel(n.bizTypes, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'국가', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:2, sub });
+                  } else if (n.countries) { const { sum, sub } = buildLevel(n.countries, type, exRate); levelSum += sum; if(sum>0 || i===0) levelSub.push({ label: n.name||'매출유형', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:1, sub });
                   }
               }); return { sum: levelSum, sub: levelSub };
           };
@@ -721,7 +724,6 @@
                               let sVol = (p.volumes||[])[i]||0;
                               let pVol = (p.purchaseVolumes||[])[i]||0;
                               
-                              // 판매 수량 계산 시 적용했던 산업성장률을 매입 수량에도 동일하게 반영 (비율 유지)
                               for(let y=1; y<=i; y++) {
                                   const g = 1 + (((inputs.industryGrowth||[])[y]||0)/100);
                                   sVol *= g;
@@ -729,7 +731,6 @@
                               }
                               const sc = ((p.supplyCosts||[])[i]||0) * exRate;
                               
-                              // 총 공급받은수량(매입) - 목표수량(판매) = 미판매 잉여수량
                               const unsoldExtVol = Math.max(0, pVol - sVol);
                               unsoldExtInvValue += unsoldExtVol * sc;
                           }
@@ -739,6 +740,7 @@
                     else if (n.channels) { calcExtInv(n.channels, exRate); }
                     else if (n.salesModes) { calcExtInv(n.salesModes, exRate); }
                     else if (n.bizTypes) { calcExtInv(n.bizTypes, exRate); }
+                    else if (n.countries) { calcExtInv(n.countries, exRate); }
               });
           };
           calcExtInv(inputs.salesHierarchy);
@@ -934,17 +936,19 @@
                   <div className="space-y-2 mb-6">
                     {(() => {
                       let extProds = [];
-                      const findExt = (countries) => {
-                        (countries||[]).forEach(country => {
-                          (country.bizTypes||[]).forEach(biz => {
-                            (biz.salesModes||[]).forEach(sm => {
-                              (sm.channels||[]).forEach(ch => {
-                                (ch.clients||[]).forEach(cl => {
-                                  (cl.categories||[]).forEach(cat => {
-                                    (cat.products||[]).forEach(p => {
-                                      if(p.isInternal === false) {
-                                        extProds.push({...p, pathIds: [country.id, biz.id, sm.id, ch.id, cl.id, cat.id]});
-                                      }
+                      const findExt = (revTypes) => {
+                        (revTypes||[]).forEach(rt => {
+                          (rt.countries||[]).forEach(country => {
+                            (country.bizTypes||[]).forEach(biz => {
+                              (biz.salesModes||[]).forEach(sm => {
+                                (sm.channels||[]).forEach(ch => {
+                                  (ch.clients||[]).forEach(cl => {
+                                    (cl.categories||[]).forEach(cat => {
+                                      (cat.products||[]).forEach(p => {
+                                        if(p.isInternal === false) {
+                                          extProds.push({...p, pathIds: [rt.id, country.id, biz.id, sm.id, ch.id, cl.id, cat.id]});
+                                        }
+                                      });
                                     });
                                   });
                                 });
@@ -1029,10 +1033,10 @@
                   <YearlyInputField label="기타 판관비" arrName="otherSga" values={inputs.otherSga} onChangeArray={handleArrayChange} />
                 </InputGroup>
 
-                <InputGroup title="6. 매출액 추정 (7단계 다차원 트리)">
+                <InputGroup title="6. 매출액 추정 (8단계 다차원 트리)">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-[11px] font-bold text-slate-500">국가 &gt; 영역 &gt; 형태 &gt; 채널 &gt; 거래처 &gt; 품목군 &gt; 품목</p>
-                    <button onClick={treeActions.addCountry} className="text-[10px] font-bold bg-white border border-slate-300 hover:border-slate-800 text-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 국가</button>
+                    <p className="text-[11px] font-bold text-slate-500">매출유형 &gt; 국가 &gt; 영역 &gt; 형태 &gt; 채널 &gt; 거래처 &gt; 품목군 &gt; 품목</p>
+                    <button onClick={treeActions.addRevType} className="text-[10px] font-bold bg-white border border-slate-300 hover:border-slate-800 text-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 매출 유형</button>
                   </div>
                   <HierarchyEditor list={inputs.salesHierarchy} level={0} pathIds={[]} handlers={treeActions} />
                 </InputGroup>
