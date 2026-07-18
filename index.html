@@ -528,6 +528,7 @@
       const [saveStatus, setSaveStatus] = useState('');
       const [isPublicProject, setIsPublicProject] = useState(false);
       const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+      const [includeTerminalValue, setIncludeTerminalValue] = useState(true);
 
       const checkApprovalAndSetUser = async (sessionUser) => {
         if (!sessionUser) {
@@ -571,12 +572,10 @@
       useEffect(() => {
         if (!user) return;
         const fetchProjects = async () => {
-          // 1. 최신 스키마(is_public 등)로 데이터 조회 시도
           let { data, error } = await supabaseClient.from('feasibility_projects')
              .select('id, name, updated_at, inputs, is_public, user_id')
              .order('updated_at', { ascending: false });
 
-          // 2. DB에 is_public 등의 컬럼이 없어 에러가 발생한 경우 (구버전 스키마 대응 자동 복구)
           if (error) {
              console.warn("DB 스키마 차이 감지(is_public 컬럼 없음). 구버전 스키마로 강제 로드합니다.");
              const fallback = await supabaseClient.from('feasibility_projects')
@@ -586,7 +585,6 @@
           }
 
           if (data) {
-             // 3. 관리자(ceo)면 전체 통과, 일반 유저면 공개된 것과 내 것만 필터링
              if (!isAdmin) {
                 data = data.filter(p => p.is_public === true || p.user_id === user.id);
              }
@@ -625,7 +623,6 @@
 
           if (currentProjectId) {
             const { error } = await supabaseClient.from('feasibility_projects').update({ ...basePayload, is_public: isPublicProject }).eq('id', currentProjectId);
-            // DB에 is_public 컬럼이 없어 에러가 나면 기본 데이터만 저장
             if(error) await supabaseClient.from('feasibility_projects').update(basePayload).eq('id', currentProjectId);
           } else {
             const { data, error } = await supabaseClient.from('feasibility_projects').insert([{ ...basePayload, is_public: isPublicProject, user_id: user.id }]).select();
@@ -640,7 +637,6 @@
           
           setSaveStatus('✅ 저장 완료');
           
-          // 저장 후 목록 갱신 (에러 방어 로직 포함)
           let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
           if(error) {
              const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
@@ -658,7 +654,6 @@
           await supabaseClient.from('feasibility_projects').delete().eq('id', currentProjectId);
           setInputs(DEFAULT_INPUTS); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false); setAutoSaveEnabled(false);
           
-          // 삭제 후 목록 갱신 (에러 방어 로직 포함)
           let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
           if(error) {
              const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
@@ -674,7 +669,6 @@
           try {
             let loaded = cloneDeep(proj.inputs);
             
-            // 1. 구버전 판관비(SG&A) 단일 변수 -> 최신 동적 리스트로 마이그레이션
             if (loaded.laborFix && !proj.inputs.sgaFixList) {
                 loaded.sgaVarList = [
                     { id: 1, name: '물류/수출비용', amounts: pad6([0]), rates: pad6(loaded.logisticsRate||[2.0]), isRate: true, calcType: 'rate' },
@@ -701,7 +695,6 @@
                 ];
             }
 
-            // 2. 구버전 영업외수익/비용 -> 최신 동적 리스트로 마이그레이션
             if (loaded.nonOpIncCash && !proj.inputs.nonOpIncCashList) {
                 loaded.nonOpIncCashList = [{ id: 1, name: '현금성 수익', amounts: pad6(loaded.nonOpIncCash) }];
                 loaded.nonOpIncNonCashList = [{ id: 1, name: '비현금성 수익', amounts: pad6(loaded.nonOpIncNonCash) }];
@@ -727,7 +720,6 @@
                if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
             });
 
-            // 3. 구버전 7~8단계 매출액 트리 -> 최신 9단계 계층 마이그레이션
             if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && !loaded.salesHierarchy[0].countries) {
                if (loaded.salesHierarchy[0].clients) {
                    loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
@@ -834,7 +826,6 @@
           updateName: hHandlers.updateName, updateField: hHandlers.updateField
       };
 
-      // 자동 저장 로직 (디바운스 적용: 마지막 변경 후 2초 대기)
       useEffect(() => {
         if (!autoSaveEnabled || !user || !currentProjectId) return;
         const timer = setTimeout(async () => {
@@ -1122,7 +1113,8 @@
           });
 
           const nopat = operatingProfit * (1 - (((inputs.taxRate||[])[i]||0)/100));
-          const terminalValue = i === 5 ? Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + balPrepaid + balReceivable - balAdvances - balAccrued + accumOtherNonCash : 0;
+          // 잔존가치 포함 여부에 따른 계산식 반영 (청산가치 기준)
+          const terminalValue = (i === 5 && includeTerminalValue) ? Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + balPrepaid + balReceivable - balAdvances - balAccrued + accumOtherNonCash : 0;
           const fcff = nopat + depreciation + amortization + terminalValue - totalCapex[i] - totalIntangible[i] + deltaWc;
           
           res.fcffData.push({ nopat, depreciation, amortization, terminalValue, capex: totalCapex[i], intangibleCapex: totalIntangible[i], deltaWc: deltaWc, fcff, pvFcff: fcff / Math.pow(1 + wacc, i) });
@@ -1144,6 +1136,46 @@
         res.internalCogsDetails = intVolTreeGlobal;
         res.externalCogsDetails = extCogsTreeGlobal;
         res.internalCogsFactorTree = intCogsFactorTreeGlobal;
+
+        let accumTotalEquityArr = [];
+        let currentAccumTE = 0;
+        for(let i=0; i<6; i++) {
+           currentAccumTE += totalEquity[i];
+           accumTotalEquityArr.push(currentAccumTE);
+        }
+
+        const equityIRRs = (inputs.equityList || []).map(eq => {
+            let accumEq = 0;
+            const cf_j = [0,1,2,3,4,5].map(i => {
+                const eqInvest = toMil((eq.amounts || [])[i]);
+                accumEq += eqInvest;
+                const share = accumTotalEquityArr[i] > 0 ? accumEq / accumTotalEquityArr[i] : 0;
+                
+                // FCFE (Free Cash Flow to Equity) 산출
+                let fcfe = res.cf[i].operatingCf - totalCapex[i] - totalIntangible[i] + totalDebt[i];
+                let j_cf = -eqInvest;
+                
+                // 배당 가능한 잉여현금흐름이 양수일 때 지분율만큼 배당으로 수취한다고 가정
+                if (fcfe > 0) {
+                    j_cf += fcfe * share;
+                }
+                
+                // 마지막 연도 청산에 따른 지분 가치 분배
+                if (i === 5 && includeTerminalValue) {
+                   const tv_entity = res.fcffData[5].terminalValue;
+                   const endingCash = res.cf[5].endingCash;
+                   const accumDebt = res.bs[5].bsDetails.debt;
+                   // 주주 관점 잔존가치 = 기업 청산가치 + 보유현금 - 잔존부채
+                   const tv_equity = tv_entity + endingCash - accumDebt;
+                   if (tv_equity > 0) {
+                       j_cf += tv_equity * share;
+                   }
+                }
+                return j_cf;
+            });
+            return { name: eq.name, irr: calculateIRR(cf_j) };
+        });
+        res.equityIRRs = equityIRRs;
 
         const buildCostRatioTree = (costNodes, revNodes) => {
             costNodes.forEach(c => {
@@ -1203,7 +1235,7 @@
         res.cmAnalysisTree = buildCmTree(res.revenueDetails, res.internalCogsDetails, res.externalCogsDetails);
 
         return res;
-      }, [inputs]);
+      }, [inputs, includeTerminalValue]);
 
       const getF = (k1, k2) => model.is_financial.map(d => k2 ? d[k1][k2] : d[k1]);
       const getM = (k1, k2) => model.is_managerial.map(d => k2 ? d[k1][k2] : d[k1]);
@@ -1468,8 +1500,12 @@
                 
                 <div style={{ display: activeTab === 'npv' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">사업타당성 종합 분석 보고서</h2>
-                    <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary</p>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h2 className="text-2xl font-black text-slate-900 tracking-tight">사업타당성 종합 분석 보고서</h2>
+                            <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary</p>
+                        </div>
+                    </div>
                   </div>
                   <div className="p-10">
                     
@@ -1519,38 +1555,73 @@
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-6 mb-12">
-                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                    <div className="grid grid-cols-4 gap-6 mb-12 items-stretch">
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
-                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">순현재가치 (NPV)</p>
-                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.npv / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span></p>
-                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">할인율(WACC) {formatPercent(model.wacc)} 적용</p>
+                        <div>
+                            <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">순현재가치 (NPV)</p>
+                            <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.npv / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span></p>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-4 font-semibold">할인율(WACC) {formatPercent(model.wacc)} 적용</p>
                       </div>
-                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className={`absolute top-0 left-0 w-1 h-full ${model.irr > model.wacc ? 'bg-red-700' : 'bg-slate-400'}`}></div>
-                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">내부수익률 (IRR)</p>
-                        <p className={`text-3xl font-black tracking-tighter ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>{formatPercent(model.irr)}</p>
-                        <p className={`text-[10px] mt-3 font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-400'}`}>{model.irr > model.wacc ? '✅ 타당성 확보 (IRR > WACC)' : '⚠️ 타당성 미흡 (IRR < WACC)'}</p>
+                        <div>
+                            <div className="flex justify-between items-start">
+                                <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">내부수익률 (IRR)</p>
+                                <span className={`text-[10px] font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-400'}`}>{model.irr > model.wacc ? '✅ 확보' : '⚠️ 미흡'}</span>
+                            </div>
+                            <p className={`text-3xl font-black tracking-tighter ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>
+                                {isNaN(model.irr) ? '-' : Math.round(model.irr * 100) + '%'}
+                            </p>
+                        </div>
+                        <div className="mt-4 pt-3 border-t border-slate-100">
+                            <p className="text-[10px] text-slate-500 font-bold mb-1.5 flex justify-between"><span>주주별 IRR</span><span>(지분율 기준)</span></p>
+                            <div className="space-y-1">
+                                {model.equityIRRs.map((eq, idx) => (
+                                    <div key={idx} className="flex justify-between items-center text-[10px]">
+                                        <span className="text-slate-600 font-semibold truncate pr-2 max-w-[100px]">{eq.name}</span>
+                                        <span className="font-bold text-slate-800">{isNaN(eq.irr) ? '-' : Math.round(eq.irr * 100) + '%'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                       </div>
-                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
-                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">투자회수기간 (Payback)</p>
-                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> 5'} <span className="text-sm font-bold text-slate-500">년</span></p>
-                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">투자금 전액 회수 소요 기간</p>
+                        <div>
+                            <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">투자회수기간 (Payback)</p>
+                            <p className="text-3xl font-black text-slate-900 tracking-tighter">{model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> 5'} <span className="text-sm font-bold text-slate-500">년</span></p>
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-4 font-semibold">투자금 전액 회수 소요 기간</p>
                       </div>
-                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden">
+                      <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
-                        <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">목표 손익분기 (BEP)</p>
-                        <p className="text-3xl font-black text-slate-900 tracking-tighter">{formatCurrency(model.is_managerial[0]?.bepRevenue / 1000000)} <span className="text-sm font-bold text-slate-500">백만</span></p>
-                        <p className="text-[10px] text-slate-400 mt-3 font-semibold">초기(Y0) 목표 손익분기 매출액</p>
+                        <div>
+                            <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">목표 손익분기 (BEP)</p>
+                            <div className="space-y-1.5 mt-2">
+                                {[0,1,2,3,4,5].map(y => (
+                                   <div key={y} className="flex justify-between items-center text-[11px]">
+                                     <span className="text-slate-400 font-bold">Y{y}</span>
+                                     <span className="font-bold text-slate-800">{formatCurrency(model.is_managerial[y]?.bepRevenue / 1000000)} 백만</span>
+                                   </div>
+                                ))}
+                            </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex justify-between items-end mb-4 px-2 mt-12">
-                      <h3 className="text-sm font-black text-slate-900 tracking-wide">잉여현금흐름 (FCFF) 추정</h3>
-                      <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                    <div className="flex justify-between items-center mb-4 px-2 mt-12">
+                      <div className="flex items-end gap-3">
+                          <h3 className="text-sm font-black text-slate-900 tracking-wide">잉여현금흐름 (FCFF) 추정</h3>
+                          <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
+                      </div>
+                      <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 cursor-pointer bg-white px-3 py-1.5 rounded-full border border-slate-300 shadow-sm hover:bg-slate-50 transition-colors">
+                          <input type="checkbox" checked={includeTerminalValue} onChange={(e) => setIncludeTerminalValue(e.target.checked)} className="accent-slate-800 w-3 h-3" />
+                          마지막 연도(Y5) 잔존가치(Terminal Value) 포함하여 타당성 분석
+                      </label>
                     </div>
-                    <table className="w-full text-right border-collapse border-y-2 border-slate-800">
+                    <table className="w-full text-right border-collapse border-y-2 border-slate-800 bg-white">
                       <TableHead />
                       <tbody className="divide-y divide-slate-200">
                         <ExpandableRow label="1. 현금의 유입 (+)" isBold
@@ -1559,7 +1630,7 @@
                             { label: '세후영업이익 (NOPAT)', values: model.fcffData.map(d => d.nopat), isGroup: true, level: 1, sub: [
                                 { label: '매출액', values: getM('revenue'), isGroup: true, level: 2, sub: model.revenueDetails },
                                 { label: '변동비', values: getM('variableCosts'), isGroup: true, level: 2, sub: [
-                                    { label: '제조 원가', values: model.is_managerial.map(d => d.variableCosts - d.varCostDetails.totalSgaVar - d.externalCogs), isGroup: true, level: 3, sub: model.internalCogsFactorTree },
+                                    { label: '제조 원가', values: model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs), isGroup: true, level: 3, sub: model.internalCogsFactorTree },
                                     { label: '외부 조달상품 원가', values: getF('externalCogs'), isGroup: true, level: 3, sub: model.externalCogsDetails },
                                     { label: '판매 변동비 (물류/수수료 등)', values: getM('varCostDetails', 'totalSgaVar'), level: 3 }
                                 ]},
@@ -1606,6 +1677,15 @@
                         <ExpandableRow label="↳ 누적 할인된 잉여현금흐름 (PV)" isTotal values={model.fcffData.reduce((acc, d, i) => { acc.push((acc[i-1]||0) + d.pvFcff); return acc; }, [])} />
                       </tbody>
                     </table>
+                    
+                    <div className="bg-slate-50 p-4 mt-3 rounded-sm border border-slate-200">
+                        <p className="text-[10px] text-slate-600 font-semibold leading-relaxed">
+                            <span className="font-bold text-slate-800 text-[11px] mb-1 inline-block">📌 잔존가치 산출식 (순자산가치/청산가치 방식 가정):</span><br/>
+                            잔존가치 = (유동자산 - 현금) - (유동부채 - 차입금) + 비유동자산<br/>
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= (매출채권 + 재고자산 + 선급금 + 미수금) - (매입채무 + 선수금 + 미지급금) + (유형자산(순액) + 무형자산(순액) + 기타비유동자산)
+                        </p>
+                    </div>
+
                   </div>
                 </div>
 
@@ -1618,7 +1698,7 @@
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10">
-                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
+                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800 bg-white">
                       <TableHead />
                       <tbody className="divide-y divide-slate-200">
                         <ExpandableRow label="I. 매출액" values={getF('revenue')} ratios={calcRatio(getF('revenue'))} isBold details={model.revenueDetails} />
@@ -1663,7 +1743,7 @@
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10">
-                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
+                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800 bg-white">
                       <TableHead />
                       <tbody className="divide-y divide-slate-200">
                         <ExpandableRow label="I. 매출액" values={getM('revenue')} ratios={calcRatio(getM('revenue'))} isBold details={model.revenueDetails} />
@@ -1694,7 +1774,7 @@
                           <p className="text-xs text-slate-500 mt-1 font-semibold">국가, 브랜드, 품목 등 각 세그먼트별 수익성 타당성 지표</p>
                         </div>
                       </div>
-                      <table className="w-full text-sm text-right border-collapse border-b-2 border-slate-800">
+                      <table className="w-full text-sm text-right border-collapse border-b-2 border-slate-800 bg-white">
                         <TableHead />
                         <tbody className="divide-y divide-slate-200">
                           <ExpandableRow label="총 공헌이익 (Total CM)" values={getM('contributionMargin')} ratios={calcRatio(getM('contributionMargin'))} isHeader details={model.cmAnalysisTree} />
@@ -1716,7 +1796,7 @@
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10 flex flex-col gap-8">
-                    <div className="border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                    <div className="border border-slate-200 rounded-sm shadow-sm overflow-hidden bg-white">
                       <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">자 산 (Assets)</div>
                       <table className="w-full text-right border-collapse">
                         <TableHead />
@@ -1737,7 +1817,7 @@
                         </tbody>
                       </table>
                     </div>
-                    <div className="border border-slate-200 rounded-sm shadow-sm overflow-hidden">
+                    <div className="border border-slate-200 rounded-sm shadow-sm overflow-hidden bg-white">
                       <div className="bg-slate-100 p-3.5 font-black text-center border-b border-slate-300 text-slate-800 tracking-widest text-sm">부채 및 자본 (Liabilities & Equity)</div>
                       <table className="w-full text-right border-collapse">
                         <TableHead />
@@ -1768,7 +1848,7 @@
                     <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
                   </div>
                   <div className="p-10">
-                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800">
+                    <table className="w-full text-sm text-right border-collapse border-y-2 border-slate-800 bg-white">
                       <TableHead />
                       <tbody className="divide-y divide-slate-200">
                         <ExpandableRow label="I. 영업활동 현금흐름" values={getC('operatingCf')} isBold details={[
