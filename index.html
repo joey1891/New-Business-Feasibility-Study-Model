@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>사업타당성 시뮬레이터</title>
+  <title>사업타당성 시뮬레이터 (컨설팅 펌 스타일)</title>
   
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -1545,7 +1545,15 @@
                                 { label: '감가상각비', values: model.fcffData.map(d => d.depreciation), level: 2 },
                                 { label: '무형자산상각비', values: model.fcffData.map(d => d.amortization), level: 2 }
                             ]},
-                            { label: '영업자산부채 변동 (유입)', values: model.fcffData.map(d => d.deltaWc>0?d.deltaWc:0), level: 1 },
+                            { label: '영업자산부채 변동 (유입)', values: model.fcffData.map(d => d.deltaWc>0?d.deltaWc:0), isGroup: true, level: 1, sub: [
+                                { label: '매출채권 감소', values: model.cf.map(d => d.cfDetails.deltaArGross > 0 ? d.cfDetails.deltaArGross : 0), level: 2 },
+                                { label: '재고자산 감소', values: model.cf.map(d => d.cfDetails.deltaInv > 0 ? d.cfDetails.deltaInv : 0), level: 2 },
+                                { label: '매입채무 증가', values: model.cf.map(d => d.cfDetails.deltaAp > 0 ? d.cfDetails.deltaAp : 0), level: 2 },
+                                { label: '선수금 등 증가', values: model.cf.map(d => d.cfDetails.advancesInflow > 0 ? d.cfDetails.advancesInflow : 0), level: 2 },
+                                { label: '미지급금 등 증가', values: model.cf.map(d => d.cfDetails.accruedInflow > 0 ? d.cfDetails.accruedInflow : 0), level: 2 },
+                                { label: '선급금 등 감소', values: model.cf.map(d => d.cfDetails.prepaidOutflow > 0 ? d.cfDetails.prepaidOutflow : 0), level: 2 },
+                                { label: '미수금 등 감소', values: model.cf.map(d => d.cfDetails.receivableOutflow > 0 ? d.cfDetails.receivableOutflow : 0), level: 2 }
+                            ]},
                             { label: '잔존가치 (Terminal Value)', values: model.fcffData.map(d => d.terminalValue), level: 1 },
                           ]} 
                         />
@@ -1554,11 +1562,21 @@
                           details={[
                             { label: '자본적지출 (CAPEX)', values: model.fcffData.map(d => d.capex), level: 1 },
                             { label: '무형자산투자액', values: model.fcffData.map(d => d.intangibleCapex), level: 1 },
-                            { label: '영업자산부채 변동 (유출)', values: model.fcffData.map(d => d.deltaWc<0?-d.deltaWc:0), level: 1 }
+                            { label: '영업자산부채 변동 (유출)', values: model.fcffData.map(d => d.deltaWc<0?-d.deltaWc:0), isGroup: true, level: 1, sub: [
+                                { label: '매출채권 증가', values: model.cf.map(d => d.cfDetails.deltaArGross < 0 ? -d.cfDetails.deltaArGross : 0), level: 2 },
+                                { label: '재고자산 증가', values: model.cf.map(d => d.cfDetails.deltaInv < 0 ? -d.cfDetails.deltaInv : 0), level: 2 },
+                                { label: '매입채무 감소', values: model.cf.map(d => d.cfDetails.deltaAp < 0 ? -d.cfDetails.deltaAp : 0), level: 2 },
+                                { label: '선수금 등 감소', values: model.cf.map(d => d.cfDetails.advancesInflow < 0 ? -d.cfDetails.advancesInflow : 0), level: 2 },
+                                { label: '미지급금 등 감소', values: model.cf.map(d => d.cfDetails.accruedInflow < 0 ? -d.cfDetails.accruedInflow : 0), level: 2 },
+                                { label: '선급금 등 증가', values: model.cf.map(d => d.cfDetails.prepaidOutflow < 0 ? -d.cfDetails.prepaidOutflow : 0), level: 2 },
+                                { label: '미수금 등 증가', values: model.cf.map(d => d.cfDetails.receivableOutflow < 0 ? -d.cfDetails.receivableOutflow : 0), level: 2 }
+                            ]}
                           ]} 
                         />
                         <ExpandableRow label="잉여현금흐름 (FCFF)" isHeader values={model.fcffData.map(d => d.fcff)} />
-                        <ExpandableRow label="할인된 잉여현금흐름 (PV)" isTotal values={model.fcffData.map(d => d.pvFcff)} />
+                        <ExpandableRow label="↳ 누적 잉여현금흐름" isBold values={model.fcffData.reduce((acc, d, i) => { acc.push((acc[i-1]||0) + d.fcff); return acc; }, [])} />
+                        <ExpandableRow label="할인된 잉여현금흐름 (PV)" isHeader values={model.fcffData.map(d => d.pvFcff)} />
+                        <ExpandableRow label="↳ 누적 할인된 잉여현금흐름 (PV)" isTotal values={model.fcffData.reduce((acc, d, i) => { acc.push((acc[i-1]||0) + d.pvFcff); return acc; }, [])} />
                       </tbody>
                     </table>
                   </div>
@@ -1586,9 +1604,9 @@
                         ]} />
                         <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={calcRatio(getF('grossProfit'))} isTotal details={model.gpAnalysisTree} />
                         <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={calcRatio(getF('totalSga'))} details={[
-                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), ratios: calcRatio(getF('sgaDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'rate'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
-                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), isGroup: true, level: 1, sub: inputs.sgaSemiList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'amount'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
-                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), isGroup: true, level: 1, sub: inputs.sgaFixList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'amount'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
+                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), ratios: calcRatio(getF('sgaDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
+                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), isGroup: true, level: 1, sub: inputs.sgaSemiList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
+                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), isGroup: true, level: 1, sub: inputs.sgaFixList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
                             { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), ratios: calcRatio(getF('sgaDetails', 'amortization')), isGroup: true, level: 1 },
                           ]} />
                         <ExpandableRow label="V. 영업이익" values={getF('operatingProfit')} ratios={calcRatio(getF('operatingProfit'))} isHeader />
@@ -1625,14 +1643,14 @@
                         <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={calcRatio(getM('variableCosts'))} details={[
                             { label: '자체생산 변동 원가', values: model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs), ratios: calcRatio(model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs)), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>!f.label.includes('감가상각')).map(f => ({...f, ratios: calcRatio(f.values)})) },
                             { label: '외부조달 상품 원가', values: getF('externalCogs'), ratios: calcRatio(getF('externalCogs')), isGroup: true, level: 1, sub: model.externalCogsDetails },
-                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), ratios: calcRatio(getM('varCostDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'rate'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) }
+                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), ratios: calcRatio(getM('varCostDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) }
                           ]} />
                         <ExpandableRow label="III. 공헌이익" values={getM('contributionMargin')} ratios={calcRatio(getM('contributionMargin'))} isTotal />
                         <ExpandableRow label="IV. 고정비" values={getM('fixedCosts')} ratios={calcRatio(getM('fixedCosts'))} details={[
                             { label: '제조 고정비', values: model.is_financial.map((d,i) => model.is_managerial[i].fixedCosts - d.sgaDetails.totalSgaSemi - d.sgaDetails.totalSgaFixOnly - d.sgaDetails.amortization), ratios: calcRatio(model.is_financial.map((d,i) => model.is_managerial[i].fixedCosts - d.sgaDetails.totalSgaSemi - d.sgaDetails.totalSgaFixOnly - d.sgaDetails.amortization)), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>f.label.includes('감가상각')).map(f => ({...f, ratios: calcRatio(f.values)})) },
                             { label: '준변동/고정 판관비', values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi + d.sgaDetails.totalSgaFixOnly + d.sgaDetails.amortization), ratios: calcRatio(model.is_financial.map(d => d.sgaDetails.totalSgaSemi + d.sgaDetails.totalSgaFixOnly + d.sgaDetails.amortization)), isGroup: true, level: 1, sub: [
-                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), level: 2, sub: inputs.sgaSemiList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'amount'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
-                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), level: 2, sub: inputs.sgaFixList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'amount'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
+                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), level: 2, sub: inputs.sgaSemiList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
+                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), level: 2, sub: inputs.sgaFixList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
                                 { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), ratios: calcRatio(getF('sgaDetails', 'amortization')), level: 2 }
                             ]}
                           ]} />
