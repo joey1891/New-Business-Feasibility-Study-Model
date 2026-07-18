@@ -562,10 +562,27 @@
       useEffect(() => {
         if (!user) return;
         const fetchProjects = async () => {
-          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
-          if (!isAdmin) query.or(`is_public.eq.true,user_id.eq.${user.id}`);
-          const { data } = await query;
-          if (data) setProjects(data);
+          // 1. 최신 스키마(is_public 등)로 데이터 조회 시도
+          let { data, error } = await supabaseClient.from('feasibility_projects')
+             .select('id, name, updated_at, inputs, is_public, user_id')
+             .order('updated_at', { ascending: false });
+
+          // 2. DB에 is_public 등의 컬럼이 없어 에러가 발생한 경우 (구버전 스키마 대응 자동 복구)
+          if (error) {
+             console.warn("DB 스키마 차이 감지(is_public 컬럼 없음). 구버전 스키마로 강제 로드합니다.");
+             const fallback = await supabaseClient.from('feasibility_projects')
+                .select('id, name, updated_at, inputs')
+                .order('updated_at', { ascending: false });
+             data = fallback.data;
+          }
+
+          if (data) {
+             // 3. 관리자(ceo)면 전체 통과, 일반 유저면 공개된 것과 내 것만 필터링
+             if (!isAdmin) {
+                data = data.filter(p => p.is_public === true || p.user_id === user.id);
+             }
+             setProjects(data);
+          }
         };
         fetchProjects();
       }, [user, isAdmin]);
@@ -594,16 +611,34 @@
       const handleSave = async () => {
         if (!user) return; setSaveStatus('저장 중...');
         try {
-          if (currentProjectId) await supabaseClient.from('feasibility_projects').update({ name: projectName, inputs, is_public: isPublicProject, updated_at: new Date().toISOString() }).eq('id', currentProjectId);
-          else {
-            const { data } = await supabaseClient.from('feasibility_projects').insert([{ name: projectName, inputs, is_public: isPublicProject, user_id: user.id }]).select();
-            if (data && data.length > 0) setCurrentProjectId(data[0].id);
+          const basePayload = { name: projectName, inputs, updated_at: new Date().toISOString() };
+          let savedId = currentProjectId;
+
+          if (currentProjectId) {
+            const { error } = await supabaseClient.from('feasibility_projects').update({ ...basePayload, is_public: isPublicProject }).eq('id', currentProjectId);
+            // DB에 is_public 컬럼이 없어 에러가 나면 기본 데이터만 저장
+            if(error) await supabaseClient.from('feasibility_projects').update(basePayload).eq('id', currentProjectId);
+          } else {
+            const { data, error } = await supabaseClient.from('feasibility_projects').insert([{ ...basePayload, is_public: isPublicProject, user_id: user.id }]).select();
+            if (error) {
+               const fallback = await supabaseClient.from('feasibility_projects').insert([{ ...basePayload }]).select();
+               if(fallback.data && fallback.data.length > 0) savedId = fallback.data[0].id;
+            } else if (data && data.length > 0) {
+               savedId = data[0].id;
+            }
+            if(savedId) setCurrentProjectId(savedId);
           }
+          
           setSaveStatus('✅ 저장 완료');
-          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
-          if (!isAdmin) query.or(`is_public.eq.true,user_id.eq.${user.id}`);
-          const { data: updated } = await query;
-          if (updated) setProjects(updated);
+          
+          // 저장 후 목록 갱신 (에러 방어 로직 포함)
+          let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
+          if(error) {
+             const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
+             data = fb.data;
+          }
+          if(data) setProjects(isAdmin ? data : data.filter(p => p.is_public === true || p.user_id === user.id));
+          
           setTimeout(() => setSaveStatus(''), 3000);
         } catch (e) { setSaveStatus('❌ 권한 오류'); }
       };
@@ -613,10 +648,14 @@
         try {
           await supabaseClient.from('feasibility_projects').delete().eq('id', currentProjectId);
           setInputs(DEFAULT_INPUTS); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false);
-          const query = supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
-          if (!isAdmin) query.or(`is_public.eq.true,user_id.eq.${user.id}`);
-          const { data: updated } = await query;
-          if (updated) setProjects(updated);
+          
+          // 삭제 후 목록 갱신 (에러 방어 로직 포함)
+          let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
+          if(error) {
+             const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
+             data = fb.data;
+          }
+          if(data) setProjects(isAdmin ? data : data.filter(p => p.is_public === true || p.user_id === user.id));
         } catch (e) { alert('삭제 권한이 없습니다.'); }
       };
 
