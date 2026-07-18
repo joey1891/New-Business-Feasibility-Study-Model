@@ -293,7 +293,6 @@
       );
     };
 
-    // --- 7-Level Hierarchy Editor Component ---
     const HierarchyEditor = ({ list, level, pathIds, handlers }) => {
         const levelConfig = [
             { key: 'countries', name: '국가', addFn: handlers.addCountry, rmFn: handlers.rmRevType, ph: '매출 유형명 (예: 제품/상품 판매)' },
@@ -338,7 +337,7 @@
                                    <div className="text-[10px] font-black text-orange-700 mb-1">외부조달 공급원가 (Supply Cost - 원)</div>
                                    <div className="grid grid-cols-6 gap-1">
                                       {pad6(product.supplyCosts||[]).map((sc, idx) => (
-                                         <NumInput key={`sc-${idx}`} value={sc} onChange={(v) => handlers.updateField(pathIds, product.id, 'supplyCosts', idx, v)} className="text-[10px] border-orange-300 focus:border-orange-500 bg-white text-orange-900 font-bold" />
+                                         <NumInput key={`sc-${idx}`} value={sc} onChange={(v) => handlers.updateField(pathIds, product.id, 'supplyCosts', idx, v)} className="text-[10px] border-orange-300 focus:border-orange-50 bg-white text-orange-900 font-bold" />
                                       ))}
                                    </div>
                                  </div>
@@ -545,7 +544,17 @@
       };
 
       const handleArrayChange = (name, index, value) => setInputs(prev => { const newArr = pad6(prev[name]); newArr[index] = value; return { ...prev, [name]: newArr }; });
-      const handleListAmt = (listName, id, index, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, amounts: item.amounts.map((a, i) => i === index ? value : a), rates: item.rates ? item.rates.map((a, i) => i === index ? value : a) : undefined } : item) }));
+      
+      // FIX: handleListAmt 수정. amounts와 rates 배열이 존재하는지 확인한 후 map 실행
+      const handleListAmt = (listName, id, index, value) => setInputs(prev => ({ 
+          ...prev, 
+          [listName]: prev[listName].map(item => item.id === id ? { 
+              ...item, 
+              amounts: item.amounts ? item.amounts.map((a, i) => i === index ? value : a) : undefined, 
+              rates: item.rates ? item.rates.map((a, i) => i === index ? value : a) : undefined 
+          } : item) 
+      }));
+      
       const handleListField = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
       const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), usefulLife: 5 }] }));
       const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
