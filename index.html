@@ -57,15 +57,33 @@
       accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
       prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
       receivableList: [{ id: 1, name: '미수수익/미수금', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
-      logisticsRate: pad6([2.0]), salesCommRate: pad6([1.5]), asCostRate: pad6([0.5]),
-      utilities: pad6([10]), travel: pad6([8]), telecom: pad6([5]),
-      laborFix: pad6([150]), benefits: pad6([20]), rent: pad6([60]), taxes: pad6([5]), insurance: pad6([12]), fees: pad6([15]), rnd: pad6([20]), marketing: pad6([50]), supplies: pad6([12]), badDebt: pad6([0]), otherSga: pad6([10]),
-      sgaTypes: {
-        logisticsRate: 'rate', salesCommRate: 'rate', asCostRate: 'rate',
-        utilities: 'amount', travel: 'amount', telecom: 'amount',
-        laborFix: 'amount', benefits: 'amount', rent: 'amount', taxes: 'amount', insurance: 'amount', fees: 'amount', rnd: 'amount', marketing: 'amount', supplies: 'amount', badDebt: 'rate', otherSga: 'amount'
-      },
-      nonOpIncCash: pad6([0]), nonOpIncNonCash: pad6([0]), nonOpExpCash: pad6([0]), nonOpExpNonCash: pad6([0]),
+      sgaVarList: [
+        { id: 1, name: '물류/수출비용', amounts: pad6([0]), rates: pad6([2.0]), isRate: true },
+        { id: 2, name: '판매수수료', amounts: pad6([0]), rates: pad6([1.5]), isRate: true },
+        { id: 3, name: 'A/S 비용', amounts: pad6([0]), rates: pad6([0.5]), isRate: true }
+      ],
+      sgaSemiList: [
+        { id: 1, name: '수도광열비', amounts: pad6([10]), rates: pad6([0]), isRate: false },
+        { id: 2, name: '여비교통비', amounts: pad6([8]), rates: pad6([0]), isRate: false },
+        { id: 3, name: '통신비', amounts: pad6([5]), rates: pad6([0]), isRate: false }
+      ],
+      sgaFixList: [
+        { id: 1, name: '인건비 (급여/퇴직금)', amounts: pad6([150]), rates: pad6([0]), isRate: false },
+        { id: 2, name: '복리후생비', amounts: pad6([20]), rates: pad6([0]), isRate: false },
+        { id: 3, name: '임차료', amounts: pad6([60]), rates: pad6([0]), isRate: false },
+        { id: 4, name: '세금과공과', amounts: pad6([5]), rates: pad6([0]), isRate: false },
+        { id: 5, name: '보험료', amounts: pad6([12]), rates: pad6([0]), isRate: false },
+        { id: 6, name: '지급수수료', amounts: pad6([15]), rates: pad6([0]), isRate: false },
+        { id: 7, name: '연구개발비 (R&D)', amounts: pad6([20]), rates: pad6([0]), isRate: false },
+        { id: 8, name: '마케팅/광고선전비', amounts: pad6([50]), rates: pad6([0]), isRate: false },
+        { id: 9, name: '소모품비', amounts: pad6([12]), rates: pad6([0]), isRate: false },
+        { id: 10, name: '대손상각비 (추정)', amounts: pad6([0]), rates: pad6([0]), isRate: true },
+        { id: 11, name: '기타 판관비', amounts: pad6([10]), rates: pad6([0]), isRate: false }
+      ],
+      nonOpIncCashList: [{ id: 1, name: '이자수익 등', amounts: pad6([0]) }],
+      nonOpIncNonCashList: [{ id: 1, name: '외환차익 등', amounts: pad6([0]) }],
+      nonOpExpCashList: [{ id: 1, name: '수수료 등', amounts: pad6([0]) }],
+      nonOpExpNonCashList: [{ id: 1, name: '외환차손 등', amounts: pad6([0]) }],
       salesHierarchy: [{ id: 'rt1', name: '제품/상품 판매', countries: [{ id: 'c1', name: '대한민국', brands: [{ id: 'br1', name: '기본 브랜드', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0]) }] }] }] }] }] }] }] }] }, { id: 'rt2', name: '서비스 용역 매출', countries: [] }]
     };
 
@@ -647,17 +665,55 @@
           let loaded = cloneDeep(proj.inputs);
           loaded = { ...DEFAULT_INPUTS, ...loaded };
           
-          ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'logisticsRate', 'salesCommRate', 'asCostRate', 'utilities', 'travel', 'telecom', 'laborFix', 'benefits', 'rent', 'taxes', 'insurance', 'fees', 'rnd', 'marketing', 'supplies', 'badDebt', 'otherSga', 'nonOpIncCash', 'nonOpIncNonCash', 'nonOpExpCash', 'nonOpExpNonCash'].forEach(k => {
+          ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays'].forEach(k => {
              loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
           });
-          ['advancesList', 'accruedList', 'prepaidList', 'receivableList'].forEach(k => {
+          
+          ['advancesList', 'accruedList', 'prepaidList', 'receivableList', 'sgaVarList', 'sgaSemiList', 'sgaFixList'].forEach(k => {
              if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts), rates: pad6(it.rates), isRate: it.isRate ?? true}));
+          });
+
+          ['equityList', 'debtList', 'capexList', 'intangibleList', 'baseCostList', 'nonOpIncCashList', 'nonOpIncNonCashList', 'nonOpExpCashList', 'nonOpExpNonCashList'].forEach(k => {
+             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts)}));
           });
           
           ['directExpList', 'indirectExpList'].forEach(k => {
              if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
           });
-          if (!loaded.sgaTypes) loaded.sgaTypes = cloneDeep(DEFAULT_INPUTS.sgaTypes);
+
+          if (!loaded.sgaVarList) {
+             const getT = (key) => (loaded.sgaTypes && loaded.sgaTypes[key]) ? (loaded.sgaTypes[key] === 'rate') : true;
+             const getF = (key) => (loaded.sgaTypes && loaded.sgaTypes[key]) ? (loaded.sgaTypes[key] === 'rate') : false;
+             loaded.sgaVarList = [
+                 { id: 1, name: '물류/수출비용', amounts: pad6(loaded.logisticsRate||[0]), rates: pad6(loaded.logisticsRate||[2.0]), isRate: getT('logisticsRate') },
+                 { id: 2, name: '판매수수료', amounts: pad6(loaded.salesCommRate||[0]), rates: pad6(loaded.salesCommRate||[1.5]), isRate: getT('salesCommRate') },
+                 { id: 3, name: 'A/S 비용', amounts: pad6(loaded.asCostRate||[0]), rates: pad6(loaded.asCostRate||[0.5]), isRate: getT('asCostRate') }
+             ];
+             loaded.sgaSemiList = [
+                 { id: 1, name: '수도광열비', amounts: pad6(loaded.utilities||[10]), rates: pad6([0]), isRate: getF('utilities') },
+                 { id: 2, name: '여비교통비', amounts: pad6(loaded.travel||[8]), rates: pad6([0]), isRate: getF('travel') },
+                 { id: 3, name: '통신비', amounts: pad6(loaded.telecom||[5]), rates: pad6([0]), isRate: getF('telecom') }
+             ];
+             loaded.sgaFixList = [
+                 { id: 1, name: '인건비 (급여/퇴직금)', amounts: pad6(loaded.laborFix||[150]), rates: pad6([0]), isRate: getF('laborFix') },
+                 { id: 2, name: '복리후생비', amounts: pad6(loaded.benefits||[20]), rates: pad6([0]), isRate: getF('benefits') },
+                 { id: 3, name: '임차료', amounts: pad6(loaded.rent||[60]), rates: pad6([0]), isRate: getF('rent') },
+                 { id: 4, name: '세금과공과', amounts: pad6(loaded.taxes||[5]), rates: pad6([0]), isRate: getF('taxes') },
+                 { id: 5, name: '보험료', amounts: pad6(loaded.insurance||[12]), rates: pad6([0]), isRate: getF('insurance') },
+                 { id: 6, name: '지급수수료', amounts: pad6(loaded.fees||[15]), rates: pad6([0]), isRate: getF('fees') },
+                 { id: 7, name: '연구개발비 (R&D)', amounts: pad6(loaded.rnd||[20]), rates: pad6([0]), isRate: getF('rnd') },
+                 { id: 8, name: '마케팅/광고선전비', amounts: pad6(loaded.marketing||[50]), rates: pad6([0]), isRate: getF('marketing') },
+                 { id: 9, name: '소모품비', amounts: pad6(loaded.supplies||[12]), rates: pad6([0]), isRate: getF('supplies') },
+                 { id: 10, name: '대손상각비 (추정)', amounts: pad6(loaded.badDebt||[0]), rates: pad6(loaded.badDebt||[0]), isRate: getT('badDebt') },
+                 { id: 11, name: '기타 판관비', amounts: pad6(loaded.otherSga||[10]), rates: pad6([0]), isRate: getF('otherSga') }
+             ];
+          }
+          if (!loaded.nonOpIncCashList) {
+             loaded.nonOpIncCashList = [{ id: 1, name: '현금성 수익', amounts: pad6(loaded.nonOpIncCash||[0]) }];
+             loaded.nonOpIncNonCashList = [{ id: 1, name: '비현금성 수익', amounts: pad6(loaded.nonOpIncNonCash||[0]) }];
+             loaded.nonOpExpCashList = [{ id: 1, name: '현금성 비용', amounts: pad6(loaded.nonOpExpCash||[0]) }];
+             loaded.nonOpExpNonCashList = [{ id: 1, name: '비현금성 비용', amounts: pad6(loaded.nonOpExpNonCash||[0]) }];
+          }
 
           const fixTree = (cList) => (cList||[]).map(rt => {
              rt.countries = (rt.countries||[]).map(c => {
@@ -804,6 +860,14 @@
         let res = { is_financial: [], is_managerial: [], bs: [], cf: [], fcffData: [], npv: 0, irr: 0, paybackPeriod: null, wacc, wE, wD, infMultArr, totalBaseCostArr: [] };
         
         let revTreeGlobal=[], intVolTreeGlobal=[], extCogsTreeGlobal=[], intCogsFactorTreeGlobal=[];
+        let varSgaTree = (inputs.sgaVarList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 2 }));
+        let semiSgaTree = (inputs.sgaSemiList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 2 }));
+        let fixSgaTree = (inputs.sgaFixList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 2 }));
+        let nonOpIncCTree = (inputs.nonOpIncCashList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 1 }));
+        let nonOpIncNCTree = (inputs.nonOpIncNonCashList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 1 }));
+        let nonOpExpCTree = (inputs.nonOpExpCashList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 1 }));
+        let nonOpExpNCTree = (inputs.nonOpExpNonCashList||[]).map(it => ({ label: it.name, values: pad6([0]), level: 1 }));
+
         let prevCash=0, accumDebt=0, accumCapital=0, accumBadDebt=0, accumOtherNonCash=0, prevArGross=0, prevInvValue=0, prevRetainedEarnings=0;
         let prevBalAdvances=0, prevBalAccrued=0, prevBalPrepaid=0, prevBalReceivable=0;
 
@@ -943,36 +1007,20 @@
           };
           calcExtInv(inputs.salesHierarchy);
 
-          const calcSga = (key) => {
-              const type = (inputs.sgaTypes || {})[key] || 'amount';
-              const val = (inputs[key] || [])[i] || 0;
-              if (type === 'rate') return revenue * (val / 100);
-              return toMil(val) * infMultArr[i];
+          const calcSgaItem = (it) => {
+              if (it.isRate) return revenue * (((it.rates||[])[i]||0)/100);
+              return toMil((it.amounts||[])[i]) * infMultArr[i];
           };
 
-          const varLogistics = calcSga('logisticsRate');
-          const varSalesComm = calcSga('salesCommRate');
-          const varAsCost = calcSga('asCostRate');
-          const totalSgaVar = varLogistics + varSalesComm + varAsCost;
-
-          const semiUtilities = calcSga('utilities');
-          const semiTravel = calcSga('travel');
-          const semiTelecom = calcSga('telecom');
-          const totalSgaSemi = semiUtilities + semiTravel + semiTelecom;
-
-          const fixLabor = calcSga('laborFix');
-          const fixBenefits = calcSga('benefits');
-          const fixRent = calcSga('rent');
-          const fixTaxes = calcSga('taxes');
-          const fixInsurance = calcSga('insurance');
-          const fixFees = calcSga('fees');
-          const fixRnd = calcSga('rnd');
-          const fixMarketing = calcSga('marketing');
-          const fixSupplies = calcSga('supplies');
-          const fixBadDebt = calcSga('badDebt');
-          const fixOther = calcSga('otherSga');
-          const totalSgaFixOnly = fixLabor + fixBenefits + fixRent + fixTaxes + fixInsurance + fixFees + fixRnd + fixMarketing + fixSupplies + fixBadDebt + fixOther;
-
+          let totalSgaVar = 0, totalSgaSemi = 0, totalSgaFixOnly = 0, fixBadDebt = 0;
+          (inputs.sgaVarList||[]).forEach((it, idx) => { const v = calcSgaItem(it); totalSgaVar += v; if(varSgaTree[idx]) varSgaTree[idx].values[i] = v; });
+          (inputs.sgaSemiList||[]).forEach((it, idx) => { const v = calcSgaItem(it); totalSgaSemi += v; if(semiSgaTree[idx]) semiSgaTree[idx].values[i] = v; });
+          (inputs.sgaFixList||[]).forEach((it, idx) => { 
+              const v = calcSgaItem(it); 
+              totalSgaFixOnly += v; 
+              if(fixSgaTree[idx]) fixSgaTree[idx].values[i] = v; 
+              if(it.name.includes('대손')) fixBadDebt += v; 
+          });
           accumBadDebt += fixBadDebt;
 
           const cogs = internalCogs + externalCogs;
@@ -980,14 +1028,20 @@
           const totalSga = totalSgaVar + totalSgaSemi + totalSgaFixOnly + amortization;
           const operatingProfit = grossProfit - totalSga;
 
+          let totalNonOpIncC = 0, totalNonOpIncNC = 0, totalNonOpExpC = 0, totalNonOpExpNC = 0;
+          (inputs.nonOpIncCashList||[]).forEach((it, idx) => { const v = toMil((it.amounts||[])[i]); totalNonOpIncC += v; if(nonOpIncCTree[idx]) nonOpIncCTree[idx].values[i] = v; });
+          (inputs.nonOpIncNonCashList||[]).forEach((it, idx) => { const v = toMil((it.amounts||[])[i]); totalNonOpIncNC += v; if(nonOpIncNCTree[idx]) nonOpIncNCTree[idx].values[i] = v; });
+          (inputs.nonOpExpCashList||[]).forEach((it, idx) => { const v = toMil((it.amounts||[])[i]); totalNonOpExpC += v; if(nonOpExpCTree[idx]) nonOpExpCTree[idx].values[i] = v; });
+          (inputs.nonOpExpNonCashList||[]).forEach((it, idx) => { const v = toMil((it.amounts||[])[i]); totalNonOpExpNC += v; if(nonOpExpNCTree[idx]) nonOpExpNCTree[idx].values[i] = v; });
+
           const interestExpense = accumDebt * (((inputs.interestRate||[])[i]||0) / 100);
-          const totalNonOpInc = toMil(((inputs.nonOpIncCash||[])[i]||0) + ((inputs.nonOpIncNonCash||[])[i]||0));
-          const totalNonOpExp = interestExpense + toMil(((inputs.nonOpExpCash||[])[i]||0) + ((inputs.nonOpExpNonCash||[])[i]||0));
+          const totalNonOpInc = totalNonOpIncC + totalNonOpIncNC;
+          const totalNonOpExp = interestExpense + totalNonOpExpC + totalNonOpExpNC;
           const ebt = operatingProfit + totalNonOpInc - totalNonOpExp;
           const tax = Math.max(0, ebt * (((inputs.taxRate||[])[i]||0) / 100));
           const netIncome = ebt - tax;
 
-          accumOtherNonCash += toMil(((inputs.nonOpIncNonCash||[])[i]||0) - ((inputs.nonOpExpNonCash||[])[i]||0));
+          accumOtherNonCash += totalNonOpIncNC - totalNonOpExpNC;
 
           const arGross = revenue * (((inputs.arDays||[])[i]||0) / 365);
           const deltaArGross = -(arGross - prevArGross); prevArGross = arGross;
@@ -1002,14 +1056,14 @@
           (inputs.intangibleList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j) intangibleNet -= (toMil(a)/(it.usefulLife||5)) * (Math.min(i, j+(it.usefulLife||5)-1) - j + 1); }));
 
           const deltaWc = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + flowAdvances + flowAccrued - flowPrepaid - flowReceivable;
-          const nonCashExpAdd = depreciation + amortization + fixBadDebt + toMil((inputs.nonOpExpNonCash||[])[i]||0);
-          const operatingCf = netIncome + nonCashExpAdd - toMil((inputs.nonOpIncNonCash||[])[i]||0) + deltaWc;
+          const nonCashExpAdd = depreciation + amortization + fixBadDebt + totalNonOpExpNC;
+          const operatingCf = netIncome + nonCashExpAdd - totalNonOpIncNC + deltaWc;
           const netCf = operatingCf - totalCapex[i] - totalIntangible[i] + totalEquity[i] + totalDebt[i]; 
           const endingCash = prevCash + netCf;
 
           res.is_financial.push({
-            revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, nonOpIncC: toMil((inputs.nonOpIncCash||[])[i]||0), nonOpIncNC: toMil((inputs.nonOpIncNonCash||[])[i]||0), nonOpExpC: toMil((inputs.nonOpExpCash||[])[i]||0), nonOpExpNC: toMil((inputs.nonOpExpNonCash||[])[i]||0), tax, netIncome, internalCogs, externalCogs,
-            sgaDetails: { totalSgaVar, totalSgaSemi, totalSgaFixOnly, amortization, varLogistics, varSalesComm, varAsCost, semiUtilities, semiTravel, semiTelecom, fixLabor, fixBenefits, fixRent, fixTaxes, fixInsurance, fixFees, fixRnd, fixMarketing, fixSupplies, fixBadDebt, fixOther },
+            revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, nonOpIncC: totalNonOpIncC, nonOpIncNC: totalNonOpIncNC, nonOpExpC: totalNonOpExpC, nonOpExpNC: totalNonOpExpNC, tax, netIncome, internalCogs, externalCogs,
+            sgaDetails: { totalSgaVar, totalSgaSemi, totalSgaFixOnly, amortization },
             ratios: { cogsRatio: revenue>0?cogs/revenue:0, grossMargin: revenue>0?grossProfit/revenue:0, sgaRatio: revenue>0?totalSga/revenue:0, opMargin: revenue>0?operatingProfit/revenue:0, netMargin: revenue>0?netIncome/revenue:0 }
           });
 
@@ -1019,7 +1073,7 @@
           
           res.is_managerial.push({
             actualProdVol, revenue, variableCosts, contributionMargin, fixedCosts, operatingProfit: contributionMargin-fixedCosts, bepRevenue: contributionMargin>0?(fixedCosts*revenue)/contributionMargin:0,
-            varCostDetails: { totalSgaVar, varLogistics, varSalesComm, varAsCost },
+            varCostDetails: { totalSgaVar },
             ratios: { varRatio: revenue>0?variableCosts/revenue:0, cmRatio: revenue>0?contributionMargin/revenue:0, fixedRatio: revenue>0?fixedCosts/revenue:0 }
           });
 
@@ -1035,8 +1089,8 @@
           });
 
           res.cf.push({
-            beginningCash: prevCash, operatingCf, investingCf: -totalCapex[i] - totalIntangible[i], financingCf: totalEquity[i] + totalDebt[i], netCf, endingCash, nonCashExpAdd, nonCashIncDed: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaWc,
-            cfDetails: { netIncome, depreciation, amortization, badDebtExp: fixBadDebt, nonOpExpNonCash: toMil((inputs.nonOpExpNonCash||[])[i]||0), nonOpIncNonCash: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaArGross, deltaInv: -(inv - prevInvValue), deltaAp: (ap - (i>0?res.bs[i-1].bsDetails.ap:0)), advancesInflow: flowAdvances, accruedInflow: flowAccrued, prepaidOutflow: -flowPrepaid, receivableOutflow: -flowReceivable, capex: -totalCapex[i], intangibleCapex: -totalIntangible[i], equity: totalEquity[i], debt: totalDebt[i] }
+            beginningCash: prevCash, operatingCf, investingCf: -totalCapex[i] - totalIntangible[i], financingCf: totalEquity[i] + totalDebt[i], netCf, endingCash, nonCashExpAdd, nonCashIncDed: totalNonOpIncNC, deltaWc,
+            cfDetails: { netIncome, depreciation, amortization, badDebtExp: fixBadDebt, nonOpExpNonCash: totalNonOpExpNC, nonOpIncNonCash: totalNonOpIncNC, deltaArGross, deltaInv: -(inv - prevInvValue), deltaAp: (ap - (i>0?res.bs[i-1].bsDetails.ap:0)), advancesInflow: flowAdvances, accruedInflow: flowAccrued, prepaidOutflow: -flowPrepaid, receivableOutflow: -flowReceivable, capex: -totalCapex[i], intangibleCapex: -totalIntangible[i], equity: totalEquity[i], debt: totalDebt[i] }
           });
 
           const nopat = operatingProfit * (1 - (((inputs.taxRate||[])[i]||0)/100));
@@ -1064,6 +1118,14 @@
         res.internalCogsDetails = intVolTreeGlobal;
         res.externalCogsDetails = extCogsTreeGlobal;
         res.internalCogsFactorTree = intCogsFactorTreeGlobal;
+        
+        res.varSgaTree = varSgaTree;
+        res.semiSgaTree = semiSgaTree;
+        res.fixSgaTree = fixSgaTree;
+        res.nonOpIncCTree = nonOpIncCTree;
+        res.nonOpIncNCTree = nonOpIncNCTree;
+        res.nonOpExpCTree = nonOpExpCTree;
+        res.nonOpExpNCTree = nonOpExpNCTree;
 
         return res;
       }, [inputs]);
@@ -1253,14 +1315,14 @@
                   <MixedYearlyInputField label="인건비 (급여/퇴직금)" arrName="laborFix" values={inputs.laborFix} type={inputs.sgaTypes?.laborFix || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
                   <MixedYearlyInputField label="복리후생비" arrName="benefits" values={inputs.benefits} type={inputs.sgaTypes?.benefits || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
                   <MixedYearlyInputField label="임차료" arrName="rent" values={inputs.rent} type={inputs.sgaTypes?.rent || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="세금과공과" arrName="taxes" values={inputs.taxes} type={inputs.sgaTypes?.taxes || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="보험료" arrName="insurance" values={inputs.insurance} type={inputs.sgaTypes?.insurance || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="지급수수료" arrName="fees" values={inputs.fees} type={inputs.sgaTypes?.fees || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="연구개발비 (R&D)" arrName="rnd" values={inputs.rnd} type={inputs.sgaTypes?.rnd || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="마케팅/광고선전비" arrName="marketing" values={inputs.marketing} type={inputs.sgaTypes?.marketing || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="소모품비" arrName="supplies" values={inputs.supplies} type={inputs.sgaTypes?.supplies || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="대손상각비 (추정)" arrName="badDebt" values={inputs.badDebt} type={inputs.sgaTypes?.badDebt || 'rate'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
-                  <MixedYearlyInputField label="기타 판관비" arrName="otherSga" values={inputs.otherSga} type={inputs.sgaTypes?.otherSga || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <DynamicMixedWcList listName="receivableList" items={inputs.receivableList} title="미수금/미수수익 기말잔액" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                </InputGroup>
+
+                <InputGroup title="5. 자금소요 (판매비와 관리비)">
+                  <DynamicMixedWcList listName="sgaVarList" items={inputs.sgaVarList} title="직접변동비 설정" namePlaceholder="항목 (예: 물류비)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicMixedWcList listName="sgaSemiList" items={inputs.sgaSemiList} title="준변동비 설정" namePlaceholder="항목 (예: 통신비)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <div className="flex justify-between items-center mb-[-12px]"><span className="text-[10px] text-blue-600 font-bold ml-1">(※ '대손'이 포함된 항목명은 대손상각비(비현금성)로 자동 인식됩니다)</span></div>
+                  <DynamicMixedWcList listName="sgaFixList" items={inputs.sgaFixList} title="고정비 설정" namePlaceholder="항목 (예: 임차료)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
                 <InputGroup title="6. 매출액 추정 (9단계 다차원 트리)">
@@ -1272,13 +1334,11 @@
                 </InputGroup>
 
                 <InputGroup title="7. 영업외수익/비용 (단위: 백만원)">
-                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외수익</div>
-                  <YearlyInputField label="현금성 수익 (이자수익 등)" arrName="nonOpIncCash" values={inputs.nonOpIncCash} onChangeArray={handleArrayChange} />
-                  <YearlyInputField label="비현금성 수익 (외환차익 등)" arrName="nonOpIncNonCash" values={inputs.nonOpIncNonCash} onChangeArray={handleArrayChange} />
+                  <DynamicListYearly listName="nonOpIncCashList" items={inputs.nonOpIncCashList} title="현금성 수익 (이자수익 등)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="nonOpIncNonCashList" items={inputs.nonOpIncNonCashList} title="비현금성 수익 (외환차익 등)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
                   <div className="my-6 border-t border-dashed border-slate-300"></div>
-                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외비용</div>
-                  <YearlyInputField label="현금성 비용 (수수료 등)" arrName="nonOpExpCash" values={inputs.nonOpExpCash} onChangeArray={handleArrayChange} />
-                  <YearlyInputField label="비현금성 비용 (외환차손 등)" arrName="nonOpExpNonCash" values={inputs.nonOpExpNonCash} onChangeArray={handleArrayChange} />
+                  <DynamicListYearly listName="nonOpExpCashList" items={inputs.nonOpExpCashList} title="현금성 비용 (수수료 등)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
+                  <DynamicListYearly listName="nonOpExpNonCashList" items={inputs.nonOpExpNonCashList} title="비현금성 비용 (외환차손 등)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
                 </InputGroup>
               </div>
             </div>
@@ -1472,7 +1532,7 @@
                                 { label: '변동비', values: getM('variableCosts'), isGroup: true, level: 2, sub: [
                                     { label: '제조 원가', values: model.is_managerial.map(d => d.variableCosts - d.varCostDetails.totalSgaVar - d.externalCogs), isGroup: true, level: 3, sub: model.internalCogsFactorTree },
                                     { label: '외부 조달상품 원가', values: getF('externalCogs'), isGroup: true, level: 3, sub: model.externalCogsDetails },
-                                    { label: '판매 변동비 (물류/수수료 등)', values: getM('varCostDetails', 'totalSgaVar'), level: 3 }
+                                    { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), isGroup: true, level: 3, sub: model.varSgaTree.map(n => ({...n, level: 4})) }
                                 ]},
                                 { label: '공헌이익', values: getM('contributionMargin'), level: 2 },
                                 { label: '고정비', values: getM('fixedCosts'), level: 2 },
@@ -1524,34 +1584,14 @@
                         ]} />
                         <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={getF('ratios', 'grossMargin')} isTotal />
                         <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={getF('ratios', 'sgaRatio')} details={[
-                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), isGroup: true, level: 1, sub: [
-                                { label: '물류/수출비용', values: getF('sgaDetails', 'varLogistics'), level: 2 },
-                                { label: '판매수수료', values: getF('sgaDetails', 'varSalesComm'), level: 2 },
-                                { label: 'A/S비용', values: getF('sgaDetails', 'varAsCost'), level: 2 },
-                            ]},
-                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), isGroup: true, level: 1, sub: [
-                                { label: '수도광열비', values: getF('sgaDetails', 'semiUtilities'), level: 2 },
-                                { label: '여비교통비', values: getF('sgaDetails', 'semiTravel'), level: 2 },
-                                { label: '통신비', values: getF('sgaDetails', 'semiTelecom'), level: 2 },
-                            ]},
-                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), isGroup: true, level: 1, sub: [
-                                { label: '인건비(급여 등)', values: getF('sgaDetails', 'fixLabor'), level: 2 },
-                                { label: '복리후생비', values: getF('sgaDetails', 'fixBenefits'), level: 2 },
-                                { label: '임차료', values: getF('sgaDetails', 'fixRent'), level: 2 },
-                                { label: '세금과공과', values: getF('sgaDetails', 'fixTaxes'), level: 2 },
-                                { label: '보험료', values: getF('sgaDetails', 'fixInsurance'), level: 2 },
-                                { label: '지급수수료', values: getF('sgaDetails', 'fixFees'), level: 2 },
-                                { label: '연구개발비', values: getF('sgaDetails', 'fixRnd'), level: 2 },
-                                { label: '마케팅비', values: getF('sgaDetails', 'fixMarketing'), level: 2 },
-                                { label: '소모품비', values: getF('sgaDetails', 'fixSupplies'), level: 2 },
-                                { label: '대손상각비', values: getF('sgaDetails', 'fixBadDebt'), level: 2 },
-                                { label: '기타 판관비', values: getF('sgaDetails', 'fixOther'), level: 2 },
-                            ]},
+                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), isGroup: true, level: 1, sub: model.varSgaTree },
+                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), isGroup: true, level: 1, sub: model.semiSgaTree },
+                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), isGroup: true, level: 1, sub: model.fixSgaTree },
                             { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), isGroup: true, level: 1 },
                           ]} />
                         <ExpandableRow label="V. 영업이익" values={getF('operatingProfit')} ratios={getF('ratios', 'opMargin')} isHeader />
-                        <ExpandableRow label="VI. 영업외수익" values={getF('totalNonOpInc')} details={[{ label: '현금성 수익', values: getF('nonOpIncC'), level: 1 }, { label: '비현금성 수익', values: getF('nonOpIncNC'), level: 1 }]} />
-                        <ExpandableRow label="VII. 영업외비용" values={getF('totalNonOpExp')} details={[{ label: '이자비용', values: getF('interestExpense'), level: 1 }, { label: '현금성 비용', values: getF('nonOpExpC'), level: 1 }, { label: '비현금성 비용', values: getF('nonOpExpNC'), level: 1 }]} />
+                        <ExpandableRow label="VI. 영업외수익" values={getF('totalNonOpInc')} details={[{ label: '현금성 수익', values: getF('nonOpIncC'), isGroup: true, level: 1, sub: model.nonOpIncCTree }, { label: '비현금성 수익', values: getF('nonOpIncNC'), isGroup: true, level: 1, sub: model.nonOpIncNCTree }]} />
+                        <ExpandableRow label="VII. 영업외비용" values={getF('totalNonOpExp')} details={[{ label: '이자비용', values: getF('interestExpense'), level: 1 }, { label: '현금성 비용', values: getF('nonOpExpC'), isGroup: true, level: 1, sub: model.nonOpExpCTree }, { label: '비현금성 비용', values: getF('nonOpExpNC'), isGroup: true, level: 1, sub: model.nonOpExpNCTree }]} />
                         <ExpandableRow label="VIII. 법인세차감전순이익" values={getF('ebt')} isTotal />
                         <ExpandableRow label="IX. 법인세비용" values={getF('tax')} />
                         <ExpandableRow label="X. 당기순이익" values={getF('netIncome')} ratios={getF('ratios', 'netMargin')} isHeader />
@@ -1576,18 +1616,14 @@
                         <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={getM('ratios', 'varRatio')} details={[
                             { label: '자체생산 변동 원가', values: model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>!f.label.includes('감가상각')) },
                             { label: '외부조달 상품 원가', values: getF('externalCogs'), isGroup: true, level: 1, sub: model.externalCogsDetails },
-                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), isGroup: true, level: 1, sub: [
-                                { label: '물류/수출비용', values: getM('varCostDetails', 'varLogistics'), level: 2 },
-                                { label: '판매수수료', values: getM('varCostDetails', 'varSalesComm'), level: 2 },
-                                { label: 'A/S비용', values: getM('varCostDetails', 'varAsCost'), level: 2 },
-                            ]}
+                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), isGroup: true, level: 1, sub: model.varSgaTree }
                           ]} />
                         <ExpandableRow label="III. 공헌이익" values={getM('contributionMargin')} ratios={getM('ratios', 'cmRatio')} isTotal />
                         <ExpandableRow label="IV. 고정비" values={getM('fixedCosts')} ratios={getM('ratios', 'fixedRatio')} details={[
                             { label: '제조 고정비', values: model.is_financial.map((d,i) => model.is_managerial[i].fixedCosts - d.sgaDetails.totalSgaSemi - d.sgaDetails.totalSgaFixOnly - d.sgaDetails.amortization), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>f.label.includes('감가상각')) },
                             { label: '준변동/고정 판관비', values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi + d.sgaDetails.totalSgaFixOnly + d.sgaDetails.amortization), isGroup: true, level: 1, sub: [
-                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), level: 2 },
-                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), level: 2 },
+                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), isGroup: true, level: 2, sub: model.semiSgaTree },
+                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), isGroup: true, level: 2, sub: model.fixSgaTree },
                                 { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), level: 2 }
                             ]}
                           ]} />
