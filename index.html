@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>사업타당성 시뮬레이터</title>
+  <title>사업타당성 시뮬레이터 (컨설팅 펌 스타일)</title>
   
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -621,54 +621,107 @@
       const handleLoad = (id) => {
         const proj = projects.find(p => p.id == id);
         if (proj) {
-          let loaded = cloneDeep(proj.inputs);
-          loaded = { ...DEFAULT_INPUTS, ...loaded };
-          
-          ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays'].forEach(k => {
-             loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
-          });
-          
-          ['advancesList', 'accruedList', 'prepaidList', 'receivableList', 'sgaVarList', 'sgaSemiList', 'sgaFixList'].forEach(k => {
-             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts), rates: pad6(it.rates), isRate: it.isRate ?? true, calcType: it.calcType || (it.isRate ? 'rate' : 'amount')}));
-          });
+          try {
+            let loaded = cloneDeep(proj.inputs);
+            
+            // 1. 구버전 판관비(SG&A) 단일 변수 -> 최신 동적 리스트로 마이그레이션
+            if (loaded.laborFix && !proj.inputs.sgaFixList) {
+                loaded.sgaVarList = [
+                    { id: 1, name: '물류/수출비용', amounts: pad6([0]), rates: pad6(loaded.logisticsRate||[2.0]), isRate: true, calcType: 'rate' },
+                    { id: 2, name: '판매수수료', amounts: pad6([0]), rates: pad6(loaded.salesCommRate||[1.5]), isRate: true, calcType: 'rate' },
+                    { id: 3, name: 'A/S 비용', amounts: pad6([0]), rates: pad6(loaded.asCostRate||[0.5]), isRate: true, calcType: 'rate' }
+                ];
+                loaded.sgaSemiList = [
+                    { id: 1, name: '수도광열비', amounts: pad6(loaded.utilities||[10]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 2, name: '여비교통비', amounts: pad6(loaded.travel||[8]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 3, name: '통신비', amounts: pad6(loaded.telecom||[5]), rates: pad6([0]), isRate: false, calcType: 'amount' }
+                ];
+                loaded.sgaFixList = [
+                    { id: 1, name: '인건비 (급여/퇴직금)', amounts: pad6(loaded.laborFix||[150]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 2, name: '복리후생비', amounts: pad6(loaded.benefits||[20]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 3, name: '임차료', amounts: pad6(loaded.rent||[60]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 4, name: '세금과공과', amounts: pad6(loaded.taxes||[5]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 5, name: '보험료', amounts: pad6(loaded.insurance||[12]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 6, name: '지급수수료', amounts: pad6(loaded.fees||[15]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 7, name: '연구개발비', amounts: pad6(loaded.rnd||[20]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 8, name: '마케팅/광고선전비', amounts: pad6(loaded.marketing||[50]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 9, name: '소모품비', amounts: pad6(loaded.supplies||[12]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 10, name: '대손상각비 (추정)', amounts: pad6(loaded.badDebt||[0]), rates: pad6([0]), isRate: false, calcType: 'amount' },
+                    { id: 11, name: '기타 판관비', amounts: pad6(loaded.otherSga||[10]), rates: pad6([0]), isRate: false, calcType: 'amount' }
+                ];
+            }
 
-          ['equityList', 'debtList', 'capexList', 'intangibleList', 'baseCostList', 'nonOpIncCashList', 'nonOpIncNonCashList', 'nonOpExpCashList', 'nonOpExpNonCashList'].forEach(k => {
-             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts)}));
-          });
-          
-          ['directExpList', 'indirectExpList'].forEach(k => {
-             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
-          });
+            // 2. 구버전 영업외수익/비용 -> 최신 동적 리스트로 마이그레이션
+            if (loaded.nonOpIncCash && !proj.inputs.nonOpIncCashList) {
+                loaded.nonOpIncCashList = [{ id: 1, name: '현금성 수익', amounts: pad6(loaded.nonOpIncCash) }];
+                loaded.nonOpIncNonCashList = [{ id: 1, name: '비현금성 수익', amounts: pad6(loaded.nonOpIncNonCash) }];
+                loaded.nonOpExpCashList = [{ id: 1, name: '현금성 비용', amounts: pad6(loaded.nonOpExpCash) }];
+                loaded.nonOpExpNonCashList = [{ id: 1, name: '비현금성 비용', amounts: pad6(loaded.nonOpExpNonCash) }];
+            }
 
-          const fixTree = (cList) => (cList||[]).map(rt => {
-             rt.countries = (rt.countries||[]).map(c => {
-                 if (c.bizTypes && !c.brands) {
-                     c.brands = [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: c.bizTypes }];
-                     delete c.bizTypes;
-                 }
-                 c.brands = (c.brands||[]).map(br => {
-                     br.bizTypes = (br.bizTypes||[]).map(bt => {
-                         bt.salesModes = (bt.salesModes||[]).map(sm => {
-                             sm.channels = (sm.channels||[]).map(ch => {
-                                 ch.clients = (ch.clients||[]).map(cl => {
-                                     cl.categories = (cl.categories||[]).map(cat => {
-                                         cat.products = (cat.products||[]).map(p => {
-                                             p.prices = pad6(p.prices); p.volumes = pad6(p.volumes); p.supplyCosts = pad6(p.supplyCosts||[0]);
-                                             p.purchaseVolumes = pad6(p.purchaseVolumes||[0]);
-                                             if(p.isInternal === undefined) p.isInternal = true;
-                                             return p;
-                                         }); return cat;
-                                     }); return cl;
-                                 }); return ch;
-                             }); return sm;
-                         }); return bt;
-                     }); return br;
-                 }); return c;
-             }); return rt;
-          });
+            loaded = { ...DEFAULT_INPUTS, ...loaded };
+            
+            ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays'].forEach(k => {
+               loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
+            });
+            
+            ['advancesList', 'accruedList', 'prepaidList', 'receivableList', 'sgaVarList', 'sgaSemiList', 'sgaFixList'].forEach(k => {
+               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts), rates: pad6(it.rates || [0]), isRate: it.isRate ?? true, calcType: it.calcType || (it.isRate ? 'rate' : 'amount')}));
+            });
 
-          loaded.salesHierarchy = fixTree(loaded.salesHierarchy);
-          setInputs(loaded); setProjectName(proj.name); setCurrentProjectId(proj.id); setIsPublicProject(proj.is_public || false);
+            ['equityList', 'debtList', 'capexList', 'intangibleList', 'baseCostList', 'nonOpIncCashList', 'nonOpIncNonCashList', 'nonOpExpCashList', 'nonOpExpNonCashList'].forEach(k => {
+               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts)}));
+            });
+            
+            ['directExpList', 'indirectExpList'].forEach(k => {
+               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
+            });
+
+            // 3. 구버전 7~8단계 매출액 트리 -> 최신 9단계 계층 마이그레이션
+            if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && !loaded.salesHierarchy[0].countries) {
+               if (loaded.salesHierarchy[0].clients) {
+                   loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
+                      id: c.id, name: c.name, brands: [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: [{ id: `bt_${c.id}`, name: 'B2B/B2C 통합', salesModes: [{ id: `sm_${c.id}`, name: '온/오프 통합', channels: [{ id: `ch_${c.id}`, name: '기본 채널', clients: (c.clients||[]).map(cl => ({
+                         id: cl.id, name: cl.name, categories: [{ id: `cat_${cl.id}`, name: '기본 품목군', products: cl.products }]
+                      })) }] }] }] }]
+                   }));
+               }
+               loaded.salesHierarchy = [{ id: 'rt_legacy', name: '제품/상품 판매', countries: loaded.salesHierarchy }];
+            }
+
+            const fixTree = (cList) => (cList||[]).map(rt => {
+               rt.countries = (rt.countries||[]).map(c => {
+                   if (c.bizTypes && !c.brands) {
+                       c.brands = [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: c.bizTypes }];
+                       delete c.bizTypes;
+                   }
+                   c.brands = (c.brands||[]).map(br => {
+                       br.bizTypes = (br.bizTypes||[]).map(bt => {
+                           bt.salesModes = (bt.salesModes||[]).map(sm => {
+                               sm.channels = (sm.channels||[]).map(ch => {
+                                   ch.clients = (ch.clients||[]).map(cl => {
+                                       cl.categories = (cl.categories||[]).map(cat => {
+                                           cat.products = (cat.products||[]).map(p => {
+                                               p.prices = pad6(p.prices); p.volumes = pad6(p.volumes); p.supplyCosts = pad6(p.supplyCosts||[0]);
+                                               p.purchaseVolumes = pad6(p.purchaseVolumes||[0]);
+                                               if(p.isInternal === undefined) p.isInternal = true;
+                                               return p;
+                                           }); return cat;
+                                       }); return cl;
+                                   }); return ch;
+                               }); return sm;
+                           }); return bt;
+                       }); return br;
+                   }); return c;
+               }); return rt;
+            });
+
+            loaded.salesHierarchy = fixTree(loaded.salesHierarchy);
+            setInputs(loaded); setProjectName(proj.name); setCurrentProjectId(proj.id); setIsPublicProject(proj.is_public || false);
+          } catch (error) {
+            console.error("데이터 불러오기 중 오류 발생:", error);
+            alert("과거 버전의 데이터를 변환하는 중 구조적 오류가 발생했습니다. (일부 설정이 유실되었을 수 있습니다)");
+          }
         }
       };
 
