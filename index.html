@@ -931,9 +931,17 @@
           convertVolToCogs(intVolTree);
 
           const mergeTree = (target, source) => {
-              source.forEach((sNode, idx) => {
-                  if(target[idx]) { target[idx].values[i] = sNode.values[i]; if(sNode.sub) mergeTree(target[idx].sub, sNode.sub); } 
-                  else target.push(sNode);
+              source.forEach((sNode) => {
+                  const tNode = target.find(t => t.id === sNode.id);
+                  if (tNode) { 
+                      tNode.values[i] = sNode.values[i]; 
+                      if (sNode.sub) {
+                          if (!tNode.sub) tNode.sub = [];
+                          mergeTree(tNode.sub, sNode.sub); 
+                      }
+                  } else {
+                      target.push(JSON.parse(JSON.stringify(sNode)));
+                  }
               });
           };
 
@@ -1122,6 +1130,27 @@
         };
         buildCostRatioTree(res.internalCogsDetails, res.revenueDetails);
         buildCostRatioTree(res.externalCogsDetails, res.revenueDetails);
+
+        const buildGpTree = (revNodes, intCogsNodes, extCogsNodes) => {
+            return (revNodes || []).map(r => {
+                const iNode = intCogsNodes?.find(x => x.id === r.id);
+                const eNode = extCogsNodes?.find(x => x.id === r.id);
+                const gpValues = [0,1,2,3,4,5].map(y => {
+                    const rev = r.values[y] || 0;
+                    const intCogs = iNode?.values?.[y] || 0;
+                    const extCogs = eNode?.values?.[y] || 0;
+                    return rev - (intCogs + extCogs);
+                });
+                const gpRatios = [0,1,2,3,4,5].map(y => r.values[y] > 0 ? gpValues[y] / r.values[y] : 0);
+                
+                let sub = [];
+                if (r.sub) {
+                    sub = buildGpTree(r.sub, iNode?.sub||[], eNode?.sub||[]);
+                }
+                return { id: r.id, label: r.label, isGroup: r.isGroup, level: r.level, values: gpValues, ratios: gpRatios, sub };
+            });
+        };
+        res.gpAnalysisTree = buildGpTree(res.revenueDetails, res.internalCogsDetails, res.externalCogsDetails);
 
         const buildCmTree = (revNodes, intCogsNodes, extCogsNodes) => {
             return revNodes.map(r => {
@@ -1547,7 +1576,7 @@
                             ]},
                             { label: '외부조달 상품 원가', values: getF('externalCogs'), ratios: calcRatio(getF('externalCogs')), isGroup: true, level: 1, sub: model.externalCogsDetails }
                         ]} />
-                        <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={calcRatio(getF('grossProfit'))} isTotal />
+                        <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={calcRatio(getF('grossProfit'))} isTotal details={model.gpAnalysisTree} />
                         <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={calcRatio(getF('totalSga'))} details={[
                             { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), ratios: calcRatio(getF('sgaDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'rate'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
                             { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), isGroup: true, level: 1, sub: inputs.sgaSemiList.map(it => { const vals = pad6(it.rates||it.amounts).map((val, i) => { const type = it.calcType||'amount'; if(type==='rate') return getF('revenue')[i]*(val/100); if(type==='labor_rate') return model.totalLaborArr[i]*(val/100); return toMil(val)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
