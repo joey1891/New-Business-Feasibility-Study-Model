@@ -1133,6 +1133,109 @@
                       </div>
                     </div>
 
+                    {/* 주요 가정 조건 요약 추가 */}
+                    <div className="mb-12 border border-slate-300 rounded bg-white shadow-sm overflow-hidden">
+                      <div className="bg-slate-800 text-white px-5 py-2.5 flex items-center justify-between">
+                        <h3 className="text-sm font-black tracking-wide">📌 주요 가정 조건 요약 (Key Assumptions Summary)</h3>
+                        <span className="text-[10px] text-slate-300 font-bold">좌측 패널 설정값 기준</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-0 divide-x divide-slate-200">
+                        <div className="p-5 bg-slate-50/50">
+                           <h4 className="text-xs font-black text-slate-800 mb-3 flex items-center gap-1.5"><span className="w-2 h-2 bg-blue-600 rounded-sm inline-block"></span>거시 및 재무 환경</h4>
+                           <ul className="text-[11px] space-y-2.5">
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">물가상승률 (Y1-Y5 평균)</span><span className="font-black text-slate-800">{(inputs.inflationRate.slice(1).reduce((a,b)=>a+b,0)/5).toFixed(1)}%</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">조달금리 (Y1-Y5 평균)</span><span className="font-black text-slate-800">{(inputs.interestRate.slice(1).reduce((a,b)=>a+b,0)/5).toFixed(1)}%</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">법인세율 (평균)</span><span className="font-black text-slate-800">{(inputs.taxRate.reduce((a,b)=>a+b,0)/6).toFixed(1)}%</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">가중평균자본비용(WACC)</span><span className="font-black text-red-600">{formatPercent(model.wacc)}</span></li>
+                           </ul>
+                        </div>
+                        <div className="p-5 bg-white">
+                           <h4 className="text-xs font-black text-slate-800 mb-3 flex items-center gap-1.5"><span className="w-2 h-2 bg-indigo-600 rounded-sm inline-block"></span>생산 및 투자 조건</h4>
+                           <ul className="text-[11px] space-y-2.5">
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">연간 최대 생산능력 (Y1)</span><span className="font-black text-slate-800">{(inputs.capexMaxCapa[1]||0).toLocaleString()} 개</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">설비 가동률 (Y1-Y5 평균)</span><span className="font-black text-slate-800">{(inputs.utilization.slice(1).reduce((a,b)=>a+b,0)/5).toFixed(1)}%</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">수율 로스(Loss)율 (평균)</span><span className="font-black text-slate-800">{(inputs.lossRate.reduce((a,b)=>a+b,0)/6).toFixed(1)}%</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">총 투자액 (CAPEX)</span><span className="font-black text-slate-800">{formatCurrency(model.cf.reduce((a,b)=>a + (-b.cfDetails.capex) + (-b.cfDetails.intangibleCapex), 0) / 1000000)} 백만</span></li>
+                           </ul>
+                        </div>
+                        <div className="p-5 bg-slate-50/50">
+                           <h4 className="text-xs font-black text-slate-800 mb-3 flex items-center gap-1.5"><span className="w-2 h-2 bg-teal-600 rounded-sm inline-block"></span>운전자본 및 성과</h4>
+                           <ul className="text-[11px] space-y-2.5">
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">매출채권 회전일 (평균)</span><span className="font-black text-slate-800">{(inputs.arDays.reduce((a,b)=>a+b,0)/6).toFixed(0)} 일</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">재고자산 회전일 (평균)</span><span className="font-black text-slate-800">{(inputs.invDays.reduce((a,b)=>a+b,0)/6).toFixed(0)} 일</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">매입채무 회전일 (평균)</span><span className="font-black text-slate-800">{(inputs.apDays.reduce((a,b)=>a+b,0)/6).toFixed(0)} 일</span></li>
+                              <li className="flex justify-between border-b border-slate-200/60 pb-1.5"><span className="text-slate-500 font-bold">추정 총 매출액(Y1-Y5)</span><span className="font-black text-blue-700">{formatCurrency(model.is_financial.slice(1).reduce((a,b)=>a+b.revenue, 0) / 1000000)} 백만</span></li>
+                           </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 모델 정합성 검증 블록 위치 이동 */}
+                    <div className="mb-12 bg-white border border-slate-300 rounded-sm p-6 shadow-sm relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1 h-full bg-indigo-600"></div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-sm font-black text-slate-900 tracking-wide">✅ 모델 정합성 검증 (Reconciliation Check)</h3>
+                      </div>
+                      <table className="w-full text-right border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-slate-100 border-y border-slate-300">
+                            <th className="py-2 px-4 text-left text-xs font-black text-slate-800">검증 항목</th>
+                            {[0,1,2,3,4,5].map(y => <th key={y} className="py-2 px-4 text-center text-[11px] font-black text-slate-800">Y{y}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-xs">
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 text-left font-bold text-slate-700">1. 영업이익 일치 <span className="text-[10px] text-slate-400 font-normal ml-1">(재무회계 = 관리회계)</span></td>
+                            {[0,1,2,3,4,5].map(i => {
+                                const finOp = model.is_financial[i]?.operatingProfit || 0;
+                                const mgrOp = model.is_managerial[i]?.operatingProfit || 0;
+                                const isMatch = Math.abs(finOp - mgrOp) < 1;
+                                return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
+                            })}
+                          </tr>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 text-left font-bold text-slate-700">2. 대차평균 원리 <span className="text-[10px] text-slate-400 font-normal ml-1">(자산총계 = 부채+자본)</span></td>
+                            {[0,1,2,3,4,5].map(i => {
+                                const ta = model.bs[i]?.totalAssets || 0;
+                                const le = (model.bs[i]?.totalLiabilities || 0) + (model.bs[i]?.totalEquity || 0);
+                                const isMatch = Math.abs(ta - le) < 1;
+                                return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
+                            })}
+                          </tr>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 text-left font-bold text-slate-700">3. 현금잔액 일치 <span className="text-[10px] text-slate-400 font-normal ml-1">(재무상태표 = 현금흐름표)</span></td>
+                            {[0,1,2,3,4,5].map(i => {
+                                const bsCash = model.bs[i]?.bsDetails?.cash || 0;
+                                const cfCash = model.cf[i]?.endingCash || 0;
+                                const isMatch = Math.abs(bsCash - cfCash) < 1;
+                                return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
+                            })}
+                          </tr>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 text-left font-bold text-slate-700">4. 자금조달 정합성 <span className="text-[10px] text-slate-400 font-normal ml-1">(입력 자본+차입 = 재무활동현금흐름)</span></td>
+                            {[0,1,2,3,4,5].map(i => {
+                                const sumMil = (list) => (list||[]).reduce((s, it) => s + toMil((it.amounts||[])[i]), 0);
+                                const inputFunding = sumMil(inputs.equityList) + sumMil(inputs.debtList);
+                                const cfFunding = model.cf[i]?.financingCf || 0;
+                                const isMatch = Math.abs(inputFunding - cfFunding) < 1;
+                                return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
+                            })}
+                          </tr>
+                          <tr className="hover:bg-slate-50 transition-colors">
+                            <td className="py-2.5 px-4 text-left font-bold text-slate-700">5. 투자집행 정합성 <span className="text-[10px] text-slate-400 font-normal ml-1">(입력 투자액합계 = 투자활동현금흐름)</span></td>
+                            {[0,1,2,3,4,5].map(i => {
+                                const sumMil = (list) => (list||[]).reduce((s, it) => s + toMil((it.amounts||[])[i]), 0);
+                                const inputInvest = sumMil(inputs.capexList) + sumMil(inputs.intangibleList);
+                                const cfInvest = model.cf[i]?.investingCf || 0; // 투자활동 현금흐름은 음수
+                                const isMatch = Math.abs(inputInvest + cfInvest) < 1; 
+                                return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
+                            })}
+                          </tr>
+                        </tbody>
+                      </table>
+                      <p className="text-[10px] text-slate-500 mt-3 font-semibold">* 모든 연도의 정합성이 'Pass'로 표시되어야 추정 재무제표 3표(IS, BS, CF)가 수학적으로 완벽하게 연동됨을 의미합니다.</p>
+                    </div>
+
                     <div className="flex justify-between items-end mb-4 px-2">
                       <h3 className="text-sm font-black text-slate-900 tracking-wide">잉여현금흐름 (FCFF) 추정</h3>
                       <span className="text-[11px] text-slate-500 font-bold">(단위: 백만원)</span>
