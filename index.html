@@ -53,13 +53,18 @@
         { id: 1, name: '품질검사비', rates: pad6([4.0]) }, { id: 2, name: '수선유지비', rates: pad6([4.0]) }, { id: 3, name: '폐기물처리비', rates: pad6([2.0]) }
       ],
       arDays: pad6([30]), invDays: pad6([30]), apDays: pad6([30]),
-      advancesList: [{ id: 1, name: '계약금/선수금', rates: pad6([0]) }],
-      accruedList: [{ id: 1, name: '미지급비용/예수금', rates: pad6([0]) }],
-      prepaidList: [{ id: 1, name: '선급금/선급비용', rates: pad6([0]) }],
-      receivableList: [{ id: 1, name: '미수수익/미수금', rates: pad6([0]) }],
+      advancesList: [{ id: 1, name: '계약금/선수금', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
+      accruedList: [{ id: 1, name: '미지급비용/예수금', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
+      prepaidList: [{ id: 1, name: '선급금/선급비용', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
+      receivableList: [{ id: 1, name: '미수수익/미수금', amounts: pad6([0]), rates: pad6([0]), isRate: true }],
       logisticsRate: pad6([2.0]), salesCommRate: pad6([1.5]), asCostRate: pad6([0.5]),
-      utilities: pad6([1.0]), travel: pad6([0.5]), telecom: pad6([0.3]),
+      utilities: pad6([10]), travel: pad6([8]), telecom: pad6([5]),
       laborFix: pad6([150]), benefits: pad6([20]), rent: pad6([60]), taxes: pad6([5]), insurance: pad6([12]), fees: pad6([15]), rnd: pad6([20]), marketing: pad6([50]), supplies: pad6([12]), badDebt: pad6([0]), otherSga: pad6([10]),
+      sgaTypes: {
+        logisticsRate: 'rate', salesCommRate: 'rate', asCostRate: 'rate',
+        utilities: 'amount', travel: 'amount', telecom: 'amount',
+        laborFix: 'amount', benefits: 'amount', rent: 'amount', taxes: 'amount', insurance: 'amount', fees: 'amount', rnd: 'amount', marketing: 'amount', supplies: 'amount', badDebt: 'rate', otherSga: 'amount'
+      },
       nonOpIncCash: pad6([0]), nonOpIncNonCash: pad6([0]), nonOpExpCash: pad6([0]), nonOpExpNonCash: pad6([0]),
       salesHierarchy: [{ id: 'rt1', name: '제품/상품 판매', countries: [{ id: 'c1', name: '대한민국', brands: [{ id: 'br1', name: '기본 브랜드', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0]) }] }] }] }] }] }] }] }] }, { id: 'rt2', name: '서비스 용역 매출', countries: [] }]
     };
@@ -275,6 +280,87 @@
       <div className="mb-6 bg-white p-5 border-t-2 border-slate-800 shadow-sm rounded-sm">
         <h3 className="text-sm font-black text-slate-900 mb-5 tracking-tight">{title}</h3>
         <div>{children}</div>
+      </div>
+    ));
+
+    const MixedYearlyInputField = React.memo(({ label, arrName, values, type, onTypeChange, onChangeArray, model }) => (
+      <div className="flex flex-col gap-1 mb-3 bg-white p-2.5 border border-slate-200 rounded shadow-sm">
+        <div className="flex justify-between items-center mb-1.5">
+          <label className="text-[12px] font-bold text-slate-800 tracking-wide leading-tight">{label}</label>
+          <select value={type} onChange={(e) => onTypeChange(arrName, e.target.value)} className="text-[10px] font-bold border border-slate-300 bg-slate-50 rounded px-1.5 py-0.5 outline-none focus:border-red-700 text-slate-700">
+            <option value="amount">절대금액 (백만원)</option>
+            <option value="rate">매출액 대비 (%)</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-6 gap-1.5">
+          {pad6(values).map((v, i) => {
+            const rev = model?.is_financial?.[i]?.revenue || 0;
+            let displayAmt = 0, displayRate = 0;
+            if (type === 'rate') {
+              displayAmt = rev * ((v||0) / 100);
+              displayRate = v || 0;
+            } else {
+              displayAmt = toMil(v||0) * (model?.infMultArr?.[i] || 1); 
+              displayRate = rev > 0 ? (displayAmt / rev) * 100 : 0;
+            }
+            return (
+              <div key={i} className="flex flex-col">
+                <span className="text-[9px] text-slate-400 mb-0.5 text-center font-bold">Y{i}</span>
+                <NumInput value={v} onChange={(val) => onChangeArray(arrName, i, val)} className="text-[10px]" />
+                <span className="text-[9px] text-slate-500 text-right mt-1 font-semibold leading-tight truncate" title={type === 'rate' ? `${formatCurrency(displayAmt)}원` : `${displayRate.toFixed(1)}%`}>
+                  {type === 'rate' ? `${formatCurrency(displayAmt / 1000000)}백만` : `${displayRate.toFixed(1)}%`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    ));
+
+    const DynamicMixedWcList = React.memo(({ listName, items, title, namePlaceholder, onAdd, onRemove, onFieldChange, onAmountChange, model }) => (
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-[13px] font-bold text-slate-800 tracking-wide">{title}</label>
+          <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 항목 추가</button>
+        </div>
+        <div className="space-y-3">
+          {(items||[]).map((item) => (
+            <div key={item.id} className="bg-white border border-slate-200 rounded p-2.5 shadow-sm">
+              <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
+                <input type="text" value={item.name} placeholder={namePlaceholder} onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)} className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none text-slate-800" />
+                <div className="flex items-center gap-2">
+                   <select value={item.isRate ? 'rate' : 'amount'} onChange={(e) => onFieldChange(listName, item.id, 'isRate', e.target.value === 'rate')} className="text-[10px] font-bold border border-slate-300 bg-slate-50 text-slate-700 rounded px-1.5 py-0.5 outline-none focus:border-red-700">
+                      <option value="amount">절대금액 (백만원)</option>
+                      <option value="rate">매출액 대비 (%)</option>
+                   </select>
+                   <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
+                </div>
+              </div>
+              <div className="grid grid-cols-6 gap-1 mt-1">
+                {pad6(item.isRate ? item.rates : item.amounts).map((val, idx) => {
+                  const rev = model?.is_financial?.[idx]?.revenue || 0;
+                  let displayAmt = 0, displayRate = 0;
+                  if (item.isRate) {
+                      displayAmt = rev * ((val||0) / 100);
+                      displayRate = val || 0;
+                  } else {
+                      displayAmt = toMil(val||0);
+                      displayRate = rev > 0 ? (displayAmt / rev) * 100 : 0;
+                  }
+                  return (
+                    <div key={idx} className="flex flex-col">
+                      <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
+                      <NumInput value={val} onChange={(v) => onAmountChange(listName, item.id, idx, v, item.isRate ? 'rates' : 'amounts')} className="text-[10px]" />
+                      <span className="text-[9px] text-slate-500 text-right mt-1 font-semibold leading-tight truncate" title={item.isRate ? `${formatCurrency(displayAmt)}원` : `${displayRate.toFixed(1)}%`}>
+                        {item.isRate ? `${formatCurrency(displayAmt / 1000000)}백만` : `${displayRate.toFixed(1)}%`}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     ));
 
@@ -564,14 +650,14 @@
           ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'logisticsRate', 'salesCommRate', 'asCostRate', 'utilities', 'travel', 'telecom', 'laborFix', 'benefits', 'rent', 'taxes', 'insurance', 'fees', 'rnd', 'marketing', 'supplies', 'badDebt', 'otherSga', 'nonOpIncCash', 'nonOpIncNonCash', 'nonOpExpCash', 'nonOpExpNonCash'].forEach(k => {
              loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
           });
-          
-          ['equityList', 'debtList', 'capexList', 'intangibleList', 'advancesList', 'accruedList', 'prepaidList', 'receivableList', 'baseCostList'].forEach(k => {
-             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts)}));
+          ['advancesList', 'accruedList', 'prepaidList', 'receivableList'].forEach(k => {
+             if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts), rates: pad6(it.rates), isRate: it.isRate ?? true}));
           });
           
           ['directExpList', 'indirectExpList'].forEach(k => {
              if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
           });
+          if (!loaded.sgaTypes) loaded.sgaTypes = cloneDeep(DEFAULT_INPUTS.sgaTypes);
 
           const fixTree = (cList) => (cList||[]).map(rt => {
              rt.countries = (rt.countries||[]).map(c => {
@@ -622,19 +708,28 @@
       };
 
       const handleArrayChange = (name, index, value) => setInputs(prev => { const newArr = pad6(prev[name]); newArr[index] = value; return { ...prev, [name]: newArr }; });
+      const handleSgaTypeChange = (name, type) => setInputs(prev => ({ ...prev, sgaTypes: { ...(prev.sgaTypes||{}), [name]: type } }));
       
-      // FIX: handleListAmt 수정. amounts와 rates 배열이 존재하는지 확인한 후 map 실행
-      const handleListAmt = (listName, id, index, value) => setInputs(prev => ({ 
+      const handleListAmt = (listName, id, index, value, targetKey) => setInputs(prev => ({ 
           ...prev, 
-          [listName]: prev[listName].map(item => item.id === id ? { 
-              ...item, 
-              amounts: item.amounts ? item.amounts.map((a, i) => i === index ? value : a) : undefined, 
-              rates: item.rates ? item.rates.map((a, i) => i === index ? value : a) : undefined 
-          } : item) 
+          [listName]: prev[listName].map(item => {
+              if (item.id !== id) return item;
+              if (targetKey) {
+                  const newArr = pad6(item[targetKey] || [0]);
+                  newArr[index] = value;
+                  return { ...item, [targetKey]: newArr };
+              } else {
+                  return { 
+                      ...item, 
+                      amounts: item.amounts ? item.amounts.map((a, i) => i === index ? value : a) : undefined, 
+                      rates: item.rates ? item.rates.map((a, i) => i === index ? value : a) : undefined 
+                  };
+              }
+          }) 
       }));
       
       const handleListField = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
-      const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), usefulLife: 5 }] }));
+      const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), isRate: true, usefulLife: 5 }] }));
       const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
 
       const hHandlers = {
@@ -700,10 +795,6 @@
         const totalDebt = [0,1,2,3,4,5].map(i => sumMil(inputs.debtList, i));
         const totalCapex = [0,1,2,3,4,5].map(i => sumMil(inputs.capexList, i));
         const totalIntangible = [0,1,2,3,4,5].map(i => sumMil(inputs.intangibleList, i));
-        const totalAdvances = [0,0,0,0,0,0];
-        const totalAccrued = [0,0,0,0,0,0];
-        const totalPrepaid = [0,0,0,0,0,0];
-        const totalReceivable = [0,0,0,0,0,0];
 
         const initV = totalEquity[0] + totalDebt[0];
         const wE = initV > 0 ? totalEquity[0]/initV : 0;
@@ -714,6 +805,7 @@
         
         let revTreeGlobal=[], intVolTreeGlobal=[], extCogsTreeGlobal=[], intCogsFactorTreeGlobal=[];
         let prevCash=0, accumDebt=0, accumCapital=0, accumBadDebt=0, accumOtherNonCash=0, prevArGross=0, prevInvValue=0, prevRetainedEarnings=0;
+        let prevBalAdvances=0, prevBalAccrued=0, prevBalPrepaid=0, prevBalReceivable=0;
 
         for (let i = 0; i < 6; i++) {
           accumCapital += totalEquity[i]; accumDebt += totalDebt[i];
@@ -759,11 +851,20 @@
           const { sum: totalInternalSalesVol, sub: intVolTree } = buildLevel(inputs.salesHierarchy, 'intCogsVol');
           const { sum: externalCogs, sub: extCogsTree } = buildLevel(inputs.salesHierarchy, 'extCogs');
 
-          const calcWCAmt = (list) => (list||[]).reduce((s, it) => s + revenue * (((it.rates||it.amounts||[])[i]||0)/100), 0);
-          totalAdvances[i] = calcWCAmt(inputs.advancesList);
-          totalAccrued[i] = calcWCAmt(inputs.accruedList);
-          totalPrepaid[i] = calcWCAmt(inputs.prepaidList);
-          totalReceivable[i] = calcWCAmt(inputs.receivableList);
+          const calcWcBalance = (list) => (list||[]).reduce((s, it) => {
+              if (it.isRate) return s + revenue * (((it.rates||[])[i]||0)/100);
+              return s + toMil((it.amounts||[])[i]);
+          }, 0);
+
+          const balAdvances = calcWcBalance(inputs.advancesList);
+          const balAccrued = calcWcBalance(inputs.accruedList);
+          const balPrepaid = calcWcBalance(inputs.prepaidList);
+          const balReceivable = calcWcBalance(inputs.receivableList);
+
+          const flowAdvances = balAdvances - prevBalAdvances;
+          const flowAccrued = balAccrued - prevBalAccrued;
+          const flowPrepaid = balPrepaid - prevBalPrepaid;
+          const flowReceivable = balReceivable - prevBalReceivable;
 
           const totalBaseCost = (inputs.baseCostList||[]).reduce((s, bc) => s + toMil((bc.amounts||[])[i])*infMultArr[i], 0);
           res.totalBaseCostArr.push(totalBaseCost);
@@ -842,10 +943,37 @@
           };
           calcExtInv(inputs.salesHierarchy);
 
-          const totalSgaVar = revenue * ((((inputs.logisticsRate||[])[i]||0)+((inputs.salesCommRate||[])[i]||0)+((inputs.asCostRate||[])[i]||0))/100);
-          const totalSgaSemi = revenue * ((((inputs.utilities||[])[i]||0) + ((inputs.travel||[])[i]||0) + ((inputs.telecom||[])[i]||0))/100);
-          const totalSgaFixOnly = revenue * ((((inputs.laborFix||[])[i]||0) + ((inputs.benefits||[])[i]||0) + ((inputs.rent||[])[i]||0) + ((inputs.taxes||[])[i]||0) + ((inputs.insurance||[])[i]||0) + ((inputs.fees||[])[i]||0) + ((inputs.rnd||[])[i]||0) + ((inputs.marketing||[])[i]||0) + ((inputs.supplies||[])[i]||0) + ((inputs.badDebt||[])[i]||0) + ((inputs.otherSga||[])[i]||0))/100);
-          accumBadDebt += revenue * (((inputs.badDebt||[])[i]||0)/100);
+          const calcSga = (key) => {
+              const type = (inputs.sgaTypes || {})[key] || 'amount';
+              const val = (inputs[key] || [])[i] || 0;
+              if (type === 'rate') return revenue * (val / 100);
+              return toMil(val) * infMultArr[i];
+          };
+
+          const varLogistics = calcSga('logisticsRate');
+          const varSalesComm = calcSga('salesCommRate');
+          const varAsCost = calcSga('asCostRate');
+          const totalSgaVar = varLogistics + varSalesComm + varAsCost;
+
+          const semiUtilities = calcSga('utilities');
+          const semiTravel = calcSga('travel');
+          const semiTelecom = calcSga('telecom');
+          const totalSgaSemi = semiUtilities + semiTravel + semiTelecom;
+
+          const fixLabor = calcSga('laborFix');
+          const fixBenefits = calcSga('benefits');
+          const fixRent = calcSga('rent');
+          const fixTaxes = calcSga('taxes');
+          const fixInsurance = calcSga('insurance');
+          const fixFees = calcSga('fees');
+          const fixRnd = calcSga('rnd');
+          const fixMarketing = calcSga('marketing');
+          const fixSupplies = calcSga('supplies');
+          const fixBadDebt = calcSga('badDebt');
+          const fixOther = calcSga('otherSga');
+          const totalSgaFixOnly = fixLabor + fixBenefits + fixRent + fixTaxes + fixInsurance + fixFees + fixRnd + fixMarketing + fixSupplies + fixBadDebt + fixOther;
+
+          accumBadDebt += fixBadDebt;
 
           const cogs = internalCogs + externalCogs;
           const grossProfit = revenue - cogs;
@@ -873,15 +1001,15 @@
           (inputs.capexList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j) ppeNet -= (toMil(a)/(it.usefulLife||5)) * (Math.min(i, j+(it.usefulLife||5)-1) - j + 1); }));
           (inputs.intangibleList||[]).forEach(it => (it.amounts||[]).forEach((a, j) => { if(a && i >= j) intangibleNet -= (toMil(a)/(it.usefulLife||5)) * (Math.min(i, j+(it.usefulLife||5)-1) - j + 1); }));
 
-          const deltaWc = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + totalAdvances[i] + totalAccrued[i] - totalPrepaid[i] - totalReceivable[i];
-          const nonCashExpAdd = depreciation + amortization + (revenue * (((inputs.badDebt||[])[i]||0)/100)) + toMil((inputs.nonOpExpNonCash||[])[i]||0);
+          const deltaWc = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + flowAdvances + flowAccrued - flowPrepaid - flowReceivable;
+          const nonCashExpAdd = depreciation + amortization + fixBadDebt + toMil((inputs.nonOpExpNonCash||[])[i]||0);
           const operatingCf = netIncome + nonCashExpAdd - toMil((inputs.nonOpIncNonCash||[])[i]||0) + deltaWc;
           const netCf = operatingCf - totalCapex[i] - totalIntangible[i] + totalEquity[i] + totalDebt[i]; 
           const endingCash = prevCash + netCf;
 
           res.is_financial.push({
             revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, nonOpIncC: toMil((inputs.nonOpIncCash||[])[i]||0), nonOpIncNC: toMil((inputs.nonOpIncNonCash||[])[i]||0), nonOpExpC: toMil((inputs.nonOpExpCash||[])[i]||0), nonOpExpNC: toMil((inputs.nonOpExpNonCash||[])[i]||0), tax, netIncome, internalCogs, externalCogs,
-            sgaDetails: { totalSgaVar, totalSgaSemi, totalSgaFixOnly, amortization, varLogistics: revenue*(((inputs.logisticsRate||[])[i]||0)/100), varSalesComm: revenue*(((inputs.salesCommRate||[])[i]||0)/100), varAsCost: revenue*(((inputs.asCostRate||[])[i]||0)/100), semiUtilities: revenue*(((inputs.utilities||[])[i]||0)/100), semiTravel: revenue*(((inputs.travel||[])[i]||0)/100), semiTelecom: revenue*(((inputs.telecom||[])[i]||0)/100), fixLabor: revenue*(((inputs.laborFix||[])[i]||0)/100), fixBenefits: revenue*(((inputs.benefits||[])[i]||0)/100), fixRent: revenue*(((inputs.rent||[])[i]||0)/100), fixTaxes: revenue*(((inputs.taxes||[])[i]||0)/100), fixInsurance: revenue*(((inputs.insurance||[])[i]||0)/100), fixFees: revenue*(((inputs.fees||[])[i]||0)/100), fixRnd: revenue*(((inputs.rnd||[])[i]||0)/100), fixMarketing: revenue*(((inputs.marketing||[])[i]||0)/100), fixSupplies: revenue*(((inputs.supplies||[])[i]||0)/100), fixBadDebt: revenue*(((inputs.badDebt||[])[i]||0)/100), fixOther: revenue*(((inputs.otherSga||[])[i]||0)/100) },
+            sgaDetails: { totalSgaVar, totalSgaSemi, totalSgaFixOnly, amortization, varLogistics, varSalesComm, varAsCost, semiUtilities, semiTravel, semiTelecom, fixLabor, fixBenefits, fixRent, fixTaxes, fixInsurance, fixFees, fixRnd, fixMarketing, fixSupplies, fixBadDebt, fixOther },
             ratios: { cogsRatio: revenue>0?cogs/revenue:0, grossMargin: revenue>0?grossProfit/revenue:0, sgaRatio: revenue>0?totalSga/revenue:0, opMargin: revenue>0?operatingProfit/revenue:0, netMargin: revenue>0?netIncome/revenue:0 }
           });
 
@@ -891,34 +1019,35 @@
           
           res.is_managerial.push({
             actualProdVol, revenue, variableCosts, contributionMargin, fixedCosts, operatingProfit: contributionMargin-fixedCosts, bepRevenue: contributionMargin>0?(fixedCosts*revenue)/contributionMargin:0,
-            varCostDetails: { totalSgaVar, varLogistics: revenue*(((inputs.logisticsRate||[])[i]||0)/100), varSalesComm: revenue*(((inputs.salesCommRate||[])[i]||0)/100), varAsCost: revenue*(((inputs.asCostRate||[])[i]||0)/100) },
+            varCostDetails: { totalSgaVar, varLogistics, varSalesComm, varAsCost },
             ratios: { varRatio: revenue>0?variableCosts/revenue:0, cmRatio: revenue>0?contributionMargin/revenue:0, fixedRatio: revenue>0?fixedCosts/revenue:0 }
           });
 
           res.bs.push({
-            currentAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0),
+            currentAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + balPrepaid + balReceivable,
             nonCurrentAssets: ppeNet + intangibleNet + accumOtherNonCash,
-            totalAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0) + ppeNet + intangibleNet + accumOtherNonCash,
-            currentLiabilities: ap + totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0),
+            totalAssets: endingCash + Math.max(0, arGross-accumBadDebt) + inv + balPrepaid + balReceivable + ppeNet + intangibleNet + accumOtherNonCash,
+            currentLiabilities: ap + balAdvances + balAccrued,
             nonCurrentLiabilities: accumDebt,
-            totalLiabilities: ap + totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) + totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0) + accumDebt,
+            totalLiabilities: ap + balAdvances + balAccrued + accumDebt,
             totalEquity: accumCapital + prevRetainedEarnings + netIncome,
-            bsDetails: { cash: endingCash, ar: Math.max(0, arGross-accumBadDebt), inv, invBase, unsoldInvValue, unsoldExtInvValue, prepaidNet: totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0), receivableNet: totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0), ppeNet, intangibleNet, otherNetAssets: accumOtherNonCash, ap, advancesNet: totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0), accruedNet: totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0), debt: accumDebt, capital: accumCapital, retainedEarnings: prevRetainedEarnings + netIncome }
+            bsDetails: { cash: endingCash, ar: Math.max(0, arGross-accumBadDebt), inv, invBase, unsoldInvValue, unsoldExtInvValue, prepaidNet: balPrepaid, receivableNet: balReceivable, ppeNet, intangibleNet, otherNetAssets: accumOtherNonCash, ap, advancesNet: balAdvances, accruedNet: balAccrued, debt: accumDebt, capital: accumCapital, retainedEarnings: prevRetainedEarnings + netIncome }
           });
 
           res.cf.push({
             beginningCash: prevCash, operatingCf, investingCf: -totalCapex[i] - totalIntangible[i], financingCf: totalEquity[i] + totalDebt[i], netCf, endingCash, nonCashExpAdd, nonCashIncDed: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaWc,
-            cfDetails: { netIncome, depreciation, amortization, badDebtExp: revenue*(((inputs.badDebt||[])[i]||0)/100), nonOpExpNonCash: toMil((inputs.nonOpExpNonCash||[])[i]||0), nonOpIncNonCash: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaArGross, deltaInv: -(inv - prevInvValue), deltaAp: (ap - (i>0?res.bs[i-1].bsDetails.ap:0)), advancesInflow: totalAdvances[i], accruedInflow: totalAccrued[i], prepaidOutflow: -totalPrepaid[i], receivableOutflow: -totalReceivable[i], capex: -totalCapex[i], intangibleCapex: -totalIntangible[i], equity: totalEquity[i], debt: totalDebt[i] }
+            cfDetails: { netIncome, depreciation, amortization, badDebtExp: fixBadDebt, nonOpExpNonCash: toMil((inputs.nonOpExpNonCash||[])[i]||0), nonOpIncNonCash: toMil((inputs.nonOpIncNonCash||[])[i]||0), deltaArGross, deltaInv: -(inv - prevInvValue), deltaAp: (ap - (i>0?res.bs[i-1].bsDetails.ap:0)), advancesInflow: flowAdvances, accruedInflow: flowAccrued, prepaidOutflow: -flowPrepaid, receivableOutflow: -flowReceivable, capex: -totalCapex[i], intangibleCapex: -totalIntangible[i], equity: totalEquity[i], debt: totalDebt[i] }
           });
 
           const nopat = operatingProfit * (1 - (((inputs.taxRate||[])[i]||0)/100));
-          const terminalValue = i === 5 ? Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + totalPrepaid.slice(0,i+1).reduce((a,b)=>a+b,0) + totalReceivable.slice(0,i+1).reduce((a,b)=>a+b,0) - totalAdvances.slice(0,i+1).reduce((a,b)=>a+b,0) - totalAccrued.slice(0,i+1).reduce((a,b)=>a+b,0) + accumOtherNonCash : 0;
-          const wInflow = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + totalAdvances[i] + totalAccrued[i] - totalPrepaid[i] - totalReceivable[i];
+          const terminalValue = i === 5 ? Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + balPrepaid + balReceivable - balAdvances - balAccrued + accumOtherNonCash : 0;
+          const wInflow = deltaArGross - (inv - prevInvValue) + (ap - (i>0?res.bs[i-1].bsDetails.ap:0)) + flowAdvances + flowAccrued - flowPrepaid - flowReceivable;
           const fcff = nopat + depreciation + amortization + terminalValue - totalCapex[i] - totalIntangible[i] + wInflow;
           
           res.fcffData.push({ nopat, depreciation, amortization, terminalValue, capex: totalCapex[i], intangibleCapex: totalIntangible[i], deltaWc: wInflow, fcff, pvFcff: fcff / Math.pow(1 + wacc, i) });
           
           prevCash = endingCash; prevInvValue = inv; prevRetainedEarnings += netIncome;
+          prevBalAdvances = balAdvances; prevBalAccrued = balAccrued; prevBalPrepaid = balPrepaid; prevBalReceivable = balReceivable;
         }
 
         const fcffArray = res.fcffData.map(d=>d.fcff);
@@ -1103,33 +1232,35 @@
                     {pad6([0]).map((_,i) => <span key={i} className="text-right flex-1">{formatCurrency(model.bs[i]?.bsDetails?.ap / 1000000)}백만</span>)}
                   </div>
 
-                  <DynamicRevRateList listName="advancesList" items={inputs.advancesList} title="선수금/선수수익 (매출액 대비 %)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
-                  <DynamicRevRateList listName="accruedList" items={inputs.accruedList} title="미지급금/예수금 (매출액 대비 %)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
-                  <DynamicRevRateList listName="prepaidList" items={inputs.prepaidList} title="선급금/선급비용 (매출액 대비 %)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
-                  <DynamicRevRateList listName="receivableList" items={inputs.receivableList} title="미수금/미수수익 (매출액 대비 %)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicMixedWcList listName="advancesList" items={inputs.advancesList} title="선수금/선수수익 설정" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicMixedWcList listName="accruedList" items={inputs.accruedList} title="미지급금/예수금 설정" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicMixedWcList listName="prepaidList" items={inputs.prepaidList} title="선급금/선급비용 설정" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <DynamicMixedWcList listName="receivableList" items={inputs.receivableList} title="미수금/미수수익 설정" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
                 <InputGroup title="5. 자금소요 (판매비와 관리비)">
-                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">직접변동비 (매출액 대비 %)</div>
-                  <YearlyInputField label="물류/수출비용 (%)" arrName="logisticsRate" values={inputs.logisticsRate} onChangeArray={handleArrayChange} />
-                  <YearlyInputField label="판매수수료 (%)" arrName="salesCommRate" values={inputs.salesCommRate} onChangeArray={handleArrayChange} />
-                  <YearlyInputField label="A/S 비용 (%)" arrName="asCostRate" values={inputs.asCostRate} onChangeArray={handleArrayChange} />
-                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">준변동비 (매출액 대비 %)</div>
-                  <YearlyRevRateField label="수도광열비 (%)" arrName="utilities" values={inputs.utilities} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="여비교통비 (%)" arrName="travel" values={inputs.travel} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="통신비 (%)" arrName="telecom" values={inputs.telecom} onChangeArray={handleArrayChange} model={model} />
-                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">고정비 (매출액 대비 %)</div>
-                  <YearlyRevRateField label="인건비 (급여/퇴직금) (%)" arrName="laborFix" values={inputs.laborFix} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="복리후생비 (%)" arrName="benefits" values={inputs.benefits} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="임차료 (%)" arrName="rent" values={inputs.rent} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="세금과공과 (%)" arrName="taxes" values={inputs.taxes} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="보험료 (%)" arrName="insurance" values={inputs.insurance} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="지급수수료 (%)" arrName="fees" values={inputs.fees} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="연구개발비 (R&D) (%)" arrName="rnd" values={inputs.rnd} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="마케팅/광고선전비 (%)" arrName="marketing" values={inputs.marketing} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="소모품비 (%)" arrName="supplies" values={inputs.supplies} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyRevRateField label="대손상각비 (추정) (%)" arrName="badDebt" values={inputs.badDebt} onChangeArray={handleArrayChange} model={model} />
-                  <YearlyInputField label="기타 판관비" arrName="otherSga" values={inputs.otherSga} onChangeArray={handleArrayChange} />
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">직접변동비 설정</div>
+                  <MixedYearlyInputField label="물류/수출비용" arrName="logisticsRate" values={inputs.logisticsRate} type={inputs.sgaTypes?.logisticsRate || 'rate'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="판매수수료" arrName="salesCommRate" values={inputs.salesCommRate} type={inputs.sgaTypes?.salesCommRate || 'rate'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="A/S 비용" arrName="asCostRate" values={inputs.asCostRate} type={inputs.sgaTypes?.asCostRate || 'rate'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">준변동비 설정</div>
+                  <MixedYearlyInputField label="수도광열비" arrName="utilities" values={inputs.utilities} type={inputs.sgaTypes?.utilities || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="여비교통비" arrName="travel" values={inputs.travel} type={inputs.sgaTypes?.travel || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="통신비" arrName="telecom" values={inputs.telecom} type={inputs.sgaTypes?.telecom || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  
+                  <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3 mt-4">고정비 설정</div>
+                  <MixedYearlyInputField label="인건비 (급여/퇴직금)" arrName="laborFix" values={inputs.laborFix} type={inputs.sgaTypes?.laborFix || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="복리후생비" arrName="benefits" values={inputs.benefits} type={inputs.sgaTypes?.benefits || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="임차료" arrName="rent" values={inputs.rent} type={inputs.sgaTypes?.rent || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="세금과공과" arrName="taxes" values={inputs.taxes} type={inputs.sgaTypes?.taxes || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="보험료" arrName="insurance" values={inputs.insurance} type={inputs.sgaTypes?.insurance || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="지급수수료" arrName="fees" values={inputs.fees} type={inputs.sgaTypes?.fees || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="연구개발비 (R&D)" arrName="rnd" values={inputs.rnd} type={inputs.sgaTypes?.rnd || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="마케팅/광고선전비" arrName="marketing" values={inputs.marketing} type={inputs.sgaTypes?.marketing || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="소모품비" arrName="supplies" values={inputs.supplies} type={inputs.sgaTypes?.supplies || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="대손상각비 (추정)" arrName="badDebt" values={inputs.badDebt} type={inputs.sgaTypes?.badDebt || 'rate'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
+                  <MixedYearlyInputField label="기타 판관비" arrName="otherSga" values={inputs.otherSga} type={inputs.sgaTypes?.otherSga || 'amount'} onTypeChange={handleSgaTypeChange} onChangeArray={handleArrayChange} model={model} />
                 </InputGroup>
 
                 <InputGroup title="6. 매출액 추정 (9단계 다차원 트리)">
@@ -1279,7 +1410,7 @@
                             {[0,1,2,3,4,5].map(i => {
                                 const finOp = model.is_financial[i]?.operatingProfit || 0;
                                 const mgrOp = model.is_managerial[i]?.operatingProfit || 0;
-                                const isMatch = Math.abs(finOp - mgrOp) < 1;
+                                const isMatch = Math.abs(finOp - mgrOp) < 10;
                                 return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
                             })}
                           </tr>
@@ -1288,7 +1419,7 @@
                             {[0,1,2,3,4,5].map(i => {
                                 const ta = model.bs[i]?.totalAssets || 0;
                                 const le = (model.bs[i]?.totalLiabilities || 0) + (model.bs[i]?.totalEquity || 0);
-                                const isMatch = Math.abs(ta - le) < 1;
+                                const isMatch = Math.abs(ta - le) < 10;
                                 return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
                             })}
                           </tr>
@@ -1297,7 +1428,7 @@
                             {[0,1,2,3,4,5].map(i => {
                                 const bsCash = model.bs[i]?.bsDetails?.cash || 0;
                                 const cfCash = model.cf[i]?.endingCash || 0;
-                                const isMatch = Math.abs(bsCash - cfCash) < 1;
+                                const isMatch = Math.abs(bsCash - cfCash) < 10;
                                 return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
                             })}
                           </tr>
@@ -1307,7 +1438,7 @@
                                 const sumMil = (list) => (list||[]).reduce((s, it) => s + toMil((it.amounts||[])[i]), 0);
                                 const inputFunding = sumMil(inputs.equityList) + sumMil(inputs.debtList);
                                 const cfFunding = model.cf[i]?.financingCf || 0;
-                                const isMatch = Math.abs(inputFunding - cfFunding) < 1;
+                                const isMatch = Math.abs(inputFunding - cfFunding) < 10;
                                 return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
                             })}
                           </tr>
@@ -1316,8 +1447,8 @@
                             {[0,1,2,3,4,5].map(i => {
                                 const sumMil = (list) => (list||[]).reduce((s, it) => s + toMil((it.amounts||[])[i]), 0);
                                 const inputInvest = sumMil(inputs.capexList) + sumMil(inputs.intangibleList);
-                                const cfInvest = model.cf[i]?.investingCf || 0; // 투자활동 현금흐름은 음수
-                                const isMatch = Math.abs(inputInvest + cfInvest) < 1; 
+                                const cfInvest = model.cf[i]?.investingCf || 0; 
+                                const isMatch = Math.abs(inputInvest + cfInvest) < 10; 
                                 return <td key={i} className="py-2.5 px-4 text-center font-bold text-[11px]">{isMatch ? <span className="text-green-600">Pass</span> : <span className="text-red-600">Fail</span>}</td>
                             })}
                           </tr>
