@@ -96,21 +96,32 @@
     const toMil = (val) => (val || 0) * 1000000;
     const cloneDeep = (obj) => JSON.parse(JSON.stringify(obj));
 
-    const calculateIRR = (cashFlows) => {
-      let guess = 0.1;
-      for (let i = 0; i < 1000; i++) {
-        let npv = 0, derivative = 0;
+    // 안정적인 Bisection(이분법) 기반 IRR 계산 로직 적용 (발산 방지 및 무한대 처리)
+    const calculateIRR = (rawCashFlows) => {
+      const cashFlows = rawCashFlows.map(v => v / 1000000);
+      
+      if (cashFlows.every(v => v <= 0)) return -1.0; 
+      const hasNegative = cashFlows.some(v => v < 0);
+      if (!hasNegative) return Infinity; // 투자 원금 없이 수익만 발생하면 무한대
+
+      let low = -0.99999;
+      let high = 100000; // 최대 10,000,000% 탐색
+      let guess = 0;
+
+      for (let i = 0; i < 200; i++) {
+        guess = (low + high) / 2;
+        let npv = 0;
         for (let t = 0; t < cashFlows.length; t++) {
           npv += cashFlows[t] / Math.pow(1 + guess, t);
-          if (t > 0) derivative -= (t * cashFlows[t]) / Math.pow(1 + guess, t + 1);
         }
-        if (Math.abs(npv) < 0.001) return guess;
-        let nextGuess = guess - npv / derivative;
-        if (nextGuess <= -1) nextGuess = -0.99;
-        if (Math.abs(nextGuess - guess) < 0.00001) return nextGuess;
-        guess = nextGuess;
+
+        if (Math.abs(npv) < 0.0001) break;
+
+        if (npv > 0) low = guess;
+        else high = guess;
       }
-      return guess;
+      
+      return guess >= 99900 ? Infinity : guess;
     };
 
     const NumInput = React.memo(({ value, onChange, placeholder, className = "text-[12px] font-semibold text-slate-800" }) => {
@@ -431,93 +442,102 @@
       );
     };
 
+    // --- 박스 중첩을 완전히 제거한 개방형(Flat) 트리 컴포넌트 ---
     const HierarchyEditor = ({ list, level, pathIds, handlers }) => {
         const levelConfig = [
-            { key: 'countries', name: '국가', addFn: handlers.addCountry, rmFn: handlers.rmRevType, ph: '매출 유형명 (예: 제품/상품 판매)' },
-            { key: 'brands', name: '브랜드', addFn: handlers.addBrand, rmFn: handlers.rmCountry, ph: '국가명' },
-            { key: 'bizTypes', name: '사업영역 (B2B/B2C)', addFn: handlers.addBizType, rmFn: handlers.rmBrand, ph: '브랜드명' },
-            { key: 'salesModes', name: '판매형태 (온/오프라인)', addFn: handlers.addSalesMode, rmFn: handlers.rmBizType, ph: '사업영역명' },
-            { key: 'channels', name: '유통채널 (병원/약국 등)', addFn: handlers.addChannel, rmFn: handlers.rmSalesMode, ph: '판매형태명' },
-            { key: 'clients', name: '거래처', addFn: handlers.addClient, rmFn: handlers.rmChannel, ph: '채널명' },
-            { key: 'categories', name: '품목군', addFn: handlers.addCategory, rmFn: handlers.rmClient, ph: '거래처명' },
-            { key: 'products', name: '품목', addFn: handlers.addProduct, rmFn: handlers.rmCategory, ph: '품목군명' }
+            { key: 'countries', name: '국가', addFn: handlers.addCountry, rmFn: handlers.rmRevType, ph: '매출 유형명 (예: 제품판매)', color: 'bg-slate-800' },
+            { key: 'brands', name: '브랜드', addFn: handlers.addBrand, rmFn: handlers.rmCountry, ph: '국가명', color: 'bg-blue-600' },
+            { key: 'bizTypes', name: '영역', addFn: handlers.addBizType, rmFn: handlers.rmBrand, ph: '브랜드명', color: 'bg-indigo-500' },
+            { key: 'salesModes', name: '형태', addFn: handlers.addSalesMode, rmFn: handlers.rmBizType, ph: '사업영역명', color: 'bg-purple-500' },
+            { key: 'channels', name: '채널', addFn: handlers.addChannel, rmFn: handlers.rmSalesMode, ph: '판매형태명', color: 'bg-pink-500' },
+            { key: 'clients', name: '거래처', addFn: handlers.addClient, rmFn: handlers.rmChannel, ph: '채널명', color: 'bg-rose-500' },
+            { key: 'categories', name: '품목군', addFn: handlers.addCategory, rmFn: handlers.rmClient, ph: '거래처명', color: 'bg-amber-500' },
+            { key: 'products', name: '품목', addFn: handlers.addProduct, rmFn: handlers.rmCategory, ph: '품목군명', color: 'bg-red-600' }
         ];
 
+        // Level 8 (품목 상세 입력란)
         if (level === 8) { 
             return (
-                <div className="space-y-3 mt-2">
+                <React.Fragment>
                    {(list||[]).map(product => (
-                      <div key={product.id} className="bg-slate-50 p-2.5 rounded border border-slate-200 shadow-sm relative overflow-hidden">
-                         {product.isInternal === false && <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>}
-                         <div className="flex justify-between items-center mb-3 border-b border-slate-200 pb-2 pl-2">
-                            <input type="text" value={product.name} onChange={(e) => handlers.updateField(pathIds, product.id, 'name', null, e.target.value)} placeholder="품목명 입력" className="text-[12px] font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none w-1/2 px-1" />
-                            <div className="flex items-center gap-3">
-                               <label className="text-[10px] flex items-center gap-1 font-bold text-slate-600 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
-                                  <input type="checkbox" checked={product.isForeignCurrency === true} onChange={(e) => handlers.updateField(pathIds, product.id, 'isForeignCurrency', null, e.target.checked)} className="accent-blue-600" /> 외화(USD) 적용
+                      <div key={product.id} className="flex flex-col border-b border-slate-200 py-3 hover:bg-slate-50 transition-colors w-full" style={{ paddingLeft: `${level * 16}px` }}>
+                         <div className="flex flex-wrap items-center gap-2 mb-3 pr-2 w-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"></span>
+                            <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded shrink-0">품목</span>
+                            <input type="text" value={product.name} onChange={(e) => handlers.updateField(pathIds, product.id, 'name', null, e.target.value)} placeholder="품목명 입력" className="text-[13px] font-bold text-slate-900 bg-transparent border-b border-transparent focus:border-red-700 outline-none flex-1 min-w-[120px]" />
+                            <div className="flex items-center gap-3 shrink-0 ml-auto">
+                               <label className="text-[11px] flex items-center gap-1 font-bold text-slate-600 cursor-pointer">
+                                  <input type="checkbox" checked={product.isForeignCurrency === true} onChange={(e) => handlers.updateField(pathIds, product.id, 'isForeignCurrency', null, e.target.checked)} className="accent-blue-600" /> 외화(USD)
                                </label>
-                               <label className="text-[10px] flex items-center gap-1 font-bold text-slate-600 cursor-pointer bg-white px-1.5 py-0.5 rounded border border-slate-200 shadow-sm">
+                               <label className="text-[11px] flex items-center gap-1 font-bold text-slate-600 cursor-pointer">
                                   <input type="checkbox" checked={product.isInternal !== false} onChange={(e) => handlers.updateField(pathIds, product.id, 'isInternal', null, e.target.checked)} className="accent-red-700" /> 자체생산
                                </label>
-                               <button onClick={() => handlers.rmProduct(pathIds, product.id)} className="text-slate-400 hover:text-red-700 font-bold px-1">&times;</button>
+                               <button onClick={() => handlers.rmProduct(pathIds, product.id)} className="text-slate-400 hover:text-red-700 font-black px-1 text-lg">&times;</button>
                             </div>
                          </div>
-                         <div className="pl-2 pr-1">
-                             <div className="text-[11px] font-bold text-slate-700 mb-1.5 mt-1 border-t border-slate-200/50 pt-2">단가 (Price - {product.isForeignCurrency ? '외화/USD' : '원'})</div>
-                             <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-3">
-                                {pad6(product.prices).map((p, idx) => (
-                                   <div key={`p-${idx}`} className="flex items-center gap-1.5">
-                                      <span className="text-[10px] text-slate-400 font-bold w-4 text-center shrink-0">Y{idx}</span>
-                                      <NumInput value={p} onChange={(v) => handlers.updateField(pathIds, product.id, 'prices', idx, v)} className="text-[12px] font-semibold flex-1 min-w-0" />
-                                   </div>
-                                ))}
+                         
+                         <div className="flex flex-wrap gap-4 pr-2" style={{ paddingLeft: '24px' }}>
+                             <div className="flex-1 min-w-[200px] bg-white p-2 rounded border border-slate-200 shadow-sm">
+                                 <div className="text-[11px] font-bold text-slate-700 mb-1.5">단가 (Price - {product.isForeignCurrency ? 'USD' : '원'})</div>
+                                 <div className="grid grid-cols-6 gap-1">
+                                    {pad6(product.prices).map((p, idx) => (
+                                       <div key={`p-${idx}`} className="flex flex-col">
+                                          <span className="text-[9px] text-slate-400 font-bold text-center mb-0.5">Y{idx}</span>
+                                          <NumInput value={p} onChange={(v) => handlers.updateField(pathIds, product.id, 'prices', idx, v)} className="text-[11px] font-semibold" />
+                                       </div>
+                                    ))}
+                                 </div>
                              </div>
-
-                             <div className="text-[11px] font-bold text-slate-700 mb-1.5 mt-2 border-t border-slate-200/50 pt-2">목표 수량 (Volume - 개)</div>
-                             <div className="grid grid-cols-2 gap-x-3 gap-y-2 mb-2">
-                                {pad6(product.volumes).map((v, idx) => (
-                                   <div key={`v-${idx}`} className="flex items-center gap-1.5">
-                                      <span className="text-[10px] text-slate-400 font-bold w-4 text-center shrink-0">Y{idx}</span>
-                                      <NumInput value={v} onChange={(val) => handlers.updateField(pathIds, product.id, 'volumes', idx, val)} className="text-[12px] font-semibold flex-1 min-w-0" />
-                                   </div>
-                                ))}
+                             <div className="flex-1 min-w-[200px] bg-white p-2 rounded border border-slate-200 shadow-sm">
+                                 <div className="text-[11px] font-bold text-slate-700 mb-1.5">목표 수량 (Volume - 개)</div>
+                                 <div className="grid grid-cols-6 gap-1">
+                                    {pad6(product.volumes).map((v, idx) => (
+                                       <div key={`v-${idx}`} className="flex flex-col">
+                                          <span className="text-[9px] text-slate-400 font-bold text-center mb-0.5">Y{idx}</span>
+                                          <NumInput value={v} onChange={(val) => handlers.updateField(pathIds, product.id, 'volumes', idx, val)} className="text-[11px] font-semibold" />
+                                       </div>
+                                    ))}
+                                 </div>
                              </div>
-                             
                              {product.isInternal === false && (
-                                 <div className="mt-3 bg-orange-50/50 p-2 rounded border border-orange-100">
-                                   <div className="text-[11px] font-black text-orange-700 mb-1.5">외부조달 공급원가 (Supply Cost - {product.isForeignCurrency ? '외화/USD' : '원'})</div>
-                                   <div className="grid grid-cols-2 gap-x-3 gap-y-2">
-                                      {pad6(product.supplyCosts||[]).map((sc, idx) => (
-                                         <div key={`sc-${idx}`} className="flex items-center gap-1.5">
-                                            <span className="text-[10px] text-orange-400 font-bold w-4 text-center shrink-0">Y{idx}</span>
-                                            <NumInput value={sc} onChange={(v) => handlers.updateField(pathIds, product.id, 'supplyCosts', idx, v)} className="text-[12px] font-semibold border-orange-300 focus:border-orange-500 bg-white text-orange-900 flex-1 min-w-0" />
-                                         </div>
-                                      ))}
-                                   </div>
+                                 <div className="flex-1 min-w-[200px] bg-orange-50 p-2 rounded border border-orange-200 shadow-sm">
+                                     <div className="text-[11px] font-black text-orange-700 mb-1.5">외부조달원가 ({product.isForeignCurrency ? 'USD' : '원'})</div>
+                                     <div className="grid grid-cols-6 gap-1">
+                                        {pad6(product.supplyCosts||[]).map((sc, idx) => (
+                                           <div key={`sc-${idx}`} className="flex flex-col">
+                                              <span className="text-[9px] text-orange-400 font-bold text-center mb-0.5">Y{idx}</span>
+                                              <NumInput value={sc} onChange={(v) => handlers.updateField(pathIds, product.id, 'supplyCosts', idx, v)} className="text-[11px] font-semibold border-orange-300 focus:border-orange-500 bg-white text-orange-900" />
+                                           </div>
+                                        ))}
+                                     </div>
                                  </div>
                              )}
                          </div>
                       </div>
                    ))}
-                </div>
+                </React.Fragment>
             );
         }
 
+        // 일반 계층 (Flat Rendering)
         const cfg = levelConfig[level];
         return (
-            <div className="space-y-3">
+            <React.Fragment>
                 {(list||[]).map(item => (
-                    <div key={item.id} className={`p-2.5 rounded border border-slate-200 ${level===0?'bg-slate-100':level===1?'bg-white ml-2 shadow-sm':level===2?'bg-slate-50 ml-2':'bg-white ml-2 shadow-sm'}`}>
-                        <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-200/50">
-                            <input type="text" value={item.name} onChange={(e) => handlers.updateName(pathIds, item.id, e.target.value)} placeholder={cfg.ph} className="text-[12px] font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none w-1/2 px-1" />
-                            <div className="flex gap-1">
-                                <button onClick={() => cfg.addFn(pathIds, item.id)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded shadow-sm hover:bg-slate-50">+ {cfg.name}</button>
-                                <button onClick={() => cfg.rmFn(pathIds, item.id)} className="text-slate-400 hover:text-red-700 px-1.5 font-bold">&times;</button>
+                    <React.Fragment key={item.id}>
+                        <div className={`flex items-center gap-2 py-2 pr-2 border-b border-slate-200 hover:bg-slate-50 transition-colors w-full ${level===0?'bg-slate-100':''}`} style={{ paddingLeft: level === 0 ? '0.5rem' : `${level * 16}px` }}>
+                            {level > 0 && <span className={`w-1.5 h-1.5 rounded-full ${cfg.color} shrink-0`}></span>}
+                            <span className="text-[10px] font-bold text-slate-500 shrink-0">{cfg.name}</span>
+                            <input type="text" value={item.name} onChange={(e) => handlers.updateName(pathIds, item.id, e.target.value)} placeholder={cfg.ph} className="text-[13px] font-bold text-slate-800 bg-transparent border-b border-transparent focus:border-red-700 outline-none flex-1 min-w-[100px]" />
+                            <div className="flex gap-1 shrink-0 ml-auto">
+                                <button onClick={() => cfg.addFn(pathIds, item.id)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded shadow-sm hover:bg-slate-50">+ {levelConfig[level+1]?.name || '추가'}</button>
+                                <button onClick={() => cfg.rmFn(pathIds, item.id)} className="text-slate-400 hover:text-red-700 px-1.5 font-bold text-lg leading-none">&times;</button>
                             </div>
                         </div>
                         <HierarchyEditor list={item[cfg.key] || []} level={level+1} pathIds={[...pathIds, item.id]} handlers={handlers} />
-                    </div>
+                    </React.Fragment>
                 ))}
-            </div>
+            </React.Fragment>
         );
     };
 
@@ -1196,17 +1216,18 @@
         }
         res.ownershipHistory = ownershipHistory;
 
+        // 대표님께서 말씀하신 정확한 공식 적용: 
+        // 각 주주는 투자한 금액(음수)과 최종 5년차 청산 시 지분율대로 회수하는 금액(양수) 만으로 수익률 산출
         const equityIRRs = (inputs.equityList || []).map(eq => {
+            let totalInvest = 0;
+            let totalReturn = 0;
+
             const cf_j = [0,1,2,3,4,5].map(i => {
                 const eqInvest = toMil((eq.amounts || [])[i]);
+                totalInvest += eqInvest;
                 const share = ownershipHistory[i][eq.id] || 0;
                 
-                let fcfe = res.cf[i].operatingCf - totalCapex[i] - totalIntangible[i] + totalDebt[i];
                 let j_cf = -eqInvest;
-                
-                if (fcfe > 0) {
-                    j_cf += fcfe * share;
-                }
                 
                 if (i === 5) {
                    const method = inputs.terminalValueMethod || 'nav';
@@ -1214,18 +1235,19 @@
                    const endingCash = res.cf[5].endingCash;
                    const accumDebt = res.bs[5].bsDetails.debt;
                    
-                   let tv_equity = 0;
-                   if (method !== 'none') {
-                       tv_equity = tv_entity + endingCash - accumDebt;
-                   }
+                   // 청산가치 = 기업가치 + 통장에 남은 현금 - 갚아야 할 빚
+                   let tv_equity = (method === 'none' ? 0 : tv_entity) + endingCash - accumDebt;
                    
                    if (tv_equity > 0) {
-                       j_cf += tv_equity * share;
+                       const returnAmount = tv_equity * share;
+                       j_cf += returnAmount;
+                       totalReturn = returnAmount;
                    }
                 }
                 return j_cf;
             });
-            return { name: eq.name, irr: calculateIRR(cf_j) };
+            const moic = totalInvest > 0 ? totalReturn / totalInvest : 0;
+            return { name: eq.name, irr: calculateIRR(cf_j), moic };
         });
         res.equityIRRs = equityIRRs;
 
@@ -1502,12 +1524,14 @@
                   <DynamicMixedWcList listName="sgaFixList" items={inputs.sgaFixList} title="항목별 고정비" namePlaceholder="항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
-                <InputGroup title="6. 매출액 추정 (9단계 다차원 트리)">
+                <InputGroup title="6. 매출액 추정 (완전 개방형 9단계 트리)">
                   <div className="flex justify-between items-center mb-4">
-                    <p className="text-[11px] font-bold text-slate-500 tracking-tighter">매출유형 &gt; 국가 &gt; 브랜드 &gt; 영역 &gt; 형태 &gt; 채널 &gt; 거래처 &gt; 품목군 &gt; 품목</p>
-                    <button onClick={treeActions.addRevType} className="text-[10px] font-bold bg-white border border-slate-300 hover:border-slate-800 text-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 매출 유형</button>
+                    <p className="text-[11px] font-bold text-slate-500 tracking-tighter">들여쓰기만으로 계층을 표시하여 넓은 화면을 유지합니다.</p>
+                    <button onClick={treeActions.addRevType} className="text-[10px] font-bold bg-slate-800 text-white hover:bg-slate-700 px-3 py-1.5 rounded transition-colors shadow-sm">+ 매출 유형 추가</button>
                   </div>
-                  <HierarchyEditor list={inputs.salesHierarchy} level={0} pathIds={[]} handlers={treeActions} />
+                  <div className="flex flex-col border-t border-slate-200">
+                    <HierarchyEditor list={inputs.salesHierarchy} level={0} pathIds={[]} handlers={treeActions} />
+                  </div>
                 </InputGroup>
 
                 <InputGroup title="7. 영업외수익/비용">
@@ -1609,11 +1633,9 @@
                            ))}
                         </tbody>
                       </table>
-                      <div className="bg-slate-50 p-2 text-[10px] text-slate-500 font-semibold border-t border-slate-200">
-                        * 모든 연도의 정합성이 'Pass'로 표시되어야 추정 재무제표 3표(IS, BS, CF)가 수학적으로 완벽하게 연동됨을 의미합니다.
-                      </div>
                     </div>
 
+                    {/* 확실히 보이는 4대 핵심 지표 카드 */}
                     <div className="grid grid-cols-4 gap-6 mb-12">
                       <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
@@ -1625,23 +1647,26 @@
                       </div>
                       
                       <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
-                        <div className={`absolute top-0 left-0 w-1 h-full ${model.irr > model.wacc ? 'bg-red-700' : 'bg-slate-400'}`}></div>
+                        <div className={`absolute top-0 left-0 w-1 h-full ${(model.irr === Infinity || model.irr > model.wacc) ? 'bg-red-700' : 'bg-slate-400'}`}></div>
                         <div>
                             <div className="flex justify-between items-start">
                                 <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">내부수익률 (IRR)</p>
-                                <span className={`text-[10px] font-bold ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-400'}`}>{model.irr > model.wacc ? '✅ 확보' : '⚠️ 미흡'}</span>
+                                <span className={`text-[10px] font-bold ${(model.irr === Infinity || model.irr > model.wacc) ? 'text-red-700' : 'text-slate-400'}`}>{(model.irr === Infinity || model.irr > model.wacc) ? '✅ 확보' : '⚠️ 미흡'}</span>
                             </div>
-                            <p className={`text-3xl font-black tracking-tighter ${model.irr > model.wacc ? 'text-red-700' : 'text-slate-900'}`}>
-                                {isNaN(model.irr) ? '-' : Math.round(model.irr * 100) + '%'}
+                            <p className={`text-3xl font-black tracking-tighter ${(model.irr === Infinity || model.irr > model.wacc) ? 'text-red-700' : 'text-slate-900'}`}>
+                                {isNaN(model.irr) ? '-' : (model.irr === Infinity ? '∞ (무한대)' : Math.round(model.irr * 100) + '%')}
                             </p>
                         </div>
                         <div className="mt-4 pt-3 border-t border-slate-100">
-                            <p className="text-[10px] text-slate-500 font-bold mb-1.5 flex justify-between"><span>주주별 IRR</span><span>(지분율 기준)</span></p>
+                            <p className="text-[10px] text-slate-500 font-bold mb-1.5 flex justify-between"><span>주주별 IRR</span><span>(회수 배수)</span></p>
                             <div className="space-y-1">
                                 {model.equityIRRs.map((eq, idx) => (
                                     <div key={idx} className="flex justify-between items-center text-[10px]">
-                                        <span className="text-slate-600 font-semibold truncate pr-2 max-w-[100px]" title={eq.name}>{eq.name}</span>
-                                        <span className="font-bold text-slate-800">{isNaN(eq.irr) ? '-' : Math.round(eq.irr * 100) + '%'}</span>
+                                        <span className="text-slate-600 font-semibold truncate pr-2 max-w-[80px]" title={eq.name}>{eq.name}</span>
+                                        <span className="font-bold text-slate-800">
+                                            {isNaN(eq.irr) ? '-' : (eq.irr === Infinity ? '∞' : Math.round(eq.irr * 100) + '%')}
+                                            <span className="text-blue-600 font-black ml-1 text-[9px]">({eq.moic >= 100 ? Math.round(eq.moic).toLocaleString() : eq.moic.toFixed(1)}배)</span>
+                                        </span>
                                     </div>
                                 ))}
                             </div>
