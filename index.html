@@ -118,8 +118,8 @@
       }, [value, isEditing]);
 
       const handleChange = (e) => {
-        // 숫자, 쉼표, 소수점 및 사칙연산 기호(+, -, *, /, (, )) 허용
-        const raw = e.target.value.replace(/[^0-9.,+\-*/()\s]/g, '');
+        // 숫자, 쉼표, 소수점 및 사칙연산 기호(+, -, *, /, (, ), %) 허용
+        const raw = e.target.value.replace(/[^0-9.,+\-*/()\s%]/g, '');
         setLocalVal(raw);
       };
 
@@ -131,7 +131,10 @@
           if (expr.trim() === '') { onChange(0); setLocalVal('0'); return; }
           
           // 보안을 위해 숫자와 수식 관련 기호만 남김
-          const cleanExpr = expr.replace(/[^0-9.+\-*/()\s]/g, '');
+          let cleanExpr = expr.replace(/[^0-9.+\-*/()\s%]/g, '');
+          
+          // % 기호를 /100 으로 변환 (예: 400*4.75% -> 400*4.75/100)
+          cleanExpr = cleanExpr.replace(/%/g, '/100');
           
           // 자바스크립트 엔진을 통한 수식 계산 (안전한 문자열만 실행)
           const result = new Function('return ' + cleanExpr)();
@@ -384,6 +387,20 @@
               <div className="flex justify-between items-center mb-2 pb-1 border-b border-slate-100">
                 <input type="text" value={item.name} placeholder={namePlaceholder} onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)} className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none text-slate-800" />
                 <div className="flex items-center gap-2">
+                   <div className="flex items-center gap-1 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                     <span className="text-[9px] text-blue-600 font-bold">일괄적용</span>
+                     <input type="text" placeholder={item.isRate ? "일괄 %" : "일괄 금액"} onBlur={(e) => {
+                         try {
+                             let cleanExpr = e.target.value.replace(/,/g, '').replace(/[^0-9.+\-*/()\s%]/g, '').replace(/%/g, '/100');
+                             if(!cleanExpr) return;
+                             const val = new Function('return ' + cleanExpr)();
+                             if (!isNaN(val) && isFinite(val)) {
+                                 for (let i = 0; i < 6; i++) onAmountChange(listName, item.id, i, val, item.isRate ? 'rates' : 'amounts');
+                             }
+                             e.target.value = '';
+                         } catch(err) { e.target.value = ''; }
+                     }} onKeyDown={(e) => { if(e.key === 'Enter') e.target.blur(); }} className="w-12 text-right text-[10px] font-bold border border-blue-300 bg-white text-blue-800 rounded px-1 outline-none focus:border-blue-600 shadow-inner" />
+                   </div>
                    <select value={item.isRate ? 'rate' : 'amount'} onChange={(e) => onFieldChange(listName, item.id, 'isRate', e.target.value === 'rate')} className="text-[10px] font-bold border border-slate-300 bg-slate-50 text-slate-700 rounded px-1.5 py-0.5 outline-none focus:border-red-700">
                       <option value="amount">절대금액 (백만원)</option>
                       <option value="rate">매출액 대비 (%)</option>
@@ -1398,7 +1415,6 @@
                 <InputGroup title="5. 자금소요 (판매비와 관리비)">
                   <DynamicMixedWcList listName="sgaVarList" items={inputs.sgaVarList} title="직접변동비 설정" namePlaceholder="항목 (예: 물류비)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                   <DynamicMixedWcList listName="sgaSemiList" items={inputs.sgaSemiList} title="준변동비 설정" namePlaceholder="항목 (예: 통신비)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
-                  <div className="flex justify-between items-center mb-[-12px]"><span className="text-[10px] text-blue-600 font-bold ml-1">(※ '대손'이 포함된 항목명은 대손상각비(비현금성)로 자동 인식됩니다)</span></div>
                   <DynamicMixedWcList listName="sgaFixList" items={inputs.sgaFixList} title="고정비 설정" namePlaceholder="항목 (예: 임차료)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
