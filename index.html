@@ -96,16 +96,15 @@
     const toMil = (val) => (val || 0) * 1000000;
     const cloneDeep = (obj) => JSON.parse(JSON.stringify(obj));
 
-    // 안정적인 Bisection(이분법) 기반 IRR 계산 로직 적용 (발산 방지 및 무한대 처리)
     const calculateIRR = (rawCashFlows) => {
       const cashFlows = rawCashFlows.map(v => v / 1000000);
       
       if (cashFlows.every(v => v <= 0)) return -1.0; 
       const hasNegative = cashFlows.some(v => v < 0);
-      if (!hasNegative) return Infinity; // 투자 원금 없이 수익만 발생하면 무한대
+      if (!hasNegative) return Infinity;
 
       let low = -0.99999;
-      let high = 100000; // 최대 10,000,000% 탐색
+      let high = 100000; 
       let guess = 0;
 
       for (let i = 0; i < 200; i++) {
@@ -281,7 +280,7 @@
                       return (
                         <div key={idx} className="flex flex-col">
                           <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
-                          <NumInput value={val} onChange={(v) => onAmountChange(listName, item.id, idx, v, isRateType ? 'rates' : 'amounts')} className="text-[12px] fontsemibold text-slate-800" />
+                          <NumInput value={val} onChange={(v) => onAmountChange(listName, item.id, idx, v, isRateType ? 'rates' : 'amounts')} className="text-[12px] font-semibold text-slate-800" />
                           <span className="text-[9px] text-slate-500 text-right mt-1 font-semibold leading-tight truncate" title={isRateType ? `${formatCurrency(displayAmt)}원` : `${displayRate.toFixed(1)}%`}>
                             {isRateType ? `${formatCurrency(displayAmt / 1000000)}백만` : `${displayRate.toFixed(1)}%`}
                           </span>
@@ -444,21 +443,23 @@
 
     const HierarchyEditor = ({ list, level, pathIds, handlers }) => {
         const levelConfig = [
-            { key: 'countries', name: '국가', addFn: handlers.addCountry, rmFn: handlers.rmRevType, ph: '매출 유형명 (예: 제품판매)', color: 'bg-slate-800' },
-            { key: 'brands', name: '브랜드', addFn: handlers.addBrand, rmFn: handlers.rmCountry, ph: '국가명', color: 'bg-blue-600' },
-            { key: 'bizTypes', name: '영역', addFn: handlers.addBizType, rmFn: handlers.rmBrand, ph: '브랜드명', color: 'bg-indigo-500' },
-            { key: 'salesModes', name: '형태', addFn: handlers.addSalesMode, rmFn: handlers.rmBizType, ph: '사업영역명', color: 'bg-purple-500' },
-            { key: 'channels', name: '채널', addFn: handlers.addChannel, rmFn: handlers.rmSalesMode, ph: '판매형태명', color: 'bg-pink-500' },
-            { key: 'clients', name: '거래처', addFn: handlers.addClient, rmFn: handlers.rmChannel, ph: '채널명', color: 'bg-rose-500' },
-            { key: 'categories', name: '품목군', addFn: handlers.addCategory, rmFn: handlers.rmClient, ph: '거래처명', color: 'bg-amber-500' },
-            { key: 'products', name: '품목', addFn: handlers.addProduct, rmFn: handlers.rmCategory, ph: '품목군명', color: 'bg-red-600' }
+            { key: 'countries', name: '수익모델', addFn: handlers.addCountry, rmFn: handlers.rmRevType, ph: '수익모델명 (예: 제품/상품 판매)', color: 'bg-slate-800' },
+            { key: 'brands', name: '국가', addFn: handlers.addBrand, rmFn: handlers.rmCountry, ph: '국가명', color: 'bg-blue-600' },
+            { key: 'bizTypes', name: '브랜드', addFn: handlers.addBizType, rmFn: handlers.rmBrand, ph: '브랜드명', color: 'bg-indigo-500' },
+            { key: 'salesModes', name: '영역', addFn: handlers.addSalesMode, rmFn: handlers.rmBizType, ph: '사업영역명', color: 'bg-purple-500' },
+            { key: 'channels', name: '형태', addFn: handlers.addChannel, rmFn: handlers.rmSalesMode, ph: '판매형태명', color: 'bg-pink-500' },
+            { key: 'clients', name: '채널', addFn: handlers.addClient, rmFn: handlers.rmChannel, ph: '채널명', color: 'bg-rose-500' },
+            { key: 'categories', name: '거래처', addFn: handlers.addCategory, rmFn: handlers.rmClient, ph: '거래처명', color: 'bg-amber-500' },
+            { key: 'products', name: '품목군', addFn: handlers.addProduct, rmFn: handlers.rmCategory, ph: '품목군명', color: 'bg-red-600' }
         ];
 
+        // Level 8 (품목 상세 입력란)
         if (level === 8) { 
             return (
                 <React.Fragment>
                    {(list||[]).map(product => (
                       <div key={product.id} className="flex flex-col border-b-2 border-slate-200 py-4 hover:bg-slate-50 transition-colors w-full">
+                         {/* 타이틀 영역 */}
                          <div className="flex flex-wrap items-center gap-2 mb-3 pr-2 w-full" style={{ paddingLeft: `${level * 16}px` }}>
                             <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0"></span>
                             <span className="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded shrink-0">품목</span>
@@ -474,6 +475,7 @@
                             </div>
                          </div>
                          
+                         {/* 데이터 입력 영역 */}
                          <div className="flex flex-col gap-3 px-3 w-full">
                              <div className="w-full bg-white p-2.5 rounded border border-slate-300 shadow-sm">
                                  <div className="text-[11px] font-bold text-slate-700 mb-2">단가 (Price - {product.isForeignCurrency ? 'USD' : '원'})</div>
@@ -517,6 +519,7 @@
             );
         }
 
+        // 일반 계층 (Flat Rendering)
         const cfg = levelConfig[level];
         return (
             <React.Fragment>
@@ -927,7 +930,7 @@
                   } else if (n.salesModes) { const { sum, sub } = buildLevel(n.salesModes, type); levelSum += sum; if(sum>0 || i===0) levelSub.push({ id: n.id, label: n.name||'사업영역', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:4, sub });
                   } else if (n.bizTypes) { const { sum, sub } = buildLevel(n.bizTypes, type); levelSum += sum; if(sum>0 || i===0) levelSub.push({ id: n.id, label: n.name||'브랜드', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:3, sub });
                   } else if (n.brands) { const { sum, sub } = buildLevel(n.brands, type); levelSum += sum; if(sum>0 || i===0) levelSub.push({ id: n.id, label: n.name||'국가', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:2, sub });
-                  } else if (n.countries) { const { sum, sub } = buildLevel(n.countries, type); levelSum += sum; if(sum>0 || i===0) levelSub.push({ id: n.id, label: n.name||'매출유형', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:1, sub });
+                  } else if (n.countries) { const { sum, sub } = buildLevel(n.countries, type); levelSum += sum; if(sum>0 || i===0) levelSub.push({ id: n.id, label: n.name||'수익모델', values: pad6([0]).map((_,idx)=>idx===i?sum:0), isGroup:true, level:1, sub });
                   }
               }); return { sum: levelSum, sub: levelSub };
           };
@@ -1309,7 +1312,6 @@
       const getM = (k1, k2) => model.is_managerial.map(d => k2 ? d[k1][k2] : d[k1]);
       const getB = (k1, k2) => model.bs.map(d => k2 ? d[k1][k2] : d[k1]);
       const getC = (k1, k2) => model.cf.map(d => k2 ? d[k1][k2] : d[k1]);
-
       const calcRatio = (vals) => vals.map((v, i) => { const rev = model.is_financial[i]?.revenue || 0; return rev > 0 ? v / rev : 0; });
 
       if (authLoading) return <div className="flex h-screen items-center justify-center bg-slate-100 font-bold text-slate-600">로딩 중...</div>;
@@ -1543,7 +1545,6 @@
             </div>
           )}
 
-          {}
           <div className="flex-1 flex flex-col relative bg-[#e2e8f0] overflow-hidden">
             {isAdmin && (
                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-slate-800 text-white p-2 rounded-r-md shadow-lg opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -1559,9 +1560,9 @@
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name} ({new Date(p.updated_at).toLocaleDateString()})</option>)}
                 </select>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-600">{user?.email} {isAdmin && <span className="text-blue-600">(관리자)</span>}</span>
-                <button onClick={handleLogout} className="text-[11px] font-bold bg-white border border-slate-300 text-slate-700 px-3 py-1.5 rounded hover:bg-red-50 hover:text-red-700 transition-colors shadow-sm">로그아웃</button>
+              <div className="flex items-center gap-4">
+                {user && <span className="text-[11px] font-bold text-slate-600">{user.email} 님</span>}
+                <button onClick={handleLogout} className="text-[10px] font-bold bg-slate-100 border border-slate-300 px-3 py-1.5 rounded hover:bg-slate-200 shadow-sm transition-colors">로그아웃</button>
               </div>
             </div>
 
@@ -1580,7 +1581,6 @@
               ))}
             </div>
 
-            {}
             <div className="flex-1 overflow-auto p-8 custom-scrollbar relative">
               <div className="max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
                 
@@ -1634,6 +1634,7 @@
                       </table>
                     </div>
 
+                    {/* 확실히 보이는 4대 핵심 지표 카드 */}
                     <div className="grid grid-cols-4 gap-6 mb-12">
                       <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
