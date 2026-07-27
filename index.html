@@ -42,6 +42,7 @@
       companyVision: '2026년 일본영업소 개설을 시작으로 카자흐스탄, 몽골, 베트남 등 글로벌 거점 공장 설립 및 매출 200억 달성 (2030년)',
       missionImageBase64: null,
       visionImageBase64: null,
+      brandImages: [],
       // ----------------------------------------
       
       terminalValueMethod: 'nav', 
@@ -746,6 +747,7 @@
             loaded.companyVision = loaded.companyVision || DEFAULT_INPUTS.companyVision;
             loaded.missionImageBase64 = loaded.missionImageBase64 || loaded.pptImageBase64 || null;
             loaded.visionImageBase64 = loaded.visionImageBase64 || null;
+            loaded.brandImages = loaded.brandImages || [];
 
             ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'equityValuation'].forEach(k => {
                loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
@@ -832,6 +834,43 @@
           const reader = new FileReader();
           reader.onloadend = () => {
               setInputs(prev => ({ ...prev, [targetField]: reader.result }));
+          };
+          reader.readAsDataURL(file);
+      };
+
+      // 동적 브랜드 이미지 업로드 및 관리 핸들러
+      const addBrandImage = () => {
+          setInputs(prev => ({
+              ...prev,
+              brandImages: [...(prev.brandImages || []), { id: Date.now(), name: '', imageBase64: null }]
+          }));
+      };
+
+      const removeBrandImage = (id) => {
+          setInputs(prev => ({
+              ...prev,
+              brandImages: prev.brandImages.filter(b => b.id !== id)
+          }));
+      };
+
+      const updateBrandImageField = (id, field, value) => {
+          setInputs(prev => ({
+              ...prev,
+              brandImages: prev.brandImages.map(b => b.id === id ? { ...b, [field]: value } : b)
+          }));
+      };
+
+      const handleBrandImageUpload = (e, id) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 2 * 1024 * 1024) {
+              alert("이미지 크기는 2MB 이하로 업로드해주세요.");
+              e.target.value = '';
+              return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              updateBrandImageField(id, 'imageBase64', reader.result);
           };
           reader.readAsDataURL(file);
       };
@@ -1444,6 +1483,32 @@
                         <label className="text-[12px] font-bold text-slate-800 mb-1 block">기업 비전 (Vision & Roadmap) 텍스트</label>
                         <textarea value={inputs.companyVision} onChange={e => setInputs(p => ({...p, companyVision: e.target.value}))} rows="4" className="w-full text-[12px] font-semibold border border-slate-300 rounded p-2 bg-white resize-none focus:border-red-700" placeholder="연도별 비전 및 로드맵을 입력하세요..." />
                     </div>
+
+                    {/* --- 신규 추가: 브랜드 라인 동적 업로드 --- */}
+                    <div className="mt-6 pt-4 border-t border-slate-200">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-[12px] font-bold text-slate-800">브랜드 라인 (Brand Line)</label>
+                            <button onClick={addBrandImage} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 px-2 py-1 rounded shadow-sm hover:bg-slate-50">+ 브랜드 추가</button>
+                        </div>
+                        <div className="space-y-3">
+                            {(inputs.brandImages || []).map((brand, idx) => (
+                                <div key={brand.id} className="p-3 bg-indigo-50 border border-indigo-100 rounded shadow-sm relative">
+                                    <button onClick={() => removeBrandImage(brand.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-700 font-bold leading-none text-lg" title="삭제">&times;</button>
+                                    <input type="text" value={brand.name} onChange={(e) => updateBrandImageField(brand.id, 'name', e.target.value)} placeholder="브랜드명 입력 (예: 셀슈틱스)" className="w-full text-[11px] font-bold border-b border-indigo-200 bg-transparent outline-none focus:border-red-700 mb-2 pb-1 text-slate-800" />
+                                    <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleBrandImageUpload(e, brand.id)} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer border border-white rounded bg-white" />
+                                    {brand.imageBase64 && (
+                                        <div className="mt-2 text-right">
+                                            <button onClick={() => updateBrandImageField(brand.id, 'imageBase64', null)} className="text-[10px] text-red-600 font-bold hover:underline">이미지 삭제</button>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                            {(!inputs.brandImages || inputs.brandImages.length === 0) && (
+                                <div className="text-[10px] text-slate-400 text-center p-2 bg-white border border-slate-200 rounded">등록된 브랜드 이미지가 없습니다.</div>
+                            )}
+                        </div>
+                    </div>
+                    {/* -------------------------------------- */}
                 </InputGroup>
                 {/* -------------------------------------- */}
 
@@ -1693,6 +1758,31 @@
                               )}
                               <p className="text-[14px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">{inputs.companyVision}</p>
                           </div>
+
+                          {/* --- 신규 추가: 브랜드 라인 표시 영역 --- */}
+                          {(inputs.brandImages && inputs.brandImages.length > 0) && (
+                              <div className="bg-indigo-50 border border-indigo-200 p-6 rounded shadow-sm">
+                                  <div className="flex items-center gap-2 mb-4">
+                                      <div className="w-2 h-6 bg-indigo-600 rounded-sm"></div>
+                                      <h3 className="text-lg font-black text-indigo-900">BRAND LINE</h3>
+                                  </div>
+                                  <div className="flex flex-col gap-6">
+                                      {inputs.brandImages.map((brand, idx) => (
+                                          <div key={brand.id} className="bg-white border border-indigo-100 p-6 rounded shadow-sm flex flex-col items-center w-full">
+                                              <h4 className="text-[15px] font-black text-slate-800 mb-4 border-b-2 border-indigo-100 pb-2 w-full text-center">{brand.name || `브랜드 ${idx + 1}`}</h4>
+                                              {brand.imageBase64 ? (
+                                                  <div className="w-full flex justify-center bg-slate-50 border border-slate-100 rounded p-2">
+                                                      <img src={brand.imageBase64} alt={brand.name} className="max-w-full h-auto object-contain cursor-pointer hover:opacity-90 hover:scale-[1.01] transition-all" style={{ maxHeight: '600px' }} onClick={() => setZoomedImg(brand.imageBase64)} title="클릭하여 확대 보기" />
+                                                  </div>
+                                              ) : (
+                                                  <div className="text-[12px] text-slate-400 py-12 flex items-center justify-center bg-slate-50 border border-slate-100 rounded w-full">등록된 이미지 없음</div>
+                                              )}
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          )}
+                          {/* ------------------------------------- */}
                       </div>
                   </div>
                   {/* ------------------------------------- */}
