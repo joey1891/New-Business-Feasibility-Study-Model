@@ -1638,10 +1638,20 @@
                 { id: 'is_mgr', label: '📈 관리회계 손익계산서' },
                 { id: 'bs', label: '🏦 재무상태표 (B/S)' },
                 { id: 'cf', label: '💵 현금흐름표 (C/F)' },
+                { id: 'monthly_sales', label: '📅 월별영업현황표', url: 'https://joey1891.github.io/Sales-Forecast/' },
+                { id: 'price_list', label: '💰 상품가격표', url: 'https://price-list-three-woad.vercel.app/' },
               ].map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`pb-3 text-[13px] font-black tracking-widest transition-all whitespace-nowrap outline-none ${activeTab === tab.id ? 'border-b-[3px] border-red-700 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
+                <button key={tab.id} 
+                  onClick={() => {
+                    if (tab.url) {
+                      window.open(tab.url, '_blank');
+                    } else {
+                      setActiveTab(tab.id);
+                    }
+                  }}
+                  className={`pb-3 text-[13px] font-black tracking-widest transition-all whitespace-nowrap outline-none flex items-center gap-1 ${activeTab === tab.id ? 'border-b-[3px] border-red-700 text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
                   {tab.label}
+                  {tab.url && <span className="text-[10px] text-blue-500 bg-blue-50 px-1 rounded-sm border border-blue-100">↗</span>}
                 </button>
               ))}
             </div>
