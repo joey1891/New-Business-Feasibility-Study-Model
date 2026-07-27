@@ -43,6 +43,7 @@
       missionImageBase64: null,
       visionImageBase64: null,
       brandImages: [],
+      govInvestRoadmapImageBase64: null,
       // ----------------------------------------
       
       terminalValueMethod: 'nav', 
@@ -748,6 +749,7 @@
             loaded.missionImageBase64 = loaded.missionImageBase64 || loaded.pptImageBase64 || null;
             loaded.visionImageBase64 = loaded.visionImageBase64 || null;
             loaded.brandImages = loaded.brandImages || [];
+            loaded.govInvestRoadmapImageBase64 = loaded.govInvestRoadmapImageBase64 || null;
 
             ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'equityValuation'].forEach(k => {
                loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
@@ -1509,6 +1511,18 @@
                         </div>
                     </div>
                     {/* -------------------------------------- */}
+
+                    {/* --- 신규 추가: 정부 과제 및 투자 유치 로드맵 --- */}
+                    <div className="mt-6 pt-4 border-t border-slate-200">
+                        <div className="mb-2 p-2 bg-emerald-50/50 border border-emerald-100 rounded">
+                            <label className="text-[12px] font-bold text-slate-800 mb-1 block">정부 과제 및 투자 유치 로드맵</label>
+                            <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleImageUpload(e, 'govInvestRoadmapImageBase64')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-emerald-700 file:text-white hover:file:bg-emerald-800 cursor-pointer border border-slate-300 rounded bg-white" />
+                            {inputs.govInvestRoadmapImageBase64 && (
+                                <button onClick={() => setInputs(p => ({...p, govInvestRoadmapImageBase64: null}))} className="text-[10px] text-red-600 font-bold mt-2 hover:underline">로드맵 이미지 삭제</button>
+                            )}
+                        </div>
+                    </div>
+                    {/* -------------------------------------- */}
                 </InputGroup>
                 {/* -------------------------------------- */}
 
@@ -1779,6 +1793,20 @@
                                               )}
                                           </div>
                                       ))}
+                                  </div>
+                              </div>
+                          )}
+                          {/* ------------------------------------- */}
+
+                          {/* --- 신규 추가: 정부 과제 및 투자 유치 로드맵 --- */}
+                          {inputs.govInvestRoadmapImageBase64 && (
+                              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3">
+                                      <div className="w-2 h-6 bg-emerald-600 rounded-sm"></div>
+                                      <h3 className="text-lg font-black text-emerald-900">GOVERNMENT PROJECTS & INVESTMENT ROADMAP</h3>
+                                  </div>
+                                  <div className="border border-emerald-200 rounded shadow-sm overflow-hidden flex justify-center bg-white p-2">
+                                      <img src={inputs.govInvestRoadmapImageBase64} alt="Investment Roadmap" className="max-w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" style={{ maxHeight: '600px' }} onClick={() => setZoomedImg(inputs.govInvestRoadmapImageBase64)} title="클릭하여 확대 보기" />
                                   </div>
                               </div>
                           )}
