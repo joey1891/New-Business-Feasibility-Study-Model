@@ -17,7 +17,7 @@
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     body { font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-    input:focus, select:focus { outline: none; border-color: #b91c1c; box-shadow: 0 0 0 1px #b91c1c; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #b91c1c; box-shadow: 0 0 0 1px #b91c1c; }
   </style>
 </head>
 <body>
@@ -37,6 +37,13 @@
     };
 
     const DEFAULT_INPUTS = {
+      // --- 신규 추가: 미션, 비전 및 PPT 이미지 ---
+      companyMission: '한국, 중국, 대만 등 글로벌 유통 네트워크 구축 및 화장품/스킨부스터/건기식 브랜드 국내외 유통, 고품질 ODM 서비스 제공',
+      companyVision: '2026년 일본영업소 개설을 시작으로 카자흐스탄, 몽골, 베트남 등 글로벌 거점 공장 설립 및 매출 200억 달성 (2030년)',
+      missionImageBase64: null,
+      visionImageBase64: null,
+      // ----------------------------------------
+      
       terminalValueMethod: 'nav', 
       perpetualGrowthRate: 1.0,
       inflationRate: pad6([2.5]), interestRate: pad6([5.0]), exchangeRate: pad6([1300]), industryGrowth: pad6([3.0]), taxRate: pad6([20.0]), costOfEquity: pad6([10.0]),
@@ -696,6 +703,7 @@
             let loaded = cloneDeep(proj.inputs);
             
             if (loaded.laborFix && !proj.inputs.sgaFixList) {
+                // 과거 데이터 마이그레이션 로직 (생략 유지)
                 loaded.sgaVarList = [
                     { id: 1, name: '물류/수출비용', amounts: pad6([0]), rates: pad6(loaded.logisticsRate||[2.0]), isRate: true, calcType: 'rate' },
                     { id: 2, name: '판매수수료', amounts: pad6([0]), rates: pad6(loaded.salesCommRate||[1.5]), isRate: true, calcType: 'rate' },
@@ -732,6 +740,12 @@
             loaded.terminalValueMethod = loaded.terminalValueMethod || 'nav';
             loaded.perpetualGrowthRate = loaded.perpetualGrowthRate ?? 1.0;
             
+            // 미션, 비전 텍스트 마이그레이션 대비
+            loaded.companyMission = loaded.companyMission || DEFAULT_INPUTS.companyMission;
+            loaded.companyVision = loaded.companyVision || DEFAULT_INPUTS.companyVision;
+            loaded.missionImageBase64 = loaded.missionImageBase64 || loaded.pptImageBase64 || null;
+            loaded.visionImageBase64 = loaded.visionImageBase64 || null;
+
             ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'equityValuation'].forEach(k => {
                loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
             });
@@ -801,6 +815,25 @@
       const handleListField = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
       const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), isRate: true, calcType: 'rate', usefulLife: 5 }] }));
       const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
+
+      // PPT 이미지 업로드 핸들러 (Base64 변환)
+      const handleImageUpload = (e, targetField) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          // 파일 크기 제한 (예: 2MB - JSON 저장소 최적화를 위함)
+          if (file.size > 2 * 1024 * 1024) {
+              alert("이미지 크기는 2MB 이하로 업로드해주세요.");
+              e.target.value = '';
+              return;
+          }
+
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              setInputs(prev => ({ ...prev, [targetField]: reader.result }));
+          };
+          reader.readAsDataURL(file);
+      };
 
       const hHandlers = {
           addLevelItem: (pathIds, newObj, targetKey) => setInputs(p => {
@@ -1367,7 +1400,7 @@
                      <button onClick={handleSave} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold py-2 rounded shadow-sm transition-colors">💾 클라우드 저장</button>
                      <button onClick={() => { setInputs(DEFAULT_INPUTS); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false); setAutoSaveEnabled(false); }} className="flex-1 bg-white border border-slate-300 hover:border-slate-800 text-slate-800 text-[11px] font-bold py-2 rounded shadow-sm transition-colors">📄 신규 캔버스</button>
                      {currentProjectId && (
-                        <button onClick={() => { if(window.confirm('정말 이 프로젝트를 삭제하시겠습니까? 복구할 수 없습니다.')) handleDelete(); }} className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold py-2 px-3 rounded shadow-sm transition-colors">🗑️ 삭제</button>
+                        <button onClick={() => { if(window.confirm('정말 이 프로젝트를 삭제하시겠습니까? 복구할 수 복구할 수 없습니다.')) handleDelete(); }} className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold py-2 px-3 rounded shadow-sm transition-colors">🗑️ 삭제</button>
                      )}
                    </div>
                    
@@ -1381,6 +1414,37 @@
                      )}
                    </div>
                 </InputGroup>
+
+                {/* --- 신규: 기업 미션 및 비전 PPT 섹션 --- */}
+                <InputGroup title="0. 기업 미션 및 비전 (이미지 업로드)">
+                    <p className="text-[10px] text-slate-500 mb-4 font-semibold bg-slate-100 p-2 rounded">PPT 파일(.pptx) 자체는 웹에서 직접 표시되지 않습니다. 슬라이드를 <b>이미지(JPG, PNG)로 저장</b>하여 각각 첨부해 주세요.</p>
+                    
+                    <div className="mb-4 p-2 bg-blue-50/50 border border-blue-100 rounded">
+                        <label className="text-[11px] font-bold text-slate-800 mb-1 block">미션 (Mission) 슬라이드 이미지</label>
+                        <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleImageUpload(e, 'missionImageBase64')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer border border-slate-300 rounded bg-white" />
+                        {inputs.missionImageBase64 && (
+                            <button onClick={() => setInputs(p => ({...p, missionImageBase64: null}))} className="text-[10px] text-red-600 font-bold mt-2 hover:underline">미션 이미지 삭제</button>
+                        )}
+                    </div>
+
+                    <div className="mb-4 p-2 bg-red-50/50 border border-red-100 rounded">
+                        <label className="text-[11px] font-bold text-slate-800 mb-1 block">비전/로드맵 (Vision) 슬라이드 이미지</label>
+                        <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleImageUpload(e, 'visionImageBase64')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer border border-slate-300 rounded bg-white" />
+                        {inputs.visionImageBase64 && (
+                            <button onClick={() => setInputs(p => ({...p, visionImageBase64: null}))} className="text-[10px] text-red-600 font-bold mt-2 hover:underline">비전 이미지 삭제</button>
+                        )}
+                    </div>
+
+                    <div className="mb-3">
+                        <label className="text-[12px] font-bold text-slate-800 mb-1 block">기업 미션 (Mission) 텍스트</label>
+                        <textarea value={inputs.companyMission} onChange={e => setInputs(p => ({...p, companyMission: e.target.value}))} rows="3" className="w-full text-[12px] font-semibold border border-slate-300 rounded p-2 bg-white resize-none focus:border-red-700" placeholder="미션을 입력하세요..." />
+                    </div>
+                    <div>
+                        <label className="text-[12px] font-bold text-slate-800 mb-1 block">기업 비전 (Vision & Roadmap) 텍스트</label>
+                        <textarea value={inputs.companyVision} onChange={e => setInputs(p => ({...p, companyVision: e.target.value}))} rows="4" className="w-full text-[12px] font-semibold border border-slate-300 rounded p-2 bg-white resize-none focus:border-red-700" placeholder="연도별 비전 및 로드맵을 입력하세요..." />
+                    </div>
+                </InputGroup>
+                {/* -------------------------------------- */}
 
                 <InputGroup title="1. 거시환경변수">
                   <YearlyInputField label="물가상승률 (%)" arrName="inflationRate" values={inputs.inflationRate} onChangeArray={handleArrayChange} />
@@ -1585,6 +1649,43 @@
               <div className="max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
                 
                 <div style={{ display: activeTab === 'npv' ? 'block' : 'none' }}>
+                  
+                  {/* --- 신규: 우측 상단 미션 & 비전 표시 영역 --- */}
+                  <div className="px-10 py-10 border-b-4 border-slate-900 bg-white">
+                      <div className="flex justify-between items-end mb-6">
+                          <h2 className="text-3xl font-black text-slate-900 tracking-tight">기업 미션 및 비전</h2>
+                          <span className="text-xs text-slate-500 font-bold uppercase tracking-widest">Company Mission & Vision</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="bg-blue-50 border border-blue-200 p-6 rounded shadow-sm">
+                              <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-2 h-6 bg-blue-600 rounded-sm"></div>
+                                  <h3 className="text-lg font-black text-blue-900">MISSION</h3>
+                              </div>
+                              {inputs.missionImageBase64 && (
+                                  <div className="mb-4 border border-blue-200 rounded shadow-sm overflow-hidden flex justify-center bg-white p-2">
+                                      <img src={inputs.missionImageBase64} alt="Mission" className="max-w-full h-auto object-contain" style={{ maxHeight: '400px' }} />
+                                  </div>
+                              )}
+                              <p className="text-[13px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">{inputs.companyMission}</p>
+                          </div>
+                          <div className="bg-red-50 border border-red-200 p-6 rounded shadow-sm">
+                              <div className="flex items-center gap-2 mb-3">
+                                  <div className="w-2 h-6 bg-red-700 rounded-sm"></div>
+                                  <h3 className="text-lg font-black text-red-900">VISION & ROADMAP</h3>
+                              </div>
+                              {inputs.visionImageBase64 && (
+                                  <div className="mb-4 border border-red-200 rounded shadow-sm overflow-hidden flex justify-center bg-white p-2">
+                                      <img src={inputs.visionImageBase64} alt="Vision" className="max-w-full h-auto object-contain" style={{ maxHeight: '400px' }} />
+                                  </div>
+                              )}
+                              <p className="text-[13px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap">{inputs.companyVision}</p>
+                          </div>
+                      </div>
+                  </div>
+                  {/* ------------------------------------- */}
+
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">사업타당성 종합 분석 보고서</h2>
                     <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary</p>
@@ -1634,7 +1735,6 @@
                       </table>
                     </div>
 
-                    {/* 확실히 보이는 4대 핵심 지표 카드 */}
                     <div className="grid grid-cols-4 gap-6 mb-12">
                       <div className="bg-white border border-slate-200 rounded p-6 shadow-sm relative overflow-hidden flex flex-col justify-between">
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
@@ -1993,7 +2093,7 @@
                           ]} />
                         <ExpandableRow label="III. 재무활동 현금흐름" values={getC('financingCf')} isBold details={[
                             { label: '자기자본 유입 (증자)', values: getC('cfDetails', 'equity'), level: 1 },
-                            { label: '타인자본 유입 (차입)', values: getC('cfDetails', 'debt'), level: 1 }
+                            { label: '타인자본 유입 (차입)', 제alues: getC('cfDetails', 'debt'), level: 1 }
                           ]} />
                         <ExpandableRow label="현금의 증감 (I + II + III)" values={getC('netCf')} isTotal />
                         <ExpandableRow label="기초 현금" values={getC('beginningCash')} isBold />
