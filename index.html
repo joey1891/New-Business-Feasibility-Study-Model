@@ -37,11 +37,17 @@
     };
 
     const DEFAULT_INPUTS = {
+      irPptFileName: '',
+      irPptBase64: null,
+      irSlideImages: [],
+
       companyMission: '한국, 중국, 대만 등 글로벌 유통 네트워크 구축 및 화장품/스킨부스터/건기식 브랜드 국내외 유통, 고품질 ODM 서비스 제공',
       companyVision: '2026년 일본영업소 개설을 시작으로 카자흐스탄, 몽골, 베트남 등 글로벌 거점 공장 설립 및 매출 200억 달성 (2030년)',
       missionImageBase64: null,
       visionImageBase64: null,
       brandImages: [],
+      majorClientsImages: [], 
+      govInvestRoadmapImages: [],
       majorClientsImageBase64: null, 
       govInvestRoadmapImageBase64: null,
       
@@ -187,7 +193,7 @@
     ));
 
     const DynamicListYearly = React.memo(({ listName, items, title, namePlaceholder, hasUsefulLife, showOwnership, ownershipData, onAdd, onRemove, onFieldChange, onAmountChange }) => (
-  <div className="mb-6">
+      <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="text-[12px] font-bold text-slate-800 tracking-wide">{title}</label>
           <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 항목 추가</button>
@@ -304,7 +310,7 @@
     ));
 
     const DynamicBaseCostList = React.memo(({ listName, items, title, onAdd, onRemove, onFieldChange, onAmountChange, model }) => (
-  <div className="mb-6">
+      <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="text-[12px] font-bold text-slate-800 tracking-wide">{title}</label>
           <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 항목 추가</button>
@@ -337,7 +343,7 @@
     ));
 
     const DynamicExpRateList = React.memo(({ listName, items, title, onAdd, onRemove, onFieldChange, onAmountChange, model }) => (
-  <div className="mb-6">
+      <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="text-[12px] font-bold text-slate-800 tracking-wide">{title}</label>
           <button onClick={() => onAdd(listName)} className="text-[10px] font-bold text-slate-600 bg-white border border-slate-300 hover:border-slate-800 px-2 py-1 rounded transition-colors shadow-sm">+ 항목 추가</button>
@@ -554,7 +560,8 @@
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
       const [rememberId, setRememberId] = useState(false);
-      const [activeTab, setActiveTab] = useState('mission_vision');
+      // 기본 탭을 IR 자료(ir_data)로 설정
+      const [activeTab, setActiveTab] = useState('ir_data');
       const [isSidebarOpen, setIsSidebarOpen] = useState(true);
       const [inputs, setInputs] = useState(DEFAULT_INPUTS);
       const [projects, setProjects] = useState([]);
@@ -738,13 +745,28 @@
             loaded.terminalValueMethod = loaded.terminalValueMethod || 'nav';
             loaded.perpetualGrowthRate = loaded.perpetualGrowthRate ?? 1.0;
             
+            loaded.irPptFileName = loaded.irPptFileName || '';
+            loaded.irPptBase64 = loaded.irPptBase64 || null;
+            loaded.irSlideImages = loaded.irSlideImages || [];
+
             loaded.companyMission = loaded.companyMission || DEFAULT_INPUTS.companyMission;
             loaded.companyVision = loaded.companyVision || DEFAULT_INPUTS.companyVision;
-            loaded.missionImageBase64 = loaded.missionImageBase64 || loaded.pptImageBase64 || null;
+            loaded.missionImageBase64 = loaded.missionImageBase64 || null;
             loaded.visionImageBase64 = loaded.visionImageBase64 || null;
             loaded.brandImages = loaded.brandImages || [];
-            loaded.majorClientsImageBase64 = loaded.majorClientsImageBase64 || null; 
-            loaded.govInvestRoadmapImageBase64 = loaded.govInvestRoadmapImageBase64 || null;
+            
+            // 과거 단일 이미지들을 다중 이미지 배열로 마이그레이션
+            loaded.majorClientsImages = loaded.majorClientsImages || [];
+            if (loaded.majorClientsImageBase64 && loaded.majorClientsImages.length === 0) {
+                loaded.majorClientsImages = [{ id: Date.now(), name: '기존 이미지', imageBase64: loaded.majorClientsImageBase64, isVisible: true }];
+                loaded.majorClientsImageBase64 = null;
+            }
+            
+            loaded.govInvestRoadmapImages = loaded.govInvestRoadmapImages || [];
+            if (loaded.govInvestRoadmapImageBase64 && loaded.govInvestRoadmapImages.length === 0) {
+                loaded.govInvestRoadmapImages = [{ id: Date.now()+1, name: '기존 이미지', imageBase64: loaded.govInvestRoadmapImageBase64, isVisible: true }];
+                loaded.govInvestRoadmapImageBase64 = null;
+            }
 
             ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'equityValuation'].forEach(k => {
                loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
@@ -805,7 +827,7 @@
             setInputs(loaded); setProjectName(proj.name); setCurrentProjectId(proj.id); setIsPublicProject(proj.is_public || false); setAutoSaveEnabled(true);
           } catch (error) {
             console.error("데이터 불러오기 중 오류 발생:", error);
-            setAppMessage({ type: 'alert', text: "과거 버전의 데이터를 변환하는 중 구조적 오류가 발생했습니다. (일부 설정이 유실되었을 수 있습니다)" });
+            setAppMessage({ type: 'alert', text: "과거 버전의 데이터를 변환하는 중 구조적 오류가 발생했습니다." });
           }
         }
       };
@@ -840,6 +862,109 @@
           reader.onloadend = () => {
               setInputs(prev => ({ ...prev, [targetField]: reader.result }));
           };
+          reader.readAsDataURL(file);
+      };
+
+      // 범용 다중 이미지 업로드 핸들러 (슬라이드, 거래처, 로드맵 등에 사용)
+      const handleMultiImageUploadGeneric = (e, targetArray) => {
+          const files = Array.from(e.target.files);
+          if (!files.length) return;
+          
+          const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
+          if (validFiles.length < files.length) {
+              setAppMessage({ type: 'alert', text: "2MB 이하의 이미지만 업로드되었습니다. 용량이 큰 파일은 제외되었습니다." });
+          }
+
+          let newSlides = [];
+          let processed = 0;
+
+          validFiles.forEach((file, idx) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                  newSlides.push({ id: Date.now() + Math.random(), name: file.name, imageBase64: reader.result, isVisible: true });
+                  processed++;
+                  if (processed === validFiles.length) {
+                      setInputs(prev => ({
+                          ...prev,
+                          [targetArray]: [...(prev[targetArray] || []), ...newSlides]
+                      }));
+                  }
+              };
+              reader.readAsDataURL(file);
+          });
+          e.target.value = '';
+      };
+
+      // 배열 요소 순서 이동
+      const moveImage = (targetArrayName, index, direction) => {
+          setInputs(prev => {
+              const arr = [...(prev[targetArrayName] || [])];
+              if (direction === -1 && index > 0) {
+                  [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+              } else if (direction === 1 && index < arr.length - 1) {
+                  [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+              }
+              return { ...prev, [targetArrayName]: arr };
+          });
+      };
+
+      // 배열 요소 숨김/표시 토글
+      const toggleImageVisibility = (targetArrayName, id) => {
+          setInputs(prev => ({
+              ...prev,
+              [targetArrayName]: prev[targetArrayName].map(item =>
+                  item.id === id ? { ...item, isVisible: item.isVisible === false ? true : false } : item
+              )
+          }));
+      };
+
+      // 배열 요소 삭제
+      const removeMultiImage = (targetArrayName, id) => {
+          setInputs(prev => ({
+              ...prev,
+              [targetArrayName]: prev[targetArrayName].filter(item => item.id !== id)
+          }));
+      };
+
+      // IR 슬라이드용 별도 업로드 (정렬 로직 포함)
+      const handleIrSlideUpload = (e) => {
+          const files = Array.from(e.target.files);
+          if (!files.length) return;
+          
+          const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
+          if (validFiles.length < files.length) {
+              setAppMessage({ type: 'alert', text: "2MB 이하의 이미지만 업로드되었습니다. 용량이 큰 파일은 제외되었습니다." });
+          }
+
+          let newSlides = [];
+          let processed = 0;
+
+          validFiles.forEach((file, idx) => {
+              const reader = new FileReader();
+              reader.onloadend = () => {
+                  newSlides.push({ id: Date.now() + Math.random(), name: file.name, imageBase64: reader.result });
+                  processed++;
+                  if (processed === validFiles.length) {
+                      setInputs(prev => ({
+                          ...prev,
+                          irSlideImages: [...(prev.irSlideImages || []), ...newSlides].sort((a,b)=>a.name.localeCompare(b.name)) 
+                      }));
+                  }
+              };
+              reader.readAsDataURL(file);
+          });
+          e.target.value = '';
+      };
+      
+      const handlePptUpload = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          if (file.size > 10 * 1024 * 1024) { 
+              setAppMessage({ type: 'alert', text: "PPT 파일 크기가 너무 큽니다(10MB 이하 권장). JSON DB 저장 용량 한계로 저장이 거부될 수 있습니다." });
+              e.target.value = ''; return;
+          }
+          const reader = new FileReader();
+          reader.onloadend = () => { setInputs(prev => ({ ...prev, irPptFileName: file.name, irPptBase64: reader.result })); };
           reader.readAsDataURL(file);
       };
 
@@ -1459,9 +1584,49 @@
                    </div>
                 </InputGroup>
 
-                <InputGroup title="0. 기업 미션 및 비전 (이미지 업로드)">
-                    <p className="text-[10px] text-slate-500 mb-4 font-semibold bg-slate-100 p-2 rounded">PPT 파일(.pptx) 자체는 웹에서 직접 표시되지 않습니다. 슬라이드를 <b>이미지(JPG, PNG)로 저장</b>하여 각각 첨부해 주세요.</p>
+                {/* 0. IR 자료 등록 패널 */}
+                <InputGroup title="0. IR 자료 등록">
+                    <p className="text-[10px] text-slate-500 mb-4 font-semibold bg-slate-100 p-2 rounded border border-slate-200">
+                        IR 발표용 PPT 원본 파일과 화면에 보여질 각 슬라이드 이미지들을 업로드하세요. <br/>
+                        * 파일 원본은 다운로드 용도로 쓰이며, 이미지는 뷰어에 표시됩니다.
+                    </p>
                     
+                    <div className="mb-4 p-2 bg-indigo-50/50 border border-indigo-100 rounded">
+                        <label className="text-[11px] font-bold text-slate-800 mb-1 block">PPT 파일 원본 (다운로드용)</label>
+                        <input type="file" accept=".ppt, .pptx, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={handlePptUpload} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer border border-slate-300 rounded bg-white" />
+                        {inputs.irPptBase64 && (
+                            <div className="mt-2 flex justify-between items-center bg-white p-1.5 border border-indigo-200 rounded">
+                                <span className="text-[10px] font-bold text-indigo-700 truncate" title={inputs.irPptFileName}>{inputs.irPptFileName}</span>
+                                <button onClick={() => setInputs(p => ({...p, irPptFileName: '', irPptBase64: null}))} className="text-[10px] text-red-600 font-bold hover:underline shrink-0 ml-2">삭제</button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="mb-4 p-2 bg-blue-50/50 border border-blue-100 rounded">
+                        <label className="text-[11px] font-bold text-slate-800 mb-1 block">슬라이드 이미지 (다중 선택 가능)</label>
+                        <input type="file" multiple accept="image/png, image/jpeg" onChange={handleIrSlideUpload} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer border border-slate-300 rounded bg-white" />
+                    </div>
+
+                    {inputs.irSlideImages && inputs.irSlideImages.length > 0 && (
+                        <div className="space-y-2 mt-3 max-h-60 overflow-y-auto custom-scrollbar p-1 border border-slate-200 bg-slate-50 rounded">
+                            {inputs.irSlideImages.map((slide, idx) => (
+                                <div key={slide.id} className="flex items-center justify-between bg-white border border-slate-200 p-1.5 rounded shadow-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex flex-col gap-0.5">
+                                            <button onClick={() => moveImage('irSlideImages', idx, -1)} disabled={idx === 0} className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 leading-none" title="위로 이동">▲</button>
+                                            <button onClick={() => moveImage('irSlideImages', idx, 1)} disabled={idx === inputs.irSlideImages.length - 1} className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 leading-none" title="아래로 이동">▼</button>
+                                        </div>
+                                        <img src={slide.imageBase64} className="h-8 w-12 object-cover rounded border border-slate-200" />
+                                        <span className="text-[10px] text-slate-600 font-bold">SLIDE {idx + 1}</span>
+                                    </div>
+                                    <button onClick={() => removeIrSlide(slide.id)} className="text-[14px] text-slate-400 hover:text-red-600 font-bold px-1">&times;</button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </InputGroup>
+
+                <InputGroup title="1. 기업 미션 및 비전 (이미지 업로드)">
                     <div className="mb-4 p-2 bg-blue-50/50 border border-blue-100 rounded">
                         <label className="text-[11px] font-bold text-slate-800 mb-1 block">미션 (Mission) 슬라이드 이미지</label>
                         <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleImageUpload(e, 'missionImageBase64')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-slate-800 file:text-white hover:file:bg-slate-700 cursor-pointer border border-slate-300 rounded bg-white" />
@@ -1513,24 +1678,62 @@
 
                     <div className="mt-6 pt-4 border-t border-slate-200">
                         <div className="mb-3 p-2 bg-teal-50/50 border border-teal-100 rounded">
-                            <label className="text-[12px] font-bold text-slate-800 mb-1 block">주요 거래처 (Major Clients)</label>
-                            <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleImageUpload(e, 'majorClientsImageBase64')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-teal-700 file:text-white hover:file:bg-teal-800 cursor-pointer border border-slate-300 rounded bg-white" />
-                            {inputs.majorClientsImageBase64 && (
-                                <button onClick={() => setInputs(p => ({...p, majorClientsImageBase64: null}))} className="text-[10px] text-red-600 font-bold mt-2 hover:underline">거래처 이미지 삭제</button>
+                            <label className="text-[12px] font-bold text-slate-800 mb-1 block">주요 거래처 (Major Clients) - 다중 선택/순서 변경 가능</label>
+                            <input type="file" multiple accept="image/png, image/jpeg" onChange={(e) => handleMultiImageUploadGeneric(e, 'majorClientsImages')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-teal-700 file:text-white hover:file:bg-teal-800 cursor-pointer border border-slate-300 rounded bg-white" />
+                            {inputs.majorClientsImages && inputs.majorClientsImages.length > 0 && (
+                                <div className="space-y-2 mt-3 max-h-60 overflow-y-auto custom-scrollbar p-1 border border-slate-200 bg-white rounded">
+                                    {inputs.majorClientsImages.map((img, idx) => (
+                                        <div key={img.id} className={`flex items-center justify-between bg-slate-50 border ${img.isVisible === false ? 'border-dashed border-slate-300 opacity-60' : 'border-slate-200'} p-1.5 rounded shadow-sm`}>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <button onClick={() => moveImage('majorClientsImages', idx, -1)} disabled={idx === 0} className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 leading-none" title="위로 이동">▲</button>
+                                                    <button onClick={() => moveImage('majorClientsImages', idx, 1)} disabled={idx === inputs.majorClientsImages.length - 1} className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 leading-none" title="아래로 이동">▼</button>
+                                                </div>
+                                                <img src={img.imageBase64} className="h-8 w-12 object-cover rounded border border-slate-200 bg-white" />
+                                                <span className="text-[10px] text-slate-600 truncate max-w-[80px] font-semibold">{img.name || `이미지 ${idx+1}`}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button onClick={() => toggleImageVisibility('majorClientsImages', img.id)} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${img.isVisible === false ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {img.isVisible === false ? '숨김' : '표시'}
+                                                </button>
+                                                <button onClick={() => removeMultiImage('majorClientsImages', img.id)} className="text-[14px] text-slate-400 hover:text-red-600 font-bold px-1">&times;</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
 
                         <div className="mb-2 p-2 bg-emerald-50/50 border border-emerald-100 rounded">
-                            <label className="text-[12px] font-bold text-slate-800 mb-1 block">정부 과제 및 투자 유치 로드맵</label>
-                            <input type="file" accept="image/png, image/jpeg" onChange={(e) => handleImageUpload(e, 'govInvestRoadmapImageBase64')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-emerald-700 file:text-white hover:file:bg-emerald-800 cursor-pointer border border-slate-300 rounded bg-white" />
-                            {inputs.govInvestRoadmapImageBase64 && (
-                                <button onClick={() => setInputs(p => ({...p, govInvestRoadmapImageBase64: null}))} className="text-[10px] text-red-600 font-bold mt-2 hover:underline">로드맵 이미지 삭제</button>
+                            <label className="text-[12px] font-bold text-slate-800 mb-1 block">정부 과제 및 투자 유치 로드맵 - 다중 선택/순서 변경 가능</label>
+                            <input type="file" multiple accept="image/png, image/jpeg" onChange={(e) => handleMultiImageUploadGeneric(e, 'govInvestRoadmapImages')} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-emerald-700 file:text-white hover:file:bg-emerald-800 cursor-pointer border border-slate-300 rounded bg-white" />
+                            {inputs.govInvestRoadmapImages && inputs.govInvestRoadmapImages.length > 0 && (
+                                <div className="space-y-2 mt-3 max-h-60 overflow-y-auto custom-scrollbar p-1 border border-slate-200 bg-white rounded">
+                                    {inputs.govInvestRoadmapImages.map((img, idx) => (
+                                        <div key={img.id} className={`flex items-center justify-between bg-slate-50 border ${img.isVisible === false ? 'border-dashed border-slate-300 opacity-60' : 'border-slate-200'} p-1.5 rounded shadow-sm`}>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <button onClick={() => moveImage('govInvestRoadmapImages', idx, -1)} disabled={idx === 0} className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 leading-none" title="위로 이동">▲</button>
+                                                    <button onClick={() => moveImage('govInvestRoadmapImages', idx, 1)} disabled={idx === inputs.govInvestRoadmapImages.length - 1} className="text-[10px] text-slate-400 hover:text-slate-700 disabled:opacity-30 leading-none" title="아래로 이동">▼</button>
+                                                </div>
+                                                <img src={img.imageBase64} className="h-8 w-12 object-cover rounded border border-slate-200 bg-white" />
+                                                <span className="text-[10px] text-slate-600 truncate max-w-[80px] font-semibold">{img.name || `이미지 ${idx+1}`}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <button onClick={() => toggleImageVisibility('govInvestRoadmapImages', img.id)} className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${img.isVisible === false ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-700'}`}>
+                                                    {img.isVisible === false ? '숨김' : '표시'}
+                                                </button>
+                                                <button onClick={() => removeMultiImage('govInvestRoadmapImages', img.id)} className="text-[14px] text-slate-400 hover:text-red-600 font-bold px-1">&times;</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>
                 </InputGroup>
 
-                <InputGroup title="1. 거시환경변수">
+                <InputGroup title="2. 거시환경변수">
                   <YearlyInputField label="물가상승률 (%)" arrName="inflationRate" values={inputs.inflationRate} onChangeArray={handleArrayChange} />
                   <YearlyInputField label="조달 금리 (%)" arrName="interestRate" values={inputs.interestRate} onChangeArray={handleArrayChange} />
                   <YearlyInputField label="환율 (원/$)" arrName="exchangeRate" values={inputs.exchangeRate} onChangeArray={handleArrayChange} />
@@ -1538,7 +1741,7 @@
                   <YearlyInputField label="법인세율 (%)" arrName="taxRate" values={inputs.taxRate} onChangeArray={handleArrayChange} />
                 </InputGroup>
 
-                <InputGroup title="2. 자본조달 구조">
+                <InputGroup title="3. 자본조달 구조">
                   <YearlyInputField label="자기자본비용 (요구수익률) (%)" arrName="costOfEquity" values={inputs.costOfEquity} onChangeArray={handleArrayChange} />
                   <div className="my-6 border-t border-dashed border-slate-300"></div>
                   
@@ -1560,7 +1763,7 @@
                   </div>
                 </InputGroup>
 
-                <InputGroup title="3. 자금소요 (투자/CAPEX)">
+                <InputGroup title="4. 자금소요 (투자/CAPEX)">
                   <YearlyInputField label="연간 최대 생산능력 (CAPA)" arrName="capexMaxCapa" values={inputs.capexMaxCapa} onChangeArray={handleArrayChange} />
                   <YearlyInputField label="예상 설비 가동률 (%)" arrName="utilization" values={inputs.utilization} onChangeArray={handleArrayChange} />
                   <YearlyInputField label="생산 수율 로스(Loss)율 (%)" arrName="lossRate" values={inputs.lossRate} onChangeArray={handleArrayChange} />
@@ -1569,7 +1772,7 @@
                   <DynamicListYearly listName="intangibleList" items={inputs.intangibleList} title="무형자산 투자 (백만원)" namePlaceholder="항목" hasUsefulLife onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
                 </InputGroup>
 
-                <InputGroup title="4. 자금소요 (운전자본 및 제조경비)">
+                <InputGroup title="5. 자금소요 (운전자본 및 제조경비)">
                   <DynamicBaseCostList listName="baseCostList" items={inputs.baseCostList} title="기본 제조원가 (연간 총액 백만원)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                   <DynamicExpRateList listName="directExpList" items={inputs.directExpList} title="직접 제조경비율 (기본원가 대비 %)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                   <DynamicExpRateList listName="indirectExpList" items={inputs.indirectExpList} title="간접 제조경비율 (기본원가 대비 %)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
@@ -1655,7 +1858,7 @@
                   <DynamicMixedWcList listName="receivableList" items={inputs.receivableList} title="미수금/미수수익 (백만원)" namePlaceholder="항목" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
-                <InputGroup title="5. 자금소요 (판매비와 관리비)">
+                <InputGroup title="6. 자금소요 (판매비와 관리비)">
                   <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">직접변동비 설정</div>
                   <DynamicMixedWcList listName="sgaVarList" items={inputs.sgaVarList} title="항목별 직접변동비" namePlaceholder="항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                   <div className="my-6 border-t border-dashed border-slate-300"></div>
@@ -1668,7 +1871,7 @@
                   <DynamicMixedWcList listName="sgaFixList" items={inputs.sgaFixList} title="항목별 고정비" namePlaceholder="항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
-                <InputGroup title="6. 매출액 추정 (완전 개방형 9단계 트리)">
+                <InputGroup title="7. 매출액 추정 (완전 개방형 9단계 트리)">
                   <div className="flex justify-between items-center mb-4">
                     <p className="text-[11px] font-bold text-slate-500 tracking-tighter">들여쓰기만으로 계층을 표시하여 넓은 화면을 유지합니다.</p>
                     <button onClick={treeActions.addRevType} className="text-[10px] font-bold bg-slate-800 text-white hover:bg-slate-700 px-3 py-1.5 rounded transition-colors shadow-sm">+ 매출 유형 추가</button>
@@ -1678,7 +1881,7 @@
                   </div>
                 </InputGroup>
 
-                <InputGroup title="7. 영업외수익/비용">
+                <InputGroup title="8. 영업외수익/비용">
                   <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외수익 (단위: 백만원)</div>
                   <DynamicListYearly listName="nonOpIncCashList" items={inputs.nonOpIncCashList} title="현금성 수익" namePlaceholder="수익 항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
                   <DynamicListYearly listName="nonOpIncNonCashList" items={inputs.nonOpIncNonCashList} title="비현금성 수익" namePlaceholder="수익 항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
@@ -1716,6 +1919,7 @@
 
             <div className="bg-white border-b border-slate-300 px-8 pt-4 flex gap-8 shrink-0 shadow-sm z-10 custom-scrollbar overflow-x-auto">
               {[
+                { id: 'ir_data', label: '💼 IR 자료' },
                 { id: 'mission_vision', label: '🚀 기업 미션 및 비전' },
                 { id: 'npv', label: '📊 사업타당성 분석 요약' },
                 { id: 'is_fin', label: '📑 재무회계 손익계산서' },
@@ -1743,6 +1947,35 @@
             <div className="flex-1 overflow-auto p-8 custom-scrollbar relative">
               <div className="max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
                 
+                {/* 0. IR 자료 탭 */}
+                <div style={{ display: activeTab === 'ir_data' ? 'block' : 'none' }}>
+                  <div className="px-10 py-10 border-b-4 border-slate-900 bg-white">
+                      <div className="flex justify-between items-end mb-6">
+                          <h2 className="text-3xl font-black text-slate-900 tracking-tight">IR 자료 (Investor Relations)</h2>
+                          {inputs.irPptBase64 && (
+                              <a href={inputs.irPptBase64} download={inputs.irPptFileName} className="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded shadow-sm hover:bg-indigo-100 transition-colors">
+                                  📥 PPT 원본 다운로드
+                              </a>
+                          )}
+                      </div>
+                      
+                      <div className="flex flex-col gap-8 items-center bg-slate-50 p-6 rounded border border-slate-200">
+                          {(!inputs.irSlideImages || inputs.irSlideImages.length === 0) ? (
+                              <div className="text-slate-400 font-bold text-sm py-20">등록된 IR 슬라이드가 없습니다.</div>
+                          ) : (
+                              inputs.irSlideImages.map((slide, idx) => (
+                                  <div key={slide.id} className="w-full max-w-4xl bg-white border border-slate-300 shadow-md rounded overflow-hidden">
+                                      <div className="bg-slate-800 text-center py-2 border-b border-slate-900">
+                                          <span className="text-white font-bold text-sm tracking-widest">SLIDE {idx + 1}</span>
+                                      </div>
+                                      <img src={slide.imageBase64} alt={`Slide ${idx + 1}`} className="w-full h-auto cursor-pointer hover:opacity-95 transition-opacity block" onClick={() => setZoomedImg(slide.imageBase64)} title="클릭하여 확대" />
+                                  </div>
+                              ))
+                          )}
+                      </div>
+                  </div>
+                </div>
+
                 {/* 1. 기업 미션 및 비전 탭 */}
                 <div style={{ display: activeTab === 'mission_vision' ? 'block' : 'none' }}>
                   <div className="px-10 py-10 border-b-4 border-slate-900 bg-white">
@@ -1800,29 +2033,47 @@
                               </div>
                           )}
 
-                          {inputs.majorClientsImageBase64 && (
-                              <div className="bg-teal-50 border border-teal-200 p-6 rounded shadow-sm">
-                                  <div className="flex items-center gap-2 mb-3">
-                                      <div className="w-2 h-6 bg-teal-600 rounded-sm"></div>
-                                      <h3 className="text-lg font-black text-teal-900">MAJOR CLIENTS & PARTNERS</h3>
+                          {(() => {
+                              const visibleClients = (inputs.majorClientsImages || []).filter(img => isAdmin || img.isVisible !== false);
+                              if (visibleClients.length === 0) return null;
+                              return (
+                                  <div className="bg-teal-50 border border-teal-200 p-6 rounded shadow-sm">
+                                      <div className="flex items-center gap-2 mb-3">
+                                          <div className="w-2 h-6 bg-teal-600 rounded-sm"></div>
+                                          <h3 className="text-lg font-black text-teal-900">MAJOR CLIENTS & PARTNERS</h3>
+                                      </div>
+                                      <div className="flex flex-col gap-6">
+                                          {visibleClients.map((img, idx) => (
+                                              <div key={img.id} className={`border ${img.isVisible === false ? 'border-dashed border-red-300' : 'border-teal-200'} rounded shadow-sm overflow-hidden flex flex-col justify-center bg-white p-4 relative`}>
+                                                  {img.isVisible === false && <div className="absolute top-2 left-2 bg-red-100 text-red-700 text-[11px] font-bold px-2 py-1 rounded shadow-sm z-10 border border-red-200">숨김 상태 (사용자에게 보이지 않음)</div>}
+                                                  <img src={img.imageBase64} alt={`Major Client ${idx+1}`} className="max-w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" style={{ maxHeight: '600px' }} onClick={() => setZoomedImg(img.imageBase64)} title="클릭하여 확대 보기" />
+                                              </div>
+                                          ))}
+                                      </div>
                                   </div>
-                                  <div className="border border-teal-200 rounded shadow-sm overflow-hidden flex justify-center bg-white p-2">
-                                      <img src={inputs.majorClientsImageBase64} alt="Major Clients" className="max-w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" style={{ maxHeight: '600px' }} onClick={() => setZoomedImg(inputs.majorClientsImageBase64)} title="클릭하여 확대 보기" />
-                                  </div>
-                              </div>
-                          )}
+                              );
+                          })()}
                           
-                          {inputs.govInvestRoadmapImageBase64 && (
-                              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded shadow-sm">
-                                  <div className="flex items-center gap-2 mb-3">
-                                      <div className="w-2 h-6 bg-emerald-600 rounded-sm"></div>
-                                      <h3 className="text-lg font-black text-emerald-900">GOVERNMENT PROJECTS & INVESTMENT ROADMAP</h3>
+                          {(() => {
+                              const visibleRoadmaps = (inputs.govInvestRoadmapImages || []).filter(img => isAdmin || img.isVisible !== false);
+                              if (visibleRoadmaps.length === 0) return null;
+                              return (
+                                  <div className="bg-emerald-50 border border-emerald-200 p-6 rounded shadow-sm">
+                                      <div className="flex items-center gap-2 mb-3">
+                                          <div className="w-2 h-6 bg-emerald-600 rounded-sm"></div>
+                                          <h3 className="text-lg font-black text-emerald-900">GOVERNMENT PROJECTS & INVESTMENT ROADMAP</h3>
+                                      </div>
+                                      <div className="flex flex-col gap-6">
+                                          {visibleRoadmaps.map((img, idx) => (
+                                              <div key={img.id} className={`border ${img.isVisible === false ? 'border-dashed border-red-300' : 'border-emerald-200'} rounded shadow-sm overflow-hidden flex flex-col justify-center bg-white p-4 relative`}>
+                                                  {img.isVisible === false && <div className="absolute top-2 left-2 bg-red-100 text-red-700 text-[11px] font-bold px-2 py-1 rounded shadow-sm z-10 border border-red-200">숨김 상태 (사용자에게 보이지 않음)</div>}
+                                                  <img src={img.imageBase64} alt={`Investment Roadmap ${idx+1}`} className="max-w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" style={{ maxHeight: '600px' }} onClick={() => setZoomedImg(img.imageBase64)} title="클릭하여 확대 보기" />
+                                              </div>
+                                          ))}
+                                      </div>
                                   </div>
-                                  <div className="border border-emerald-200 rounded shadow-sm overflow-hidden flex justify-center bg-white p-2">
-                                      <img src={inputs.govInvestRoadmapImageBase64} alt="Investment Roadmap" className="max-w-full h-auto object-contain cursor-pointer hover:opacity-90 transition-opacity" style={{ maxHeight: '600px' }} onClick={() => setZoomedImg(inputs.govInvestRoadmapImageBase64)} title="클릭하여 확대 보기" />
-                                  </div>
-                              </div>
-                          )}
+                              );
+                          })()}
                       </div>
                   </div>
                 </div>
@@ -2047,6 +2298,7 @@
                   </div>
                 </div>
 
+                {/* 3. 재무회계 손익계산서 탭 */}
                 <div style={{ display: activeTab === 'is_fin' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
@@ -2092,6 +2344,7 @@
                   </div>
                 </div>
 
+                {/* 4. 관리회계 손익계산서 탭 */}
                 <div style={{ display: activeTab === 'is_mgr' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
@@ -2145,6 +2398,7 @@
                   </div>
                 </div>
 
+                {/* 5. 재무상태표 탭 */}
                 <div style={{ display: activeTab === 'bs' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
@@ -2197,6 +2451,7 @@
                   </div>
                 </div>
 
+                {/* 6. 현금흐름표 탭 */}
                 <div style={{ display: activeTab === 'cf' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
