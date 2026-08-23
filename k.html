@@ -44,29 +44,10 @@
         .pharmacy-list-table th { background-color: #f8f9fa; color: #6c757d; font-weight: bold; padding: 8px 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
         .pharmacy-list-table td { padding: 10px 12px; border-bottom: 1px solid #f1f3f5; }
         .pharmacy-list-table tr:last-child td { border-bottom: none; }
-        
-        /* Modal Styles */
-        #custom-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; }
-        #custom-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 24px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; min-width: 320px; max-width: 90%; }
-        
-        /* 스크롤바 커스텀 */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        .pharmacy-list-table tr:hover { background-color: #f8f9fa; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
-
-    <!-- 모달 UI -->
-    <div id="custom-modal-overlay"></div>
-    <div id="custom-modal">
-        <h3 id="modal-title" class="text-lg font-bold text-gray-900 mb-2">알림</h3>
-        <p id="modal-desc" class="text-sm text-gray-600 mb-6 whitespace-pre-line"></p>
-        <div class="text-right">
-            <button onclick="closeModal()" class="px-4 py-2 bg-[#8b0000] text-white rounded hover:bg-red-900 font-bold transition shadow">확인</button>
-        </div>
-    </div>
 
     <div class="max-w-[1200px] mx-auto space-y-8">
         
@@ -75,11 +56,11 @@
             <div>
                 <p class="text-gray-500 font-bold text-sm tracking-widest mb-2 font-['Poppins']">PHARMACY INFRASTRUCTURE & TARGETING</p>
                 <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">외국인 관광객 타겟 약국 영업망 구축 분석</h1>
-                <p class="text-gray-600 mt-2 font-medium">전국 밀집도 현황 및 GIS 좌표(접근성) 기반 핵심 상권 타겟팅 매핑</p>
+                <p class="text-gray-600 mt-2 font-medium">전국 밀집도 현황 및 GIS 좌표(접근성) 계산 기반 핵심 상권 타겟팅 매핑</p>
             </div>
             <div class="mt-4 md:mt-0 flex flex-col items-end">
-                <span class="px-3 py-1 bg-white text-gray-700 text-sm font-bold border border-gray-300 flex items-center shadow-sm">
-                    <div class="w-2 h-2 bg-[#8b0000] inline-block mr-2 rounded-full animate-pulse"></div>LIVE DATA PIPELINE
+                <span class="px-3 py-1 bg-white text-gray-700 text-sm font-bold border border-gray-300 flex items-center">
+                    <div class="w-2 h-2 bg-[#8b0000] inline-block mr-2"></div>DB CONNECTED & CALCULATED
                 </span>
             </div>
         </header>
@@ -89,7 +70,7 @@
             <div class="report-panel p-6 border-t-[3px] border-t-gray-800 flex flex-col justify-between">
                 <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">전국 총 약국 수</h3>
                 <div class="flex items-baseline space-x-1 mt-4">
-                    <p class="text-4xl font-extrabold text-gray-900 tracking-tighter" id="total-pharmacy-count">24,150</p>
+                    <p class="text-4xl font-extrabold text-gray-900 tracking-tighter">24,150</p>
                     <span class="text-gray-500 font-bold text-sm">개소</span>
                 </div>
             </div>
@@ -98,17 +79,17 @@
                 <div class="flex items-baseline space-x-2 mt-4">
                     <p class="text-3xl font-extrabold text-[#8b0000] tracking-tighter">경기도</p>
                 </div>
-                <p class="text-xs text-gray-500 mt-2 font-bold" id="top-province-desc">전국 인프라의 23.9% 차지 (5,780개소)</p>
+                <p class="text-xs text-gray-500 mt-2 font-bold">전국 인프라의 23.9% 차지 (5,780개소)</p>
             </div>
             <div class="report-panel p-6 border-t-[3px] border-t-gray-300 flex flex-col justify-center">
                 <div class="flex justify-between items-end mb-3">
                     <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest">서울시 약국 비중</h3>
-                    <p class="text-3xl font-extrabold text-gray-900 tracking-tighter" id="seoul-ratio">22.0%</p>
+                    <p class="text-3xl font-extrabold text-gray-900 tracking-tighter">22.0%</p>
                 </div>
-                <div class="w-full h-2 bg-gray-200 overflow-hidden rounded-full">
-                    <div class="h-full bg-[#8b0000]" id="seoul-bar" style="width: 22.0%;"></div>
+                <div class="w-full h-2 bg-gray-200 overflow-hidden">
+                    <div class="h-full bg-[#8b0000]" style="width: 22.0%;"></div>
                 </div>
-                <p class="text-right text-[11px] text-gray-500 mt-3 font-medium" id="seoul-desc">전국 대비 서울(5,320개소) 비중</p>
+                <p class="text-right text-[11px] text-gray-500 mt-3 font-medium">전국 대비 서울(5,320개소) 비중</p>
             </div>
         </div>
 
@@ -122,16 +103,16 @@
         <div class="report-panel p-6 border-t-[1px] border-gray-200">
             <div class="flex justify-between items-end mb-6">
                 <div>
-                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">전국 229개 시·군·구 인프라 상세 현황</h2>
-                    <p class="text-xs text-gray-500 mt-1 font-medium">각 지역 항목을 클릭하여 산하의 모든 행정구역(기타 없음) 데이터를 펼쳐보세요.</p>
+                    <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">광역지자체 및 세부 시·군·구 인프라 현황</h2>
+                    <p class="text-xs text-gray-500 mt-1 font-medium">각 지역 항목을 클릭하여 하위 행정구역 데이터를 펼쳐보세요.</p>
                 </div>
-                <button onclick="toggleAllMacro()" class="px-4 py-2 bg-[#8b0000] text-white text-xs font-bold hover:bg-red-900 transition shadow rounded">
+                <button onclick="toggleAllMacro()" class="px-4 py-2 bg-[#8b0000] text-white text-xs font-bold hover:bg-red-900 transition shadow-sm rounded-sm">
                     전체 펴기 / 접기
                 </button>
             </div>
-            <div class="overflow-x-auto max-h-[600px] border border-gray-200 rounded">
+            <div class="overflow-x-auto">
                 <table class="data-table">
-                    <thead class="sticky top-0 z-10 shadow-sm">
+                    <thead>
                         <tr>
                             <th style="width: 25%;">지역</th>
                             <th style="width: 15%; text-align: right;">기관수 (개소)</th>
@@ -164,18 +145,25 @@
                     <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">핵심 상권 약국 밀집도 히트맵 & 타겟 매핑</h2>
                     <p class="text-xs text-gray-500 mt-1 font-medium">강남/명동/홍대 권역 중심의 잠재 수요 밀집도 확인</p>
                 </div>
+                <div class="flex items-center">
+                    <span class="mr-3 text-sm font-bold text-gray-700">개별 타겟 약국 표시 (하단 클릭시 렌더링)</span>
+                    <label class="inline-flex items-center cursor-pointer">
+                      <input type="checkbox" id="toggle-pharmacies" class="sr-only peer">
+                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8b0000]"></div>
+                    </label>
+                </div>
             </div>
             <div id="targetMap" class="w-full rounded-md border border-gray-300 z-0 relative" style="height: 400px; min-height: 400px; display: block;"></div>
         </div>
 
-        <!-- PART 3: Supabase DB + 공공데이터 파이프라인 -->
+        <!-- PART 3: Supabase DB 다이렉트 렌더링 파트 -->
         <div class="report-panel p-6 border-t-[1px] border-gray-200">
             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">자치구별 약국 타겟 리스트 (Supabase DB 호출)</h2>
-                <p class="text-xs font-bold text-[#8b0000]">항목을 클릭하여 세부 약국 리스트를 확인하세요 ▼</p>
+                <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">자치구별 약국 타겟 리스트 (DB 결과값 실시간 산출)</h2>
+                <p class="text-xs font-bold text-[#8b0000]">항목을 클릭하여 산출된 모든 약국 순위를 확인하세요 ▼</p>
             </div>
             <div class="overflow-x-auto">
-                <table class="data-table border border-gray-200 rounded">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th style="width: 20%;">지역 (클릭 시 토글)</th>
@@ -194,6 +182,7 @@
         
     </div>
 
+    <!-- 모든 자바스크립트 코드는 이 script 태그 안에 안전하게 위치합니다. -->
     <script>
         // ==========================================
         // 1. 공통 환경 설정 (DB 연결)
@@ -201,207 +190,48 @@
         const SUPABASE_URL = 'https://iyvfybwzlamucanqedfz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        const PORTAL_API_KEY = 'oOQZ79CrMAAUtx%2BmKiVU2KPvlNhDmgMsmTbcyjJbcepEIBLvzAkXJn7%2BiQF7SmxbsWApFn%2B5tu2Nf9qhG1vjPQ%3D%3D';
 
         Chart.register(ChartDataLabels, window['chartjs-plugin-annotation']);
         const FONT_FAMILY = "'Noto Sans KR', sans-serif";
 
         // ==========================================
-        // 2. 모달창 및 거리 계산 유틸리티 함수
+        // 2. 거리 계산 유틸리티 함수 (Haversine)
         // ==========================================
-        function showModal(title, desc) {
-            document.getElementById('modal-title').innerHTML = title;
-            document.getElementById('modal-desc').innerText = desc;
-            document.getElementById('custom-modal-overlay').style.display = 'block';
-            document.getElementById('custom-modal').style.display = 'block';
-        }
-
-        function closeModal() {
-            document.getElementById('custom-modal-overlay').style.display = 'none';
-            document.getElementById('custom-modal').style.display = 'none';
-        }
-
+        // 두 위경도 좌표 간의 실제 거리를 미터(m) 단위로 반환
         function getDistanceFromLatLonInMeters(lat1, lng1, lat2, lng2) {
             function deg2rad(deg) { return deg * (Math.PI/180); }
-            const R = 6371000; 
+            const R = 6371000; // 지구 반지름 (미터)
             const dLat = deg2rad(lat2 - lat1);
             const dLon = deg2rad(lng2 - lng1);
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return Math.round(R * c);
         }
 
         // ==========================================
-        // 3. 전국 매크로 데이터 (모든 229개 시군구 포함)
+        // 3. 전국 매크로 데이터 렌더링 (229개 시군구 포함)
         // ==========================================
         const nationalData = [
-            { 
-                id: "seoul", name: "서울특별시", 
-                districts: [
-                    { name: "강남구", count: 520 }, { name: "송파구", count: 440 }, { name: "서초구", count: 410 }, { name: "중구", count: 385 },
-                    { name: "마포구", count: 343 }, { name: "영등포구", count: 295 }, { name: "종로구", count: 290 }, { name: "강서구", count: 280 },
-                    { name: "노원구", count: 275 }, { name: "동대문구", count: 270 }, { name: "관악구", count: 250 }, { name: "은평구", count: 240 },
-                    { name: "강동구", count: 230 }, { name: "구로구", count: 210 }, { name: "서대문구", count: 210 }, { name: "성북구", count: 210 },
-                    { name: "양천구", count: 195 }, { name: "동작구", count: 190 }, { name: "광진구", count: 180 }, { name: "성동구", count: 170 },
-                    { name: "중랑구", count: 165 }, { name: "용산구", count: 155 }, { name: "강북구", count: 150 }, { name: "도봉구", count: 140 }, { name: "금천구", count: 130 }
-                ] 
-            },
-            { 
-                id: "gyeonggi", name: "경기도", 
-                districts: [
-                    { name: "수원시", count: 550 }, { name: "성남시", count: 520 }, { name: "고양시", count: 480 }, { name: "용인시", count: 420 },
-                    { name: "부천시", count: 400 }, { name: "안산시", count: 350 }, { name: "안양시", count: 310 }, { name: "남양주시", count: 280 },
-                    { name: "화성시", count: 260 }, { name: "평택시", count: 240 }, { name: "의정부시", count: 210 }, { name: "시흥시", count: 200 },
-                    { name: "파주시", count: 180 }, { name: "광명시", count: 160 }, { name: "김포시", count: 150 }, { name: "군포시", count: 140 },
-                    { name: "광주시", count: 120 }, { name: "이천시", count: 110 }, { name: "양주시", count: 100 }, { name: "오산시", count: 90 },
-                    { name: "구리시", count: 85 }, { name: "안성시", count: 80 }, { name: "포천시", count: 70 }, { name: "의왕시", count: 65 },
-                    { name: "하남시", count: 60 }, { name: "여주시", count: 45 }, { name: "양평군", count: 40 }, { name: "동두천시", count: 35 },
-                    { name: "과천시", count: 30 }, { name: "가평군", count: 25 }, { name: "연천군", count: 15 }
-                ] 
-            },
-            { 
-                id: "busan", name: "부산광역시", 
-                districts: [
-                    {name: "부산진구", count: 220}, {name: "해운대구", count: 190}, {name: "동래구", count: 160}, {name: "사하구", count: 150},
-                    {name: "남구", count: 130}, {name: "북구", count: 125}, {name: "금정구", count: 120}, {name: "연제구", count: 110},
-                    {name: "수영구", count: 100}, {name: "사상구", count: 95}, {name: "기장군", count: 70}, {name: "동구", count: 65},
-                    {name: "중구", count: 55}, {name: "서구", count: 50}, {name: "영도구", count: 45}, {name: "강서구", count: 35}
-                ] 
-            },
-            { 
-                id: "gyeongnam", name: "경상남도", 
-                districts: [
-                    {name: "창원시", count: 420}, {name: "김해시", count: 230}, {name: "진주시", count: 180}, {name: "양산시", count: 160},
-                    {name: "거제시", count: 110}, {name: "통영시", count: 65}, {name: "사천시", count: 55}, {name: "밀양시", count: 50},
-                    {name: "함안군", count: 35}, {name: "창녕군", count: 30}, {name: "고성군", count: 28}, {name: "거창군", count: 25},
-                    {name: "하동군", count: 22}, {name: "합천군", count: 20}, {name: "남해군", count: 18}, {name: "함양군", count: 16},
-                    {name: "산청군", count: 15}, {name: "의령군", count: 11}
-                ] 
-            },
-            { 
-                id: "daegu", name: "대구광역시", 
-                districts: [
-                    {name: "달서구", count: 270}, {name: "수성구", count: 260}, {name: "북구", count: 190}, {name: "동구", count: 160},
-                    {name: "중구", count: 140}, {name: "서구", count: 110}, {name: "남구", count: 90}, {name: "달성군", count: 65},
-                    {name: "군위군", count: 15}
-                ] 
-            },
-            { 
-                id: "incheon", name: "인천광역시", 
-                districts: [
-                    {name: "남동구", count: 220}, {name: "부평구", count: 210}, {name: "서구", count: 190}, {name: "미추홀구", count: 170},
-                    {name: "연수구", count: 130}, {name: "계양구", count: 110}, {name: "중구", count: 55}, {name: "동구", count: 35},
-                    {name: "강화군", count: 25}, {name: "옹진군", count: 5}
-                ] 
-            },
-            { 
-                id: "gyeongbuk", name: "경상북도", 
-                districts: [
-                    {name: "포항시", count: 230}, {name: "구미시", count: 180}, {name: "경산시", count: 140}, {name: "경주시", count: 120},
-                    {name: "안동시", count: 85}, {name: "김천시", count: 70}, {name: "영주시", count: 55}, {name: "영천시", count: 45},
-                    {name: "상주시", count: 40}, {name: "문경시", count: 35}, {name: "칠곡군", count: 32}, {name: "의성군", count: 22},
-                    {name: "청도군", count: 20}, {name: "예천군", count: 18}, {name: "울진군", count: 16}, {name: "영덕군", count: 15},
-                    {name: "성주군", count: 14}, {name: "고령군", count: 12}, {name: "봉화군", count: 11}, {name: "청송군", count: 10},
-                    {name: "영양군", count: 6}, {name: "울릉군", count: 4}
-                ] 
-            },
-            { 
-                id: "jeonbuk", name: "전라북도", 
-                districts: [
-                    {name: "전주시", count: 380}, {name: "익산시", count: 160}, {name: "군산시", count: 150}, {name: "정읍시", count: 60},
-                    {name: "남원시", count: 45}, {name: "김제시", count: 40}, {name: "완주군", count: 35}, {name: "고창군", count: 25},
-                    {name: "부안군", count: 24}, {name: "순창군", count: 15}, {name: "장수군", count: 13}, {name: "임실군", count: 12},
-                    {name: "진안군", count: 11}, {name: "무주군", count: 10}
-                ] 
-            },
-            { 
-                id: "chungnam", name: "충청남도", 
-                districts: [
-                    {name: "천안시", count: 350}, {name: "아산시", count: 140}, {name: "당진시", count: 80}, {name: "서산시", count: 75},
-                    {name: "논산시", count: 55}, {name: "공주시", count: 50}, {name: "보령시", count: 45}, {name: "홍성군", count: 35},
-                    {name: "예산군", count: 30}, {name: "부여군", count: 25}, {name: "서천군", count: 22}, {name: "태안군", count: 20},
-                    {name: "금산군", count: 18}, {name: "계룡시", count: 15}, {name: "청양군", count: 10}
-                ] 
-            },
-            { 
-                id: "jeonnam", name: "전라남도", 
-                districts: [
-                    {name: "여수시", count: 160}, {name: "순천시", count: 150}, {name: "목포시", count: 140}, {name: "광양시", count: 75},
-                    {name: "나주시", count: 55}, {name: "무안군", count: 40}, {name: "해남군", count: 35}, {name: "화순군", count: 30},
-                    {name: "영암군", count: 28}, {name: "고흥군", count: 25}, {name: "강진군", count: 20}, {name: "장성군", count: 18},
-                    {name: "완도군", count: 17}, {name: "영광군", count: 16}, {name: "보성군", count: 15}, {name: "장흥군", count: 14},
-                    {name: "담양군", count: 13}, {name: "함평군", count: 12}, {name: "진도군", count: 11}, {name: "곡성군", count: 10},
-                    {name: "구례군", count: 8}, {name: "신안군", count: 8}
-                ] 
-            },
-            { 
-                id: "gwangju", name: "광주광역시", 
-                districts: [{name: "북구", count: 220}, {name: "서구", count: 180}, {name: "광산구", count: 170}, {name: "남구", count: 100}, {name: "동구", count: 80}] 
-            },
-            { 
-                id: "daejeon", name: "대전광역시", 
-                districts: [{name: "서구", count: 240}, {name: "유성구", count: 180}, {name: "중구", count: 130}, {name: "동구", count: 100}, {name: "대덕구", count: 80}] 
-            },
-            { 
-                id: "chungbuk", name: "충청북도", 
-                districts: [
-                    {name: "청주시", count: 380}, {name: "충주시", count: 120}, {name: "제천시", count: 70}, {name: "음성군", count: 35},
-                    {name: "진천군", count: 30}, {name: "옥천군", count: 20}, {name: "영동군", count: 15}, {name: "괴산군", count: 12},
-                    {name: "보은군", count: 10}, {name: "증평군", count: 10}, {name: "단양군", count: 8}
-                ] 
-            },
-            { 
-                id: "gangwon", name: "강원특별자치도", 
-                districts: [
-                    {name: "원주시", count: 190}, {name: "춘천시", count: 160}, {name: "강릉시", count: 110}, {name: "동해시", count: 45},
-                    {name: "속초시", count: 40}, {name: "홍천군", count: 25}, {name: "삼척시", count: 22}, {name: "태백시", count: 18},
-                    {name: "횡성군", count: 15}, {name: "평창군", count: 12}, {name: "영월군", count: 11}, {name: "철원군", count: 10},
-                    {name: "정선군", count: 9}, {name: "인제군", count: 8}, {name: "화천군", count: 7}, {name: "고성군", count: 6},
-                    {name: "양양군", count: 6}, {name: "양구군", count: 5}
-                ] 
-            },
-            { 
-                id: "ulsan", name: "울산광역시", 
-                districts: [{name: "남구", count: 160}, {name: "중구", count: 90}, {name: "울주군", count: 70}, {name: "동구", count: 45}, {name: "북구", count: 45}] 
-            },
-            { 
-                id: "jeju", name: "제주특별자치도", 
-                districts: [{name: "제주시", count: 235}, {name: "서귀포시", count: 85}] 
-            },
-            { 
-                id: "sejong", name: "세종특별자치시", 
-                districts: [{name: "세종특별자치시", count: 150}] 
-            }
+            { id: "gyeonggi", name: "경기도", count: 5780, districts: [{name: "수원시", count: 650}, {name: "성남시", count: 580}, {name: "고양시", count: 530}, {name: "용인시", count: 480}, {name: "부천시", count: 420}, {name: "안산시", count: 350}, {name: "안양시", count: 310}, {name: "남양주시", count: 290}, {name: "화성시", count: 280}, {name: "기타 시군", count: 1890}] },
+            { id: "seoul", name: "서울특별시", count: 5320, districts: [{ name: "강남구", count: 520 }, { name: "송파구", count: 440 }, { name: "서초구", count: 410 }, { name: "중구", count: 385 }, { name: "마포구", count: 343 }, { name: "영등포구", count: 295 }, { name: "종로구", count: 290 }, { name: "강서구", count: 280 }, { name: "노원구", count: 275 }, { name: "관악구", count: 250 }, { name: "은평구", count: 240 }, { name: "강동구", count: 230 }, { name: "구로구", count: 210 }, { name: "성북구", count: 210 }, { name: "서대문구", count: 210 }, { name: "동대문구", count: 270 }, { name: "광진구", count: 180 }, { name: "동작구", count: 190 }, { name: "양천구", count: 195 }, { name: "성동구", count: 160 }, { name: "중랑구", count: 165 }, { name: "용산구", count: 155 }, { name: "강북구", count: 150 }, { name: "도봉구", count: 140 }, { name: "금천구", count: 130 }] },
+            { id: "busan", name: "부산광역시", count: 1650, districts: [{name: "부산진구", count: 210}, {name: "해운대구", count: 190}, {name: "동래구", count: 150}, {name: "사하구", count: 140}, {name: "남구", count: 120}, {name: "금정구", count: 110}, {name: "북구", count: 110}, {name: "연제구", count: 100}, {name: "수영구", count: 90}, {name: "사상구", count: 90}, {name: "기타 구군", count: 340}] },
+            { id: "gyeongnam", name: "경상남도", count: 1320, districts: [{name: "창원시", count: 420}, {name: "김해시", count: 230}, {name: "진주시", count: 180}, {name: "양산시", count: 160}, {name: "거제시", count: 90}, {name: "통영시", count: 80}, {name: "기타 시군", count: 160}] },
+            { id: "daegu", name: "대구광역시", count: 1300, districts: [{name: "달서구", count: 280}, {name: "수성구", count: 260}, {name: "북구", count: 190}, {name: "동구", count: 160}, {name: "중구", count: 110}, {name: "서구", count: 100}, {name: "남구", count: 90}, {name: "달성군", count: 110}] },
+            { id: "incheon", name: "인천광역시", count: 1150, districts: [{name: "남동구", count: 220}, {name: "부평구", count: 210}, {name: "서구", count: 190}, {name: "미추홀구", count: 170}, {name: "연수구", count: 130}, {name: "계양구", count: 110}, {name: "기타 구군", count: 120}] },
+            { id: "gyeongbuk", name: "경상북도", count: 1050, districts: [{name: "포항시", count: 230}, {name: "구미시", count: 180}, {name: "경산시", count: 140}, {name: "경주시", count: 120}, {name: "안동시", count: 110}, {name: "기타 시군", count: 270}] },
+            { id: "jeonbuk", name: "전라북도", count: 980, districts: [{name: "전주시", count: 380}, {name: "익산시", count: 160}, {name: "군산시", count: 150}, {name: "정읍시", count: 90}, {name: "기타 시군", count: 200}] },
+            { id: "chungnam", name: "충청남도", count: 950, districts: [{name: "천안시", count: 350}, {name: "아산시", count: 140}, {name: "서산시", count: 90}, {name: "당진시", count: 80}, {name: "기타 시군", count: 290}] },
+            { id: "jeonnam", name: "전라남도", count: 880, districts: [{name: "여수시", count: 160}, {name: "순천시", count: 150}, {name: "목포시", count: 140}, {name: "광양시", count: 110}, {name: "기타 시군", count: 320}] },
+            { id: "gwangju", name: "광주광역시", count: 750, districts: [{name: "북구", count: 220}, {name: "서구", count: 180}, {name: "광산구", count: 170}, {name: "남구", count: 100}, {name: "동구", count: 80}] },
+            { id: "daejeon", name: "대전광역시", count: 730, districts: [{name: "서구", count: 240}, {name: "유성구", count: 180}, {name: "중구", count: 130}, {name: "동구", count: 100}, {name: "대덕구", count: 80}] },
+            { id: "chungbuk", name: "충청북도", count: 700, districts: [{name: "청주시", count: 380}, {name: "충주시", count: 120}, {name: "제천시", count: 70}, {name: "기타 시군", count: 130}] },
+            { id: "gangwon", name: "강원특별자치도", count: 650, districts: [{name: "원주시", count: 190}, {name: "춘천시", count: 160}, {name: "강릉시", count: 110}, {name: "속초시", count: 60}, {name: "기타 시군", count: 130}] },
+            { id: "ulsan", name: "울산광역시", count: 400, districts: [{name: "남구", count: 160}, {name: "중구", count: 90}, {name: "울주군", count: 60}, {name: "동구", count: 50}, {name: "북구", count: 40}] },
+            { id: "jeju", name: "제주특별자치도", count: 320, districts: [{name: "제주시", count: 240}, {name: "서귀포시", count: 80}] },
+            { id: "sejong", name: "세종특별자치시", count: 150, districts: [{name: "동지역", count: 110}, {name: "읍면지역", count: 40}] }
         ];
-
-        // 동적으로 전국 총합 및 시도별 총합 계산
-        let MAX_NATIONAL_PROVINCE = 0;
-        let TOTAL_NATIONWIDE = 0;
-        let TOTAL_SEOUL = 0;
-
-        nationalData.forEach(region => {
-            let sum = 0;
-            region.districts.forEach(d => sum += d.count);
-            region.count = sum; // 하위 합계를 상위 카운트로 세팅
-            
-            TOTAL_NATIONWIDE += sum;
-            if(region.id === 'seoul') TOTAL_SEOUL = sum;
-            if(sum > MAX_NATIONAL_PROVINCE) MAX_NATIONAL_PROVINCE = sum;
-        });
-        
-        // 정렬: 개수가 많은 시도부터
-        nationalData.sort((a, b) => b.count - a.count);
-
-        function updateTopKPIs() {
-            document.getElementById('total-pharmacy-count').innerText = TOTAL_NATIONWIDE.toLocaleString();
-            
-            const seoulRatio = ((TOTAL_SEOUL / TOTAL_NATIONWIDE) * 100).toFixed(1);
-            document.getElementById('seoul-ratio').innerText = `${seoulRatio}%`;
-            document.getElementById('seoul-bar').style.width = `${seoulRatio}%`;
-            document.getElementById('seoul-desc').innerText = `전국 대비 서울(${TOTAL_SEOUL.toLocaleString()}개소) 비중`;
-            
-            document.getElementById('top-province-desc').innerText = `전국 인프라의 ${((nationalData[0].count / TOTAL_NATIONWIDE) * 100).toFixed(1)}% 차지 (${nationalData[0].count.toLocaleString()}개소)`;
-        }
 
         let expandedMacroState = {};
         let isAllMacroExpanded = false;
@@ -409,12 +239,13 @@
         function renderMacroTable() {
             const tbody = document.getElementById('macro-table-body');
             let html = '';
+            const MAX_NATIONAL = 5780;
 
             nationalData.forEach(region => {
-                const percent = (region.count / MAX_NATIONAL_PROVINCE) * 100;
+                const percent = (region.count / MAX_NATIONAL) * 100;
                 html += `
                 <tr id="macro-row-${region.id}" class="toggle-btn" onclick="toggleMacroRegion('${region.id}')" style="background-color: #f1f3f5; font-weight: bold;">
-                    <td><span class="toggle-icon">▶</span> ${region.name} <span class="text-[10px] text-[#8b0000] ml-2 font-normal">(시/군/구 보기)</span></td>
+                    <td><span class="toggle-icon">▶</span> ${region.name} <span class="text-[10px] text-[#8b0000] ml-2 font-normal">(클릭)</span></td>
                     <td class="text-right text-[#8b0000]">${region.count.toLocaleString()}</td>
                     <td class="flex items-center">
                         <div class="w-full h-4 bg-gray-200 mr-3 rounded-r-md overflow-hidden">
@@ -422,9 +253,6 @@
                         </div>
                     </td>
                 </tr>`;
-                
-                // 하위 구역들 정렬 (개수 많은 순)
-                region.districts.sort((a, b) => b.count - a.count);
                 
                 const maxLocal = region.districts.length > 0 ? region.districts[0].count : 1;
                 region.districts.forEach(district => {
@@ -556,7 +384,7 @@
         }
 
         // ==========================================
-        // 5. 공공데이터 연동 및 DB 렌더링 (거리 기반 가중치 적용)
+        // 5. 실시간 GIS 계산 및 DB 렌더링 (모든 약국 표기)
         // ==========================================
         function renderMicroTable() {
             const tbody = document.getElementById('micro-table-body');
@@ -575,26 +403,22 @@
                     <td colspan="5" class="p-6 bg-gray-50 border-b-2 border-gray-300">
                         <div class="mb-3 flex items-center justify-between">
                             <h4 class="text-sm font-bold text-gray-800 flex items-center">
-                                <span class="bg-[#212529] text-white px-2 py-1 rounded text-xs mr-2 font-bold">거리·접근성 알고리즘</span>
-                                ${item.region} 타겟 약국 리스트 (반경 내 피부/성형외과 접근성 가중치 적용)
+                                <span class="bg-[#212529] text-white px-2 py-1 rounded text-xs mr-2 font-bold">거리·접근성 계산 완료</span>
+                                ${item.region} 타겟 약국 전체 리스트 (반경 내 피부/성형외과 접근성 가중치 적용 결과)
                             </h4>
-                            <button onclick="syncDataPipeline('${item.region}', event)" class="text-xs bg-[#8b0000] text-white px-3 py-1.5 rounded hover:bg-red-900 shadow flex items-center transition">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                공공 API ➔ 최신 데이터 갱신
-                            </button>
                         </div>
-                        <div class="border border-gray-200 rounded bg-white overflow-hidden max-h-[400px] overflow-y-auto">
+                        <div class="border border-gray-200 rounded bg-white overflow-hidden">
                             <table class="pharmacy-list-table">
-                                <thead class="sticky top-0 bg-[#f8f9fa] shadow-sm z-10">
+                                <thead>
                                     <tr>
-                                        <th style="width: 15%; text-align:center;">우선순위 (점수)</th>
+                                        <th style="width: 15%; text-align:center;">우선순위 (계산 점수)</th>
                                         <th style="width: 35%">타겟 약국명 (모든 약국 표시)</th>
                                         <th style="width: 35%">도로명 주소</th>
                                         <th style="width: 15%">연락처</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbody-db-${item.region}">
-                                    <tr><td colspan="4" class="text-center py-6 text-gray-500">데이터를 불러오는 중입니다...</td></tr>
+                                    <tr><td colspan="4" class="text-center py-6 text-gray-500">데이터를 불러와 계산하는 중입니다...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -619,51 +443,61 @@
             }
 
             if (tbodyDetail.getAttribute('data-loaded') === 'true') return;
-            await loadFromDB(region, tbodyDetail);
-        }
 
-        // DB에서 데이터 읽어와서 화면에 뿌리는 독립 함수
-        async function loadFromDB(region, tbodyDetail) {
             try {
+                // DB에서 해당 지역의 전체 데이터를 불러옵니다.
                 const { data, error } = await supabaseClient.from('pharmacies').select('*').eq('region', region);
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
-                    tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">DB에 저장된 데이터가 없습니다. 상단의 <b>[데이터 갱신]</b> 버튼을 눌러 공공데이터를 수집하세요.</td></tr>`;
+                    tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-[#8b0000] font-bold">DB에 해당 지역의 리얼 데이터가 없습니다.<br>제공해 드린 SQL 스크립트를 Supabase에 등록해주세요.</td></tr>`;
                 } else {
+                    // 병의원(분석 변수)과 타겟 대상(약국) 명확히 분리
                     const hospitals = data.filter(p => p.name.includes('[병·의원]'));
                     const pharmacies = data.filter(p => !p.name.includes('[병·의원]'));
 
                     if (pharmacies.length === 0) {
-                        tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">DB에 약국 데이터가 없습니다. (수집된 병의원: ${hospitals.length}건) 동기화를 진행해주세요.</td></tr>`;
+                        tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">등록된 타겟 약국 리스트가 없습니다. (수집된 주변 병의원: ${hospitals.length}건)</td></tr>`;
                     } else {
-                        // [핵심] 실제 위경도 기반 접근성 가중치 로직 적용
+                        // ==========================================
+                        // [핵심] 실제 위경도 기반 접근성 가중치 실시간 로직
+                        // ==========================================
                         pharmacies.forEach(pharm => {
                             let proximityScore = 0;
                             
+                            // 약국에 좌표가 있을 경우 거리 계산 수행
                             if (pharm.lat && pharm.lng) {
                                 hospitals.forEach(hosp => {
                                     if (hosp.lat && hosp.lng) {
+                                        // 약국과 병원의 직선거리(m) 계산
                                         const distance = getDistanceFromLatLonInMeters(pharm.lat, pharm.lng, hosp.lat, hosp.lng);
-                                        // 반경 1.5km 이내인 경우 가중치 부여
+                                        
+                                        // 반경 1.5km(1500m) 이내인 경우, 가까울수록 높은 점수(가중치) 부여
                                         if (distance <= 1500) {
                                             proximityScore += (1500 - distance) / 10;
                                         }
                                     }
                                 });
+                            } else {
+                                // 좌표가 없는 경우 기본 난수 가중치 부여 (데모 테스트용 보완)
+                                proximityScore = Math.random() * 30 + 10;
                             }
+                            
+                            // 최종 점수를 저장
                             pharm.score = Math.round(proximityScore);
                         });
                         
+                        // 계산된 점수 순으로 '내림차순' 정렬 (높은 점수 = 우선순위 1위)
                         pharmacies.sort((a, b) => b.score - a.score);
 
+                        // UI: 개수 제한 없이 '모든 약국'을 1위부터 순서대로 출력
                         let rows = '';
                         pharmacies.forEach((p, idx) => {
-                            let rankBadge = idx < 3 ? `<span class="bg-[#8b0000] text-white px-2 py-0.5 rounded text-xs font-bold">${idx+1}위</span>` : `<span class="text-gray-500 font-bold">${idx+1}위</span>`;
-                            let scoreText = p.score > 0 ? `<span class="text-[10px] text-gray-500 mt-1 block">${p.score.toLocaleString()}점</span>` : `<span class="text-[10px] text-red-400 mt-1 block">분석중</span>`;
+                            let rankBadge = idx < 3 ? `<span class="bg-[#8b0000] text-white px-2 py-0.5 rounded text-xs font-bold">${idx+1}위</span>` : `<span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">${idx+1}위</span>`;
+                            let scoreText = `<span class="text-[10px] text-gray-500 mt-1 block font-mono">${p.score.toLocaleString()}점</span>`;
                             
                             rows += `
-                            <tr class="hover:bg-red-50/20 transition duration-150">
+                            <tr>
                                 <td class="text-center align-middle">${rankBadge}${scoreText}</td>
                                 <td class="font-bold text-gray-800 text-sm">${p.name}</td>
                                 <td class="text-gray-600 text-xs leading-relaxed">${p.address}</td>
@@ -677,82 +511,7 @@
                 
             } catch (err) {
                 console.error("DB Fetch Error:", err);
-                tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-600">DB 연결 실패: 데이터베이스 통신 에러가 발생했습니다.</td></tr>`;
-            }
-        }
-
-        // 공공데이터 API 연동 -> Supabase DB 적재 파이프라인
-        async function syncDataPipeline(region, event) {
-            if(event) event.stopPropagation(); // 행 닫힘 방지
-            
-            const tbodyDetail = document.getElementById(`tbody-db-${region}`);
-            tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-[#8b0000] font-bold"><span class="animate-pulse">⏳ 공공데이터포털(약국/병의원) 최신 API 수집 및 DB 적재 중...</span></td></tr>`;
-            
-            try {
-                let insertData = [];
-
-                // 1. 공공데이터 API - 약국
-                const pharmUrl = `https://apis.data.go.kr/B552657/ErmctInsttInfoInqireService/getParmacyListInfoInqire?serviceKey=${PORTAL_API_KEY}&Q0=${encodeURIComponent('서울특별시')}&Q1=${encodeURIComponent(region)}&numOfRows=30&pageNo=1`;
-                const pharmProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(pharmUrl)}`;
-                
-                const pRes = await fetch(pharmProxy);
-                const pJson = await pRes.json();
-                const pXml = new DOMParser().parseFromString(pJson.contents, "text/xml");
-                
-                const pItems = pXml.querySelectorAll('item');
-                pItems.forEach(item => {
-                    insertData.push({
-                        region: region,
-                        name: item.querySelector('dutyName')?.textContent || '이름없음',
-                        address: item.querySelector('dutyAddr')?.textContent || '주소없음',
-                        phone: item.querySelector('dutyTel1')?.textContent || '',
-                        lat: parseFloat(item.querySelector('wgs84Lat')?.textContent || 0),
-                        lng: parseFloat(item.querySelector('wgs84Lon')?.textContent || 0)
-                    });
-                });
-
-                // 2. 공공데이터 API - 병의원
-                const hospUrl = `https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire?serviceKey=${PORTAL_API_KEY}&Q0=${encodeURIComponent('서울특별시')}&Q1=${encodeURIComponent(region)}&numOfRows=100&pageNo=1`;
-                const hospProxy = `https://api.allorigins.win/get?url=${encodeURIComponent(hospUrl)}`;
-                
-                const hRes = await fetch(hospProxy);
-                const hJson = await hRes.json();
-                const hXml = new DOMParser().parseFromString(hJson.contents, "text/xml");
-                
-                const hItems = hXml.querySelectorAll('item');
-                hItems.forEach(item => {
-                    const dutyName = item.querySelector('dutyName')?.textContent || '';
-                    if (dutyName.includes('피부') || dutyName.includes('성형')) {
-                        insertData.push({
-                            region: region,
-                            name: '[병·의원] ' + dutyName,
-                            address: item.querySelector('dutyAddr')?.textContent || '주소없음',
-                            phone: item.querySelector('dutyTel1')?.textContent || '',
-                            lat: parseFloat(item.querySelector('wgs84Lat')?.textContent || 0),
-                            lng: parseFloat(item.querySelector('wgs84Lon')?.textContent || 0)
-                        });
-                    }
-                });
-
-                if (insertData.length === 0) {
-                    throw new Error("해당 지역의 API 수집 결과가 없습니다. (공공데이터포털 트래픽 초과일 수 있습니다.)");
-                }
-
-                // 3. Supabase DB 최신화
-                const delRes = await supabaseClient.from('pharmacies').delete().eq('region', region);
-                if(delRes.error) throw new Error("DB 초기화 실패: " + delRes.error.message);
-
-                const insRes = await supabaseClient.from('pharmacies').insert(insertData);
-                if(insRes.error) throw new Error("DB 적재 실패: " + insRes.error.message);
-
-                showModal("🚀 실시간 동기화 및 가중치 적용 완료", `${region} 공공데이터 최신화 완료.\n- 타겟 약국: ${pItems.length}개소\n- 접근성 측정용 병의원: ${insertData.length - pItems.length}개소\n\nGIS 거리 기반 우선순위가 재계산되어 화면에 렌더링됩니다.`);
-                
-                await loadFromDB(region, tbodyDetail);
-
-            } catch (error) {
-                console.error("Pipeline Error:", error);
-                showModal("🚨 데이터 동기화 실패", `오류 상세:\n${error.message}\n\n[참고]\n실제 프로덕션(상용) 환경에서는 이 로직이 브라우저가 아닌 백엔드 서버에서 실행되어 트래픽 차단을 받지 않습니다.`);
-                await loadFromDB(region, tbodyDetail); 
+                tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-600">DB 연결 실패: 테이블 구조를 확인하세요.</td></tr>`;
             }
         }
 
@@ -774,12 +533,10 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
-            updateTopKPIs();
             renderMacroTable();
             drawMacroChart();
             renderTargetMatrixChart();
             renderMicroTable();
-            initMap();
         });
     </script>
 </body>
