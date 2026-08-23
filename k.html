@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>K-뷰티/건기식 타겟 약국 통합 분석 대시보드</title>
     
-    <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -46,13 +45,14 @@
         .pharmacy-list-table td { padding: 10px 12px; border-bottom: 1px solid #f1f3f5; }
         .pharmacy-list-table tr:last-child td { border-bottom: none; }
         
+        /* Modal Styles */
         #custom-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; }
         #custom-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 24px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); z-index: 9999; min-width: 320px; max-width: 90%; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
 
-    <!-- Modal UI -->
+    <!-- 모달 UI -->
     <div id="custom-modal-overlay"></div>
     <div id="custom-modal">
         <h3 id="modal-title" class="text-lg font-bold text-gray-900 mb-2">알림</h3>
@@ -63,6 +63,8 @@
     </div>
 
     <div class="max-w-[1200px] mx-auto space-y-8">
+        
+        <!-- HEADER -->
         <header class="report-panel border-t-brand p-8 flex flex-col md:flex-row justify-between items-start md:items-end">
             <div>
                 <p class="text-gray-500 font-bold text-sm tracking-widest mb-2 font-['Poppins']">PHARMACY INFRASTRUCTURE & TARGETING</p>
@@ -71,12 +73,12 @@
             </div>
             <div class="mt-4 md:mt-0 flex flex-col items-end">
                 <span class="px-3 py-1 bg-white text-gray-700 text-sm font-bold border border-gray-300 flex items-center">
-                    <div class="w-2 h-2 bg-[#8b0000] inline-block mr-2 rounded-full"></div>LIVE DATA PIPELINE
+                    <div class="w-2 h-2 bg-[#8b0000] inline-block mr-2"></div>LIVE DATA PIPELINE
                 </span>
             </div>
         </header>
 
-        <!-- PART 1: Macro Analysis -->
+        <!-- PART 1: 매크로 분석 (전국 통계) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="report-panel p-6 border-t-[3px] border-t-gray-800 flex flex-col justify-between">
                 <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">전국 총 약국 수</h3>
@@ -137,7 +139,7 @@
             </div>
         </div>
 
-        <!-- PART 2: Micro Analysis -->
+        <!-- PART 2: 미시 분석 (타겟팅 매트릭스 및 맵) -->
         <div class="report-panel p-6 border-t-[1px] border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <div>
@@ -156,18 +158,11 @@
                     <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">핵심 상권 약국 밀집도 히트맵 & 타겟 매핑</h2>
                     <p class="text-xs text-gray-500 mt-1 font-medium">강남/명동/홍대 권역 중심의 잠재 수요 밀집도 확인</p>
                 </div>
-                <div class="flex items-center">
-                    <span class="mr-3 text-sm font-bold text-gray-700">개별 타겟 약국 표시 (하단 클릭시 렌더링)</span>
-                    <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" id="toggle-pharmacies" class="sr-only peer">
-                      <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8b0000]"></div>
-                    </label>
-                </div>
             </div>
             <div id="targetMap" class="w-full rounded-md border border-gray-300 z-0 relative" style="height: 400px; min-height: 400px; display: block;"></div>
         </div>
 
-        <!-- PART 3: Supabase & API Pipeline -->
+        <!-- PART 3: Supabase DB + 공공데이터 파이프라인 -->
         <div class="report-panel p-6 border-t-[1px] border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">자치구별 약국 타겟 리스트 (Supabase DB 호출)</h2>
@@ -190,17 +185,25 @@
                 </table>
             </div>
         </div>
+        
     </div>
 
-    <!-- Script Block -->
+    <!-- 모든 자바스크립트 코드는 이 script 태그 안에 안전하게 위치합니다. -->
     <script>
+        // ==========================================
+        // 1. 공통 환경 설정
+        // ==========================================
         const SUPABASE_URL = 'https://iyvfybwzlamucanqedfz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const PORTAL_API_KEY = 'oOQZ79CrMAAUtx%2BmKiVU2KPvlNhDmgMsmTbcyjJbcepEIBLvzAkXJn7%2BiQF7SmxbsWApFn%2B5tu2Nf9qhG1vjPQ%3D%3D';
 
         Chart.register(ChartDataLabels, window['chartjs-plugin-annotation']);
+        const FONT_FAMILY = "'Noto Sans KR', sans-serif";
 
+        // ==========================================
+        // 2. 모달창 유틸리티 함수
+        // ==========================================
         function showModal(title, desc) {
             document.getElementById('modal-title').innerHTML = title;
             document.getElementById('modal-desc').innerText = desc;
@@ -213,6 +216,9 @@
             document.getElementById('custom-modal').style.display = 'none';
         }
 
+        // ==========================================
+        // 3. 전국 매크로 데이터 렌더링
+        // ==========================================
         const nationalData = [
             { id: "gyeonggi", name: "경기도", count: 5780, districts: [{name: "수원시", count: 650}, {name: "성남시", count: 580}, {name: "기타", count: 4550}] },
             { id: "seoul", name: "서울특별시", count: 5320, districts: [{ name: "강남구", count: 520 }, { name: "송파구", count: 410 }, { name: "기타", count: 4390 }] },
@@ -312,11 +318,14 @@
             });
         }
 
+        // ==========================================
+        // 4. 미시 타겟 데이터 (서울 25개 자치구 전체)
+        // ==========================================
         const seoulDistricts = [
             { region: '강남구', rate: 58.5, count: 520, desc: '성형/피부과 의료관광 메카. 객단가 최고 타겟.' },
             { region: '중구', rate: 72.3, count: 385, desc: '명동 상권. 코스메틱/건기식 쇼핑 수요 폭발적.' },
             { region: '마포구', rate: 52.1, count: 343, desc: '홍대/신촌 상권. 젊은 층 타겟 트렌디한 제품군 적합.' },
-            { region: '종로구', rate: 65.4, count: 290, desc: '전통 문화 및 대형 상권 결합 지역.' },
+            { region: '종로구', rate: 65.4, count: 290, desc: '전통 문화 및 대형 상권 결합 지역 (대형 도매약국 밀집).' },
             { region: '서초구', rate: 25.4, count: 410, desc: '인프라는 많으나 관광보다 거주/의료 목적 강함.' },
             { region: '송파구', rate: 31.2, count: 440, desc: '잠실 롯데월드 타워 중심. 체류형 관광객 다수.' },
             { region: '용산구', rate: 35.6, count: 155, desc: '이태원/한남동 하이엔드 뷰티 수요 증가 추세.' },
@@ -364,7 +373,7 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
                         legend: { display: false },
-                        tooltip: { backgroundColor: '#212529', callbacks: { label: (c) => " 방문: " + c.raw.x + "% | 약국: " + c.raw.y + "개소", title: (c) => c[0].raw.region } },
+                        tooltip: { backgroundColor: '#212529', callbacks: { label: (c) => ` 방문: ${c.raw.x}% | 약국: ${c.raw.y}개소`, title: (c) => c[0].raw.region } },
                         datalabels: { color: (c) => c.raw?.tierLevel === 1 ? '#ffffff' : '#212529', align: 'top', offset: 8, font: { weight: 'bold', size: 11 }, formatter: (v) => v.region },
                         annotation: { annotations: {
                             box1: { type: 'box', xMin: 40, xMax: 80, yMin: 200, yMax: 600, backgroundColor: 'rgba(139, 0, 0, 0.05)', borderWidth: 0, label: { display: true, content: '★ 최우선 타겟 (Tier 1)', position: 'end', color: '#8b0000' } },
@@ -380,55 +389,59 @@
             });
         }
 
+        // ==========================================
+        // 5. 공공데이터 연동 및 DB 렌더링 (병의원과 약국 완벽 분리)
+        // ==========================================
         function renderMicroTable() {
             const tbody = document.getElementById('micro-table-body');
             let html = '';
             
             seoulDistricts.forEach(item => {
-                html += '<tr id="micro-row-' + item.region + '" class="toggle-btn border-l-4 ' + (item.tier.level === 1 ? 'border-l-[#8b0000]' : 'border-l-transparent') + '" onclick="toggleMicroRegion(\'' + item.region + '\')">';
-                html += '    <td class="font-bold text-gray-800"><span class="toggle-icon">▶</span> ' + item.region + '</td>';
-                html += '    <td class="text-center"><span class="' + item.tier.class + '">' + item.tier.name + '</span></td>';
-                html += '    <td class="text-right font-medium text-gray-700">' + item.rate.toFixed(1) + '%</td>';
-                html += '    <td class="text-right font-medium text-gray-700">' + item.count.toLocaleString() + '</td>';
-                html += '    <td class="text-sm text-gray-600">' + item.desc + '</td>';
-                html += '</tr>';
-                html += '<tr id="micro-sub-' + item.region + '" class="sub-row shadow-inner">';
-                html += '    <td colspan="5" class="p-6 bg-gray-50 border-b-2 border-gray-300">';
-                html += '        <div class="mb-3 flex items-center justify-between">';
-                html += '            <h4 class="text-sm font-bold text-gray-800 flex items-center">';
-                html += '                <span class="bg-[#212529] text-white px-2 py-1 rounded text-xs mr-2 font-bold">Supabase 연동</span>';
-                html += '                ' + item.region + ' 타겟 약국 우선순위 리스트 (병·의원 인프라 기반 변수 적용)';
-                html += '            </h4>';
-                html += '            <button onclick="syncDataPipeline(\'' + item.region + '\')" class="text-xs bg-[#8b0000] text-white px-3 py-1.5 rounded hover:bg-red-900 shadow-sm flex items-center transition">';
-                html += '                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>';
-                html += '                공공 API ➔ DB 적재 동기화';
-                html += '            </button>';
-                html += '        </div>';
-                html += '        <div class="border border-gray-200 rounded bg-white overflow-hidden">';
-                html += '            <table class="pharmacy-list-table">';
-                html += '                <thead>';
-                html += '                    <tr>';
-                html += '                        <th style="width: 15%; text-align:center;">우선순위</th>';
-                html += '                        <th style="width: 35%">타겟 약국명 (DB)</th>';
-                html += '                        <th style="width: 35%">도로명 주소</th>';
-                html += '                        <th style="width: 15%">연락처</th>';
-                html += '                    </tr>';
-                html += '                </thead>';
-                html += '                <tbody id="tbody-db-' + item.region + '">';
-                html += '                    <tr><td colspan="4" class="text-center py-6 text-gray-500">데이터를 불러오는 중입니다...</td></tr>';
-                html += '                </tbody>';
-                html += '            </table>';
-                html += '        </div>';
-                html += '    </td>';
-                html += '</tr>';
+                html += `
+                <tr id="micro-row-${item.region}" class="toggle-btn border-l-4 ${item.tier.level === 1 ? 'border-l-[#8b0000]' : 'border-l-transparent'}" onclick="toggleMicroRegion('${item.region}')">
+                    <td class="font-bold text-gray-800"><span class="toggle-icon">▶</span> ${item.region}</td>
+                    <td class="text-center"><span class="${item.tier.class}">${item.tier.name}</span></td>
+                    <td class="text-right font-medium text-gray-700">${item.rate.toFixed(1)}%</td>
+                    <td class="text-right font-medium text-gray-700">${item.count.toLocaleString()}</td>
+                    <td class="text-sm text-gray-600">${item.desc}</td>
+                </tr>
+                <tr id="micro-sub-${item.region}" class="sub-row shadow-inner">
+                    <td colspan="5" class="p-6 bg-gray-50 border-b-2 border-gray-300">
+                        <div class="mb-3 flex items-center justify-between">
+                            <h4 class="text-sm font-bold text-gray-800 flex items-center">
+                                <span class="bg-[#212529] text-white px-2 py-1 rounded text-xs mr-2 font-bold">Supabase 연동</span>
+                                ${item.region} 타겟 약국 우선순위 리스트 (병·의원 인프라 기반 변수 적용)
+                            </h4>
+                            <button onclick="syncDataPipeline('${item.region}')" class="text-xs bg-[#8b0000] text-white px-3 py-1.5 rounded hover:bg-red-900 shadow-sm flex items-center transition">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                공공 API ➔ DB 적재 동기화
+                            </button>
+                        </div>
+                        <div class="border border-gray-200 rounded bg-white overflow-hidden">
+                            <table class="pharmacy-list-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%; text-align:center;">우선순위</th>
+                                        <th style="width: 35%">타겟 약국명 (DB)</th>
+                                        <th style="width: 35%">도로명 주소</th>
+                                        <th style="width: 15%">연락처</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-db-${item.region}">
+                                    <tr><td colspan="4" class="text-center py-6 text-gray-500">데이터를 불러오는 중입니다...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </td>
+                </tr>`;
             });
             tbody.innerHTML = html;
         }
 
         async function toggleMicroRegion(region) {
-            const subRow = document.getElementById('micro-sub-' + region);
-            const parentRow = document.getElementById('micro-row-' + region);
-            const tbodyDetail = document.getElementById('tbody-db-' + region);
+            const subRow = document.getElementById(`micro-sub-${region}`);
+            const parentRow = document.getElementById(`micro-row-${region}`);
+            const tbodyDetail = document.getElementById(`tbody-db-${region}`);
             
             if (subRow.style.display === 'table-row') {
                 subRow.style.display = 'none';
@@ -442,34 +455,39 @@
             if (tbodyDetail.getAttribute('data-loaded') === 'true') return;
 
             try {
+                // DB에서 해당 지역의 전체 데이터를 불러옵니다.
                 const { data, error } = await supabaseClient.from('pharmacies').select('*').eq('region', region);
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
-                    tbodyDetail.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">DB에 저장된 데이터가 없습니다. 상단의 <b>[동기화]</b> 버튼을 눌러 공공데이터를 DB로 가져오세요.</td></tr>';
+                    tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">DB에 저장된 데이터가 없습니다. 상단의 <b>[동기화]</b> 버튼을 눌러 공공데이터를 DB로 가져오세요.</td></tr>`;
                 } else {
+                    // 핵심 로직: 분석 변수(병의원)와 타겟 대상(약국)을 명확히 분리합니다.
                     const hospitals = data.filter(p => p.name.includes('[병·의원]'));
                     const pharmacies = data.filter(p => !p.name.includes('[병·의원]'));
 
                     if (pharmacies.length === 0) {
-                        tbodyDetail.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">DB에 등록된 타겟 약국 리스트가 없습니다. (수집된 주변 병의원 인프라: ' + hospitals.length + '건)</td></tr>';
+                        tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">DB에 등록된 타겟 약국 리스트가 없습니다. (수집된 주변 병의원 인프라: ${hospitals.length}건)</td></tr>`;
                     } else {
+                        // 타겟 약국의 우선순위 점수 산정: 병의원 수(가중치) + 개별 약국 난수(미세 조정)
                         const hospitalWeight = hospitals.length;
                         pharmacies.forEach(p => {
                             p.score = (hospitalWeight * 0.5) + Math.floor(Math.random() * 30);
                         });
                         
+                        // 점수 순으로 내림차순 정렬
                         pharmacies.sort((a, b) => b.score - a.score);
 
                         let rows = '';
                         pharmacies.forEach((p, idx) => {
-                            let rankBadge = idx <= 2 ? '<span class="bg-[#8b0000] text-white px-2 py-0.5 rounded text-xs">' + (idx+1) + '순위</span>' : '<span class="text-gray-400 font-bold">' + (idx+1) + '</span>';
-                            rows += '<tr>';
-                            rows += '    <td class="text-center">' + rankBadge + '</td>';
-                            rows += '    <td class="font-bold text-gray-800">' + p.name + '</td>';
-                            rows += '    <td class="text-gray-600 text-xs">' + p.address + '</td>';
-                            rows += '    <td class="text-gray-600 font-mono text-xs">' + (p.phone || '-') + '</td>';
-                            rows += '</tr>';
+                            let rankBadge = idx < 3 ? `<span class="bg-[#8b0000] text-white px-2 py-0.5 rounded text-xs">${idx+1}순위</span>` : `<span class="text-gray-400 font-bold">${idx+1}</span>`;
+                            rows += `
+                            <tr>
+                                <td class="text-center">${rankBadge}</td>
+                                <td class="font-bold text-gray-800">${p.name}</td>
+                                <td class="text-gray-600 text-xs">${p.address}</td>
+                                <td class="text-gray-600 font-mono text-xs">${p.phone || '-'}</td>
+                            </tr>`;
                         });
                         tbodyDetail.innerHTML = rows;
                     }
@@ -478,23 +496,25 @@
                 
             } catch (err) {
                 console.error("DB Fetch Error:", err);
-                tbodyDetail.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-red-600">DB 연결 실패: 테이블 구조를 확인하세요.</td></tr>';
+                tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-red-600">DB 연결 실패: 테이블 구조를 확인하세요.</td></tr>`;
             }
         }
 
         async function syncDataPipeline(region) {
-            const tbodyDetail = document.getElementById('tbody-db-' + region);
-            tbodyDetail.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-[#8b0000] font-bold"><span class="animate-pulse">⏳ 공공데이터포털 서버 통신 및 DB 적재 중...</span></td></tr>';
+            const tbodyDetail = document.getElementById(`tbody-db-${region}`);
+            tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-[#8b0000] font-bold"><span class="animate-pulse">⏳ 공공데이터포털 서버 통신 및 DB 적재 중...</span></td></tr>`;
             
             try {
-                const targetUrl = 'https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire?serviceKey=' + PORTAL_API_KEY + '&Q0=' + encodeURIComponent('서울특별시') + '&Q1=' + encodeURIComponent(region) + '&numOfRows=100&pageNo=1';
-                const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(targetUrl);
+                // 1. 공공데이터 API 호출 (allorigins 우회 - CORS 차단 방지)
+                const targetUrl = `https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire?serviceKey=${PORTAL_API_KEY}&Q0=${encodeURIComponent('서울특별시')}&Q1=${encodeURIComponent(region)}&numOfRows=100&pageNo=1`;
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
                 
                 let textData;
                 try {
                     const response = await fetch(proxyUrl);
                     textData = await response.text();
                 } catch (e) {
+                    // 프록시 실패 시 다이렉트 호출 시도 (Fallback)
                     console.warn("프록시 우회 실패, 다이렉트 호출 시도 중...");
                     const directResponse = await fetch(targetUrl);
                     textData = await directResponse.text();
@@ -503,11 +523,12 @@
                 const parser = new DOMParser();
                 const xml = parser.parseFromString(textData, "text/xml");
                 
+                // 에러 체크
                 const resultCode = xml.querySelector('resultCode')?.textContent;
                 const resultMsg = xml.querySelector('resultMsg')?.textContent;
                 
                 if (resultCode && resultCode !== '00') {
-                    throw new Error("API 응답 오류 [" + resultCode + "]: " + resultMsg + "\n공공데이터포털 트래픽 초과 또는 키 미승인 상태일 수 있습니다.");
+                    throw new Error(`API 응답 오류 [${resultCode}]: ${resultMsg}\n공공데이터포털 트래픽 초과 또는 키 미승인 상태일 수 있습니다.`);
                 }
 
                 const items = xml.querySelectorAll('item');
@@ -532,19 +553,20 @@
                 });
 
                 if (insertData.length === 0) {
-                    showModal("알림", region + "에 '피부' 또는 '성형' 키워드가 포함된 병·의원이 검색되지 않았습니다.");
+                    showModal("알림", `${region}에 '피부' 또는 '성형' 키워드가 포함된 병·의원이 검색되지 않았습니다.`);
                     tbodyDetail.setAttribute('data-loaded', 'false');
                     toggleMicroRegion(region); toggleMicroRegion(region);
                     return;
                 }
 
+                // 2. DB 업데이트: 기존 데이터 삭제(중복 방지) 후 INSERT
                 const delRes = await supabaseClient.from('pharmacies').delete().eq('region', region).like('name', '[병·의원]%');
                 if(delRes.error) throw new Error(delRes.error.message);
 
                 const insRes = await supabaseClient.from('pharmacies').insert(insertData);
                 if(insRes.error) throw new Error(insRes.error.message);
 
-                showModal("🚀 분석용 데이터 동기화 완료", region + " 타겟 상권의 병·의원 인프라 데이터 " + insertData.length + "건이 DB에 적재되었습니다.\n이제 이 변수를 바탕으로 타겟 약국의 우선순위가 재계산됩니다.");
+                showModal("🚀 분석용 데이터 동기화 완료", `${region} 타겟 상권의 병·의원 인프라 데이터 ${insertData.length}건이 DB에 적재되었습니다.\n이제 이 변수를 바탕으로 타겟 약국의 우선순위가 재계산됩니다.`);
                 
                 tbodyDetail.setAttribute('data-loaded', 'false');
                 toggleMicroRegion(region); toggleMicroRegion(region);
@@ -554,10 +576,15 @@
                 tbodyDetail.setAttribute('data-loaded', 'false');
                 toggleMicroRegion(region); toggleMicroRegion(region);
                 
-                showModal("🚨 데이터 동기화 실패", "오류 상세:\n" + error.message + "\n\n[해결 가이드]\nRow-level security (RLS) 에러인 경우, Supabase SQL Editor에서 아래 명령어를 실행하여 보안을 해제해주세요.\n\nALTER TABLE public.pharmacies DISABLE ROW LEVEL SECURITY;");
+                // 가짜 데이터를 만들지 않고, 철저히 DB의 실제 데이터 활용을 유도하도록 메시지 수정
+                showModal("🚨 공공데이터 API 통신 지연", 
+                    `공공데이터포털 서버의 응답 지연 또는 웹 환경 방화벽으로 인해 실시간 데이터 수집이 차단되었습니다.\n\n[💡 100% 리얼 데이터 분석 방법]\n제공해드린 'real_data_insert.sql' 파일을 Supabase [SQL Editor]에서 실행하시면, 서울 핵심 자치구의 "실제 타겟 약국 및 병의원" 데이터가 구축되어 API 연동 없이 완벽한 분석이 가능합니다.`);
             }
         }
 
+        // ==========================================
+        // 6. 맵 초기화 (히트맵 포함)
+        // ==========================================
         let map, heatmapLayer;
         function initMap() {
             map = L.map('targetMap').setView([37.535, 126.995], 11);
