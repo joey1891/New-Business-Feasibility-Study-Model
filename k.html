@@ -22,7 +22,6 @@
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; background-color: #f8f9fa; color: #212529; }
         .report-panel { background: #ffffff; border: 1px solid #dee2e6; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-bottom: 24px; }
-        .border-t-brand-blue { border-top: 5px solid #0056b3; }
         .border-t-brand-red { border-top: 5px solid #8b0000; }
         
         .data-table { width: 100%; border-collapse: collapse; }
@@ -35,9 +34,8 @@
         .badge-tier-3 { background-color: #adb5bd; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
 
         .toggle-btn { cursor: pointer; user-select: none; transition: all 0.2s; }
-        .toggle-btn:hover { color: #0056b3; background-color: #f1f3f5; }
+        .toggle-btn:hover { color: #8b0000; background-color: #f1f3f5; }
         .toggle-icon { display: inline-block; width: 16px; transition: transform 0.3s; color: #8b0000; }
-        .toggle-icon-blue { color: #0056b3; }
         .expanded .toggle-icon { transform: rotate(90deg); }
         
         .sub-row-macro { display: none; background-color: #fbfbfc; }
@@ -52,11 +50,11 @@
         .pharmacy-list-table tr:last-child td { border-bottom: none; }
         
         .btn-sync {
-            background-color: #0056b3; color: white; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px;
+            background-color: #8b0000; color: white; padding: 6px 12px; font-size: 12px; font-weight: bold; border-radius: 4px;
             cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: none;
         }
-        .btn-sync:hover { background-color: #004494; }
+        .btn-sync:hover { background-color: #6a0000; }
         .btn-sync:disabled { background-color: #adb5bd; cursor: not-allowed; box-shadow: none; }
     </style>
 </head>
@@ -67,7 +65,7 @@
         <!-- ======================================================== -->
         <!-- PART 1: MACRO ANALYSIS -->
         <!-- ======================================================== -->
-        <header class="report-panel border-t-brand-blue p-8 flex flex-col md:flex-row justify-between items-start md:items-end">
+        <header class="report-panel border-t-brand-red p-8 flex flex-col md:flex-row justify-between items-start md:items-end">
             <div>
                 <p class="text-gray-500 font-bold text-sm tracking-widest mb-2 font-['Poppins']">PHARMACY INFRASTRUCTURE ANALYSIS</p>
                 <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">전국 약국 인프라 및 서울시 세부 분석</h1>
@@ -75,7 +73,7 @@
             </div>
             <div class="mt-4 md:mt-0 flex flex-col items-end">
                 <span class="px-3 py-1 bg-white text-gray-700 text-sm font-bold border border-gray-300 flex items-center">
-                    <div class="w-2 h-2 bg-[#0056b3] inline-block mr-2 rounded-full"></div> NATIONAL & SEOUL
+                    <div class="w-2 h-2 bg-[#8b0000] inline-block mr-2 rounded-full"></div> NATIONAL & SEOUL
                 </span>
             </div>
         </header>
@@ -89,10 +87,10 @@
                 </div>
             </div>
             
-            <div class="report-panel !mb-0 p-6 border-t-[3px] border-t-[#0056b3] flex flex-col justify-between">
+            <div class="report-panel !mb-0 p-6 border-t-[3px] border-t-[#8b0000] flex flex-col justify-between">
                 <h3 class="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">최다 밀집 광역지자체</h3>
                 <div class="flex items-baseline space-x-2 mt-4">
-                    <p class="text-3xl font-extrabold text-[#0056b3] tracking-tighter">경기도</p>
+                    <p class="text-3xl font-extrabold text-[#8b0000] tracking-tighter">경기도</p>
                 </div>
                 <p class="text-xs text-gray-500 mt-2 font-bold">전국 인프라의 23.9% 차지 (5,780개소)</p>
             </div>
@@ -153,7 +151,7 @@
                 <p class="text-gray-600 mt-2 font-medium">관광객 수요와 피부/성형외과 밀집도 교차 분석 (Supabase DB 연동)</p>
             </div>
             <div class="mt-4 md:mt-0 flex flex-col items-end">
-                <div class="px-3 py-1 bg-blue-50 text-blue-800 text-[11px] font-bold border border-blue-300 flex items-center mb-1 rounded-sm">
+                <div class="px-3 py-1 bg-red-50 text-red-800 text-[11px] font-bold border border-red-300 flex items-center mb-1 rounded-sm">
                     DATA PIPELINE ACTIVE (API ➔ DB ➔ UI)
                 </div>
                 <p class="text-[10px] text-gray-400 font-mono mt-1">Status: Supabase Connected</p>
@@ -269,7 +267,7 @@
                     labels: nationalData.map(d => d.name),
                     datasets: [{ 
                         data: nationalData.map(d => d.count), 
-                        backgroundColor: nationalData.map(d => d.name === '서울특별시' ? '#0056b3' : '#343a40'), 
+                        backgroundColor: nationalData.map(d => d.name === '서울특별시' ? '#8b0000' : '#343a40'), 
                         barPercentage: 0.6 
                     }]
                 },
@@ -295,11 +293,11 @@
             nationalData.forEach(region => {
                 const percent = (region.count / MAX_NATIONAL) * 100;
                 html += `
-                <tr id="row-macro-${region.id}" class="toggle-btn" onclick="toggleMacroRegion('${region.id}')" style="background-color: #f8f9fa; border-left: 4px solid ${region.name==='서울특별시'?'#0056b3':'transparent'};">
-                    <td class="font-bold text-gray-800"><span class="toggle-icon toggle-icon-blue">▶</span> ${region.name}</td>
-                    <td class="text-right font-bold text-[#0056b3]">${region.count.toLocaleString()}</td>
+                <tr id="row-macro-${region.id}" class="toggle-btn" onclick="toggleMacroRegion('${region.id}')" style="background-color: #f8f9fa; border-left: 4px solid ${region.name==='서울특별시'?'#8b0000':'transparent'};">
+                    <td class="font-bold text-gray-800"><span class="toggle-icon">▶</span> ${region.name}</td>
+                    <td class="text-right font-bold text-[#8b0000]">${region.count.toLocaleString()}</td>
                     <td class="flex items-center">
-                        <div class="w-full h-3 bg-gray-200 mr-3 rounded-r-md overflow-hidden"><div class="h-full bg-[#0056b3]" style="width: ${percent}%;"></div></div>
+                        <div class="w-full h-3 bg-gray-200 mr-3 rounded-r-md overflow-hidden"><div class="h-full bg-[#8b0000]" style="width: ${percent}%;"></div></div>
                     </td>
                 </tr>`;
                 
@@ -594,7 +592,7 @@
                         <h3 class="text-lg font-bold mb-2 text-gray-900">${title}</h3>
                         <p class="text-sm text-gray-600 mb-4 whitespace-pre-wrap">${message}</p>
                         <div class="flex justify-end">
-                            <button onclick="document.getElementById('custom-modal').remove()" class="bg-[#0056b3] text-white px-4 py-2 rounded font-bold text-sm hover:bg-blue-700">확인</button>
+                            <button onclick="document.getElementById('custom-modal').remove()" class="bg-[#8b0000] text-white px-4 py-2 rounded font-bold text-sm hover:bg-[#6a0000]">확인</button>
                         </div>
                     </div>
                 </div>
