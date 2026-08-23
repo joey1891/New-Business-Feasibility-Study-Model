@@ -44,7 +44,6 @@
         .pharmacy-list-table th { background-color: #f8f9fa; color: #6c757d; font-weight: bold; padding: 8px 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
         .pharmacy-list-table td { padding: 10px 12px; border-bottom: 1px solid #f1f3f5; }
         .pharmacy-list-table tr:last-child td { border-bottom: none; }
-        .pharmacy-list-table tr:hover { background-color: #f8f9fa; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -56,7 +55,7 @@
             <div>
                 <p class="text-gray-500 font-bold text-sm tracking-widest mb-2 font-['Poppins']">PHARMACY INFRASTRUCTURE & TARGETING</p>
                 <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">외국인 관광객 타겟 약국 영업망 구축 분석</h1>
-                <p class="text-gray-600 mt-2 font-medium">전국 밀집도 현황 및 GIS 좌표(접근성) 계산 기반 핵심 상권 타겟팅 매핑</p>
+                <p class="text-gray-600 mt-2 font-medium">전국 밀집도 현황 및 GIS 좌표(접근성) 기반 핵심 상권 타겟팅 매핑</p>
             </div>
             <div class="mt-4 md:mt-0 flex flex-col items-end">
                 <span class="px-3 py-1 bg-white text-gray-700 text-sm font-bold border border-gray-300 flex items-center">
@@ -143,16 +142,17 @@
             <div class="flex justify-between items-end mb-4">
                 <div>
                     <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">핵심 상권 약국 밀집도 히트맵 & 타겟 매핑</h2>
-                    <p class="text-xs text-gray-500 mt-1 font-medium">강남/명동/홍대 권역 중심의 잠재 수요 밀집도 확인</p>
+                    <p class="text-xs text-gray-500 mt-1 font-medium">강남/명동/홍대 권역 중심의 잠재 수요 밀집도 및 하단 리스트 연동 마커 확인</p>
                 </div>
                 <div class="flex items-center">
                     <span class="mr-3 text-sm font-bold text-gray-700">개별 타겟 약국 표시 (하단 클릭시 렌더링)</span>
                     <label class="inline-flex items-center cursor-pointer">
-                      <input type="checkbox" id="toggle-pharmacies" class="sr-only peer">
+                      <input type="checkbox" id="toggle-pharmacies" class="sr-only peer" checked>
                       <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#8b0000]"></div>
                     </label>
                 </div>
             </div>
+            <!-- 지도 영역 -->
             <div id="targetMap" class="w-full rounded-md border border-gray-300 z-0 relative" style="height: 400px; min-height: 400px; display: block;"></div>
         </div>
 
@@ -182,25 +182,17 @@
         
     </div>
 
-    <!-- 모든 자바스크립트 코드는 이 script 태그 안에 안전하게 위치합니다. -->
+    <!-- 스크립트 영역 -->
     <script>
-        // ==========================================
-        // 1. 공통 환경 설정 (DB 연결)
-        // ==========================================
         const SUPABASE_URL = 'https://iyvfybwzlamucanqedfz.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         Chart.register(ChartDataLabels, window['chartjs-plugin-annotation']);
-        const FONT_FAMILY = "'Noto Sans KR', sans-serif";
 
-        // ==========================================
-        // 2. 거리 계산 유틸리티 함수 (Haversine)
-        // ==========================================
-        // 두 위경도 좌표 간의 실제 거리를 미터(m) 단위로 반환
         function getDistanceFromLatLonInMeters(lat1, lng1, lat2, lng2) {
             function deg2rad(deg) { return deg * (Math.PI/180); }
-            const R = 6371000; // 지구 반지름 (미터)
+            const R = 6371000; 
             const dLat = deg2rad(lat2 - lat1);
             const dLon = deg2rad(lng2 - lng1);
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -210,9 +202,6 @@
             return Math.round(R * c);
         }
 
-        // ==========================================
-        // 3. 전국 매크로 데이터 렌더링 (229개 시군구 포함)
-        // ==========================================
         const nationalData = [
             { id: "gyeonggi", name: "경기도", count: 5780, districts: [{name: "수원시", count: 650}, {name: "성남시", count: 580}, {name: "고양시", count: 530}, {name: "용인시", count: 480}, {name: "부천시", count: 420}, {name: "안산시", count: 350}, {name: "안양시", count: 310}, {name: "남양주시", count: 290}, {name: "화성시", count: 280}, {name: "기타 시군", count: 1890}] },
             { id: "seoul", name: "서울특별시", count: 5320, districts: [{ name: "강남구", count: 520 }, { name: "송파구", count: 440 }, { name: "서초구", count: 410 }, { name: "중구", count: 385 }, { name: "마포구", count: 343 }, { name: "영등포구", count: 295 }, { name: "종로구", count: 290 }, { name: "강서구", count: 280 }, { name: "노원구", count: 275 }, { name: "관악구", count: 250 }, { name: "은평구", count: 240 }, { name: "강동구", count: 230 }, { name: "구로구", count: 210 }, { name: "성북구", count: 210 }, { name: "서대문구", count: 210 }, { name: "동대문구", count: 270 }, { name: "광진구", count: 180 }, { name: "동작구", count: 190 }, { name: "양천구", count: 195 }, { name: "성동구", count: 160 }, { name: "중랑구", count: 165 }, { name: "용산구", count: 155 }, { name: "강북구", count: 150 }, { name: "도봉구", count: 140 }, { name: "금천구", count: 130 }] },
@@ -312,9 +301,6 @@
             });
         }
 
-        // ==========================================
-        // 4. 미시 타겟 데이터 (서울 25개 자치구 전체)
-        // ==========================================
         const seoulDistricts = [
             { region: '강남구', rate: 58.5, count: 520, desc: '성형/피부과 의료관광 메카. 객단가 최고 타겟.' },
             { region: '중구', rate: 72.3, count: 385, desc: '명동 상권. 코스메틱/건기식 쇼핑 수요 폭발적.' },
@@ -383,9 +369,61 @@
             });
         }
 
-        // ==========================================
-        // 5. 실시간 GIS 계산 및 DB 렌더링 (모든 약국 표기)
-        // ==========================================
+        let map, heatmapLayer, pharmacyMarkerLayer;
+
+        function initMap() {
+            map = L.map('targetMap').setView([37.535, 126.995], 11);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
+            
+            pharmacyMarkerLayer = L.layerGroup().addTo(map);
+
+            const toggleSwitch = document.getElementById('toggle-pharmacies');
+            if(toggleSwitch) {
+                toggleSwitch.addEventListener('change', function(e) {
+                    if(e.target.checked) {
+                        map.addLayer(pharmacyMarkerLayer);
+                    } else {
+                        map.removeLayer(pharmacyMarkerLayer);
+                    }
+                });
+            }
+
+            setTimeout(() => { 
+                map.invalidateSize(); 
+                renderHeatmap(); 
+            }, 500);
+        }
+
+        function renderHeatmap() {
+            const heatPoints = [];
+            for(let i=0; i<250; i++) heatPoints.push([37.498 + (Math.random()-0.5)*0.05, 127.027 + (Math.random()-0.5)*0.07, Math.random() * 1.5]); 
+            for(let i=0; i<180; i++) heatPoints.push([37.562 + (Math.random()-0.5)*0.03, 126.985 + (Math.random()-0.5)*0.04, Math.random() * 1.5]); 
+            for(let i=0; i<120; i++) heatPoints.push([37.556 + (Math.random()-0.5)*0.04, 126.924 + (Math.random()-0.5)*0.05, Math.random()]); 
+            
+            heatmapLayer = L.heatLayer(heatPoints, { 
+                radius: 18, blur: 15, maxZoom: 14, 
+                gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: '#8b0000' } 
+            }).addTo(map);
+        }
+
+        function updateMapWithPharmacies(pharmacies) {
+            if(!pharmacyMarkerLayer) return;
+            pharmacyMarkerLayer.clearLayers();
+            
+            pharmacies.forEach(p => {
+                if(p.lat && p.lng) {
+                    const marker = L.circleMarker([p.lat, p.lng], {
+                        radius: 6, fillColor: "#8b0000", color: "#ffffff", weight: 2, opacity: 1, fillOpacity: 0.9
+                    }).bindPopup(`<div style="font-family:'Noto Sans KR',sans-serif;"><b>${p.name}</b><br><span style="font-size:11px;color:gray;">가중치 점수: ${p.score}점</span></div>`);
+                    pharmacyMarkerLayer.addLayer(marker);
+                }
+            });
+
+            if(pharmacies.length > 0 && pharmacies[0].lat && pharmacies[0].lng) {
+                map.flyTo([pharmacies[0].lat, pharmacies[0].lng], 14, { duration: 1.0 });
+            }
+        }
+
         function renderMicroTable() {
             const tbody = document.getElementById('micro-table-body');
             let html = '';
@@ -442,55 +480,41 @@
                 parentRow.classList.add('expanded', 'bg-gray-100');
             }
 
-            if (tbodyDetail.getAttribute('data-loaded') === 'true') return;
+            if (tbodyDetail.getAttribute('data-loaded') === 'true') {
+                if(tbodyDetail.pharmaciesData) {
+                    updateMapWithPharmacies(tbodyDetail.pharmaciesData);
+                }
+                return;
+            }
 
             try {
-                // DB에서 해당 지역의 전체 데이터를 불러옵니다.
                 const { data, error } = await supabaseClient.from('pharmacies').select('*').eq('region', region);
                 if (error) throw error;
 
                 if (!data || data.length === 0) {
                     tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-[#8b0000] font-bold">DB에 해당 지역의 리얼 데이터가 없습니다.<br>제공해 드린 SQL 스크립트를 Supabase에 등록해주세요.</td></tr>`;
                 } else {
-                    // 병의원(분석 변수)과 타겟 대상(약국) 명확히 분리
                     const hospitals = data.filter(p => p.name.includes('[병·의원]'));
                     const pharmacies = data.filter(p => !p.name.includes('[병·의원]'));
 
                     if (pharmacies.length === 0) {
                         tbodyDetail.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-gray-500 font-medium">등록된 타겟 약국 리스트가 없습니다. (수집된 주변 병의원: ${hospitals.length}건)</td></tr>`;
                     } else {
-                        // ==========================================
-                        // [핵심] 실제 위경도 기반 접근성 가중치 실시간 로직
-                        // ==========================================
                         pharmacies.forEach(pharm => {
                             let proximityScore = 0;
-                            
-                            // 약국에 좌표가 있을 경우 거리 계산 수행
                             if (pharm.lat && pharm.lng) {
                                 hospitals.forEach(hosp => {
                                     if (hosp.lat && hosp.lng) {
-                                        // 약국과 병원의 직선거리(m) 계산
                                         const distance = getDistanceFromLatLonInMeters(pharm.lat, pharm.lng, hosp.lat, hosp.lng);
-                                        
-                                        // 반경 1.5km(1500m) 이내인 경우, 가까울수록 높은 점수(가중치) 부여
-                                        if (distance <= 1500) {
-                                            proximityScore += (1500 - distance) / 10;
-                                        }
+                                        if (distance <= 1500) proximityScore += (1500 - distance) / 10;
                                     }
                                 });
-                            } else {
-                                // 좌표가 없는 경우 기본 난수 가중치 부여 (데모 테스트용 보완)
-                                proximityScore = Math.random() * 30 + 10;
                             }
-                            
-                            // 최종 점수를 저장
                             pharm.score = Math.round(proximityScore);
                         });
                         
-                        // 계산된 점수 순으로 '내림차순' 정렬 (높은 점수 = 우선순위 1위)
                         pharmacies.sort((a, b) => b.score - a.score);
 
-                        // UI: 개수 제한 없이 '모든 약국'을 1위부터 순서대로 출력
                         let rows = '';
                         pharmacies.forEach((p, idx) => {
                             let rankBadge = idx < 3 ? `<span class="bg-[#8b0000] text-white px-2 py-0.5 rounded text-xs font-bold">${idx+1}위</span>` : `<span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs font-bold">${idx+1}위</span>`;
@@ -505,6 +529,9 @@
                             </tr>`;
                         });
                         tbodyDetail.innerHTML = rows;
+
+                        tbodyDetail.pharmaciesData = pharmacies;
+                        updateMapWithPharmacies(pharmacies);
                     }
                 }
                 tbodyDetail.setAttribute('data-loaded', 'true');
@@ -515,28 +542,12 @@
             }
         }
 
-        // ==========================================
-        // 6. 맵 초기화 (히트맵 포함)
-        // ==========================================
-        let map, heatmapLayer;
-        function initMap() {
-            map = L.map('targetMap').setView([37.535, 126.995], 11);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map);
-            setTimeout(() => { map.invalidateSize(); renderHeatmap(); }, 500);
-        }
-        function renderHeatmap() {
-            const heatPoints = [];
-            for(let i=0; i<250; i++) heatPoints.push([37.498 + (Math.random()-0.5)*0.05, 127.027 + (Math.random()-0.5)*0.07, Math.random() * 1.5]);
-            for(let i=0; i<180; i++) heatPoints.push([37.562 + (Math.random()-0.5)*0.03, 126.985 + (Math.random()-0.5)*0.04, Math.random() * 1.5]);
-            for(let i=0; i<120; i++) heatPoints.push([37.556 + (Math.random()-0.5)*0.04, 126.924 + (Math.random()-0.5)*0.05, Math.random()]);
-            heatmapLayer = L.heatLayer(heatPoints, { radius: 18, blur: 15, maxZoom: 14, gradient: { 0.4: 'blue', 0.6: 'cyan', 0.7: 'lime', 0.8: 'yellow', 1.0: '#8b0000' } }).addTo(map);
-        }
-
         window.addEventListener('DOMContentLoaded', () => {
             renderMacroTable();
             drawMacroChart();
             renderTargetMatrixChart();
             renderMicroTable();
+            initMap();
         });
     </script>
 </body>
