@@ -480,20 +480,46 @@
 
         // [파이프라인 Step 1] 공공데이터포털(국립중앙의료원 병의원 찾기 API) 호출 및 파싱
         async function fetchPublicPharmacyAPI(regionName) {
-            const apiUrl = `https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire?serviceKey=${HOSPITAL_API_KEY}&Q0=${encodeURIComponent('서울특별시')}&Q1=${encodeURIComponent(regionName)}&pageNo=1&numOfRows=100`;
+            // Updated API URL encoding and query parameters
+            const Q0 = encodeURIComponent('서울특별시');
+            const Q1 = encodeURIComponent(regionName);
+            // The API key is already URL-encoded, so we don't encode it again.
+            const apiUrl = `https://apis.data.go.kr/B552657/HsptlAsembySearchService/getHsptlMdcncListInfoInqire?serviceKey=${HOSPITAL_API_KEY}&Q0=${Q0}&Q1=${Q1}&pageNo=1&numOfRows=100`;
+            
             try {
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+                // Using a more reliable CORS proxy for the demo environment
+                const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(apiUrl)}`;
+                
                 const response = await fetch(proxyUrl);
                 if (!response.ok) throw new Error(`HTTP 에러: ${response.status}`);
                 
-                const json = await response.json();
-                const textData = json.contents; 
+                // When using corsproxy.io, the response might be the direct XML
+                // or wrapped in JSON depending on how it's called. Assuming direct XML here.
+                let textData;
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const json = await response.json();
+                     // Some proxies wrap the response in a 'contents' field
+                    textData = json.contents || json.data || json;
+                } else {
+                     textData = await response.text();
+                }
+
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(textData, "text/xml");
                 
+                // Check for API errors in the XML response
+                const resultCode = xmlDoc.getElementsByTagName("resultCode")[0]?.textContent;
+                const resultMsg = xmlDoc.getElementsByTagName("resultMsg")[0]?.textContent;
+                
+                if (resultCode && resultCode !== "00") {
+                    throw new Error(`공공데이터 API 에러 (${resultCode}): ${resultMsg}`);
+                }
+
+                // Check for authorization/system errors
                 const returnAuthMsg = xmlDoc.getElementsByTagName("returnAuthMsg")[0]?.textContent;
                 const errMsg = xmlDoc.getElementsByTagName("errMsg")[0]?.textContent;
-                if (returnAuthMsg || errMsg) throw new Error(`공공데이터 API 에러: ${returnAuthMsg || errMsg}`);
+                if (returnAuthMsg || errMsg) throw new Error(`공공데이터 API 시스템 에러: ${returnAuthMsg || errMsg}`);
                 
                 const items = xmlDoc.getElementsByTagName("item");
                 const parsedData = [];
@@ -513,7 +539,7 @@
                 }
                 return parsedData;
             } catch (error) {
-                console.error("Fetch API Error:", error);
+                console.error("Fetch API Error Details:", error);
                 throw error;
             }
         }
@@ -527,24 +553,53 @@
             try {
                 const freshData = await fetchPublicPharmacyAPI(regionName);
                 if (freshData.length > 0) {
-                    const { data, error } = await supabaseClient.from('pharmacies').insert(freshData);
-                    if (error) throw error;
+                    // 1. Delete existing data for this region to prevent duplicates on multiple syncs
+                    const { error: deleteError } = await supabaseClient
+                        .from('pharmacies')
+                        .delete()
+                        .eq('region', regionName)
+                        .like('name', '[병·의원]%'); // Only delete fetched hospital data, keep manually inserted pharmacies if any
                     
-                    alert(`✅ 성공: 공공데이터에서 ${freshData.length}개의 [${regionName} 피부/성형 인프라] 데이터를 가져와 DB에 적재했습니다!\n이제 DB에서 우선순위를 다시 계산하여 불러옵니다.`);
+                    if (deleteError) {
+                        console.warn("기존 데이터 삭제 중 오류 (무시하고 계속 진행):", deleteError);
+                    }
+
+                    // 2. Insert new data
+                    const { data, error: insertError } = await supabaseClient.from('pharmacies').insert(freshData);
+                    if (insertError) throw insertError;
+                    
+                    // Use a custom modal instead of alert()
+                    showModal('성공', `✅ 공공데이터에서 ${freshData.length}개의 [${regionName} 피부/성형 인프라] 데이터를 가져와 DB에 적재했습니다!\n이제 DB에서 우선순위를 다시 계산하여 불러옵니다.`);
                     
                     document.getElementById(`tbody-micro-${regionName}`).setAttribute('data-loaded', 'false');
                     const targetItem = targetData.find(t => t.region === regionName);
                     await loadFromSupabaseAndRender(regionName, targetItem ? targetItem.tier.level : 3);
                 } else {
-                    alert(`해당 지역(${regionName})에서 가져올 병의원 타겟 데이터가 없습니다.`);
+                    showModal('알림', `해당 지역(${regionName})에서 가져올 병의원 타겟 데이터가 없습니다.`);
                 }
             } catch (error) {
                 console.error("Pipeline Error:", error);
-                alert(`🚨 데이터 동기화 실패:\n${error.message}\n(API 키 권한 문제이거나 공공데이터 서버 트래픽 초과일 수 있습니다.)`);
+                showModal('데이터 동기화 실패', `🚨 오류 상세:\n${error.message}\n\n가능한 원인:\n1. 공공데이터 API 키 권한 문제 (트래픽 초과 등)\n2. CORS 프록시 서버 문제\n3. 브라우저 보안 설정`);
             } finally {
                 btnElement.innerHTML = originalText;
                 btnElement.disabled = false;
             }
+        }
+
+        // Custom Modal Function to replace alert()
+        function showModal(title, message) {
+            const modalHtml = `
+                <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div class="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-xl">
+                        <h3 class="text-lg font-bold mb-2 text-gray-900">${title}</h3>
+                        <p class="text-sm text-gray-600 mb-4 whitespace-pre-wrap">${message}</p>
+                        <div class="flex justify-end">
+                            <button onclick="document.getElementById('custom-modal').remove()" class="bg-[#0056b3] text-white px-4 py-2 rounded font-bold text-sm hover:bg-blue-700">확인</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
         // [파이프라인 Step 3] Supabase DB에서 데이터 Select 및 화면 렌더링
