@@ -38,7 +38,8 @@
 
     const DEFAULT_INPUTS = {
       irPptFileName: '',
-      irPptBase64: null,
+      irPptFileUrl: null, // Changed from irPptBase64 to store the Supabase Storage URL
+      irPptFilePath: null, // Store the internal path for deletion if needed
       irSlideImages: [],
 
       companyMission: '한국, 중국, 대만 등 글로벌 유통 네트워크 구축 및 화장품/스킨부스터/건기식 브랜드 국내외 유통, 고품질 ODM 서비스 제공',
@@ -560,7 +561,6 @@
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
       const [rememberId, setRememberId] = useState(false);
-      // 기본 탭을 IR 자료(ir_data)로 설정
       const [activeTab, setActiveTab] = useState('ir_data');
       const [isSidebarOpen, setIsSidebarOpen] = useState(true);
       const [inputs, setInputs] = useState(DEFAULT_INPUTS);
@@ -573,6 +573,7 @@
       const [zoomedImg, setZoomedImg] = useState(null);
       const [appMessage, setAppMessage] = useState(null);
       const [pendingPasteImage, setPendingPasteImage] = useState(null);
+      const [uploadingPpt, setUploadingPpt] = useState(false); // New state for PPT upload progress
 
       const checkApprovalAndSetUser = async (sessionUser) => {
         if (!sessionUser) {
@@ -747,7 +748,13 @@
             loaded.perpetualGrowthRate = loaded.perpetualGrowthRate ?? 1.0;
             
             loaded.irPptFileName = loaded.irPptFileName || '';
-            loaded.irPptBase64 = loaded.irPptBase64 || null;
+            loaded.irPptFileUrl = loaded.irPptFileUrl || null; // Map correctly from potential old data if needed
+            loaded.irPptFilePath = loaded.irPptFilePath || null;
+            if(loaded.irPptBase64) {
+               // Handle legacy data where base64 was stored
+               loaded.irPptFileUrl = loaded.irPptBase64;
+               delete loaded.irPptBase64;
+            }
             loaded.irSlideImages = loaded.irSlideImages || [];
 
             loaded.companyMission = loaded.companyMission || DEFAULT_INPUTS.companyMission;
@@ -756,7 +763,6 @@
             loaded.visionImageBase64 = loaded.visionImageBase64 || null;
             loaded.brandImages = loaded.brandImages || [];
             
-            // 과거 단일 이미지들을 다중 이미지 배열로 마이그레이션
             loaded.majorClientsImages = loaded.majorClientsImages || [];
             if (loaded.majorClientsImageBase64 && loaded.majorClientsImages.length === 0) {
                 loaded.majorClientsImages = [{ id: Date.now(), name: '기존 이미지', imageBase64: loaded.majorClientsImageBase64, isVisible: true }];
@@ -866,7 +872,6 @@
           reader.readAsDataURL(file);
       };
 
-      // 범용 다중 이미지 업로드 핸들러 (슬라이드, 거래처, 로드맵 등에 사용)
       const handleMultiImageUploadGeneric = (e, targetArray) => {
           const files = Array.from(e.target.files);
           if (!files.length) return;
@@ -896,7 +901,6 @@
           e.target.value = '';
       };
 
-      // 배열 요소 순서 이동
       const moveImage = (targetArrayName, index, direction) => {
           setInputs(prev => {
               const arr = [...(prev[targetArrayName] || [])];
@@ -909,7 +913,6 @@
           });
       };
 
-      // 배열 요소 숨김/표시 토글
       const toggleImageVisibility = (targetArrayName, id) => {
           setInputs(prev => ({
               ...prev,
@@ -919,7 +922,6 @@
           }));
       };
 
-      // 배열 요소 삭제
       const removeMultiImage = (targetArrayName, id) => {
           setInputs(prev => ({
               ...prev,
@@ -927,7 +929,6 @@
           }));
       };
 
-      // IR 슬라이드용 별도 업로드 (정렬 로직 포함)
       const handleIrSlideUpload = (e) => {
           const files = Array.from(e.target.files);
           if (!files.length) return;
@@ -957,16 +958,75 @@
           e.target.value = '';
       };
       
-      const handlePptUpload = (e) => {
+      const handlePptUpload = async (e) => {
           const file = e.target.files[0];
           if (!file) return;
-          if (file.size > 10 * 1024 * 1024) { 
-              setAppMessage({ type: 'alert', text: "PPT 파일 크기가 너무 큽니다(10MB 이하 권장). JSON DB 저장 용량 한계로 저장이 거부될 수 있습니다." });
-              e.target.value = ''; return;
+          
+          setUploadingPpt(true);
+          setAppMessage({ type: 'alert', text: "PPT 파일을 업로드 중입니다. 잠시만 기다려주세요..." });
+
+          try {
+              // Generate a unique file path within the 'feasibility_files' bucket
+              const fileExt = file.name.split('.').pop();
+              const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+              const filePath = `ppt_uploads/${fileName}`;
+
+              // Upload to Supabase Storage
+              const { data, error } = await supabaseClient.storage
+                  .from('feasibility_files')
+                  .upload(filePath, file, {
+                      cacheControl: '3600',
+                      upsert: false
+                  });
+
+              if (error) {
+                  throw error;
+              }
+
+              // Get public URL
+              const { data: { publicUrl } } = supabaseClient.storage
+                  .from('feasibility_files')
+                  .getPublicUrl(filePath);
+
+              // Update inputs state
+              setInputs(prev => ({ 
+                  ...prev, 
+                  irPptFileName: file.name, 
+                  irPptFileUrl: publicUrl,
+                  irPptFilePath: filePath
+              }));
+              
+              setAppMessage({ type: 'alert', text: "PPT 파일 업로드가 완료되었습니다." });
+
+          } catch (error) {
+              console.error("PPT Upload Error:", error);
+              setAppMessage({ type: 'alert', text: `PPT 업로드 실패: ${error.message}` });
+          } finally {
+              setUploadingPpt(false);
+              e.target.value = ''; // Reset input
           }
-          const reader = new FileReader();
-          reader.onloadend = () => { setInputs(prev => ({ ...prev, irPptFileName: file.name, irPptBase64: reader.result })); };
-          reader.readAsDataURL(file);
+      };
+
+      const handlePptRemove = async () => {
+          if (!inputs.irPptFilePath) {
+              // If no file path, just clear the state (might be legacy base64)
+              setInputs(p => ({...p, irPptFileName: '', irPptFileUrl: null, irPptFilePath: null}));
+              return;
+          }
+
+          try {
+              // Attempt to delete from Supabase storage to save space
+              const { error } = await supabaseClient.storage
+                  .from('feasibility_files')
+                  .remove([inputs.irPptFilePath]);
+                  
+              if (error) console.warn("Failed to delete file from storage:", error);
+          } catch (e) {
+              console.error("Error deleting file:", e);
+          } finally {
+              // Clear state regardless of storage deletion success
+              setInputs(p => ({...p, irPptFileName: '', irPptFileUrl: null, irPptFilePath: null}));
+          }
       };
 
       const addBrandImage = () => {
@@ -1074,10 +1134,9 @@
         return () => clearTimeout(timer);
       }, [inputs, projectName, isPublicProject, autoSaveEnabled, currentProjectId, user]);
 
-      // 💡 [신규 추가] 클립보드 붙여넣기 (Ctrl+V) 감지 로직
       useEffect(() => {
         const handlePaste = (e) => {
-          if (!isAdmin) return; // 편집 권한이 있는 경우만 작동
+          if (!isAdmin) return;
           
           const items = e.clipboardData?.items;
           if (!items) return;
@@ -1094,7 +1153,7 @@
               const reader = new FileReader();
               reader.onload = (event) => setPendingPasteImage(event.target.result);
               reader.readAsDataURL(blob);
-              break; // 한 번에 하나의 이미지만 처리
+              break; 
             }
           }
         };
@@ -1103,7 +1162,6 @@
         return () => window.removeEventListener('paste', handlePaste);
       }, [isAdmin]);
 
-      // 💡 [신규 추가] 붙여넣은 이미지 목적지 지정 함수
       const applyPaste = (targetField, isMulti) => {
         const timeStr = new Date().toLocaleTimeString('ko-KR');
         if (isMulti) {
@@ -1114,10 +1172,9 @@
         } else {
           setInputs(prev => ({ ...prev, [targetField]: pendingPasteImage }));
         }
-        setPendingPasteImage(null); // 모달 닫기
+        setPendingPasteImage(null);
       };
 
-      // 💡 [신규 추가] 모달 이미지 네비게이션 함수 및 키보드 이벤트 (마우스 휠, 방향키)
       const handleZoomNav = (direction) => {
           setZoomedImg(prev => {
               if (!prev || !prev.images || prev.images.length <= 1) return prev;
@@ -1653,20 +1710,32 @@
                    </div>
                 </InputGroup>
 
-                {/* 0. IR 자료 등록 패널 */}
+                {}
                 <InputGroup title="0. IR 자료 등록">
                     <p className="text-[10px] text-slate-500 mb-4 font-semibold bg-slate-100 p-2 rounded border border-slate-200">
                         IR 발표용 PPT 원본 파일과 화면에 보여질 각 슬라이드 이미지들을 업로드하세요. <br/>
-                        * 파일 원본은 다운로드 용도로 쓰이며, 이미지는 뷰어에 표시됩니다.
+                        * 파일 원본은 <b>Supabase Storage</b>에 저장되어 용량 제한 없이 안전하게 관리되며 다운로드 용도로 쓰입니다.
                     </p>
                     
                     <div className="mb-4 p-2 bg-indigo-50/50 border border-indigo-100 rounded">
                         <label className="text-[11px] font-bold text-slate-800 mb-1 block">PPT 파일 원본 (다운로드용)</label>
-                        <input type="file" accept=".ppt, .pptx, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" onChange={handlePptUpload} className="block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer border border-slate-300 rounded bg-white" />
-                        {inputs.irPptBase64 && (
+                        <div className="flex items-center gap-2">
+                           <input 
+                              type="file" 
+                              accept=".ppt, .pptx, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                              onChange={handlePptUpload} 
+                              disabled={uploadingPpt}
+                              className={`block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold ${uploadingPpt ? 'file:bg-indigo-300' : 'file:bg-indigo-600 hover:file:bg-indigo-700'} file:text-white cursor-pointer border border-slate-300 rounded bg-white transition-colors`} 
+                           />
+                           {uploadingPpt && <span className="text-[10px] text-indigo-600 font-bold animate-pulse whitespace-nowrap">업로드 중...</span>}
+                        </div>
+                        {inputs.irPptFileUrl && (
                             <div className="mt-2 flex justify-between items-center bg-white p-1.5 border border-indigo-200 rounded">
-                                <span className="text-[10px] font-bold text-indigo-700 truncate" title={inputs.irPptFileName}>{inputs.irPptFileName}</span>
-                                <button onClick={() => setInputs(p => ({...p, irPptFileName: '', irPptBase64: null}))} className="text-[10px] text-red-600 font-bold hover:underline shrink-0 ml-2">삭제</button>
+                                <span className="text-[10px] font-bold text-indigo-700 truncate flex-1 mr-2" title={inputs.irPptFileName}>
+                                    📄 {inputs.irPptFileName}
+                                </span>
+                                <a href={inputs.irPptFileUrl} target="_blank" rel="noreferrer" className="text-[10px] text-blue-600 font-bold hover:underline shrink-0 mr-3">확인</a>
+                                <button onClick={handlePptRemove} className="text-[10px] text-red-600 font-bold hover:underline shrink-0">삭제</button>
                             </div>
                         )}
                     </div>
@@ -1695,6 +1764,7 @@
                     )}
                 </InputGroup>
 
+                {}
                 <InputGroup title="1. 기업 미션 및 비전 (이미지 업로드)">
                     <div className="mb-4 p-2 bg-blue-50/50 border border-blue-100 rounded">
                         <label className="text-[11px] font-bold text-slate-800 mb-1 block">미션 (Mission) 슬라이드 이미지</label>
@@ -1965,6 +2035,7 @@
             </div>
           )}
 
+          {}
           <div className="flex-1 flex flex-col relative bg-[#e2e8f0] overflow-hidden">
             {isAdmin && (
                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="absolute left-0 top-1/2 -translate-y-1/2 z-50 bg-slate-800 text-white p-2 rounded-r-md shadow-lg opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -2016,13 +2087,13 @@
             <div className="flex-1 overflow-auto p-8 custom-scrollbar relative">
               <div className="max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
                 
-                {/* 0. IR 자료 탭 */}
+                {/* 0. IR 자료 탭 (Updated for Supabase URL) */}
                 <div style={{ display: activeTab === 'ir_data' ? 'block' : 'none' }}>
                   <div className="px-10 py-10 border-b-4 border-slate-900 bg-white">
                       <div className="flex justify-between items-end mb-6">
                           <h2 className="text-3xl font-black text-slate-900 tracking-tight">IR 자료 (Investor Relations)</h2>
-                          {inputs.irPptBase64 && (
-                              <a href={inputs.irPptBase64} download={inputs.irPptFileName} className="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded shadow-sm hover:bg-indigo-100 transition-colors">
+                          {inputs.irPptFileUrl && (
+                              <a href={inputs.irPptFileUrl} target="_blank" rel="noreferrer" download={inputs.irPptFileName} className="text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded shadow-sm hover:bg-indigo-100 transition-colors">
                                   📥 PPT 원본 다운로드
                               </a>
                           )}
@@ -2578,7 +2649,7 @@
             </div>
           </div>
           
-          {/* 이미지 확대 모달 (네비게이션 기능 포함) */}
+          {}
           {zoomedImg && (
              <div 
                 className="fixed inset-0 z-[9999] bg-slate-900/95 flex flex-col items-center justify-center p-4 cursor-pointer backdrop-blur-sm transition-all" 
@@ -2622,7 +2693,6 @@
              </div>
           )}
 
-          {/* 알림 및 확인 모달 (alert, confirm 대체) */}
           {appMessage && (
              <div className="fixed inset-0 z-[10000] bg-slate-900/50 flex items-center justify-center backdrop-blur-sm p-4">
                 <div className="bg-white p-6 rounded-md shadow-xl min-w-[300px] max-w-sm border-t-4 border-slate-900">
@@ -2637,7 +2707,6 @@
              </div>
           )}
 
-          {/* 💡 [신규 추가] 클립보드 이미지 붙여넣기 선택 모달 */}
           {pendingPasteImage && (
              <div className="fixed inset-0 z-[10001] bg-slate-900/70 flex items-center justify-center backdrop-blur-sm p-4">
                 <div className="bg-white rounded-lg shadow-2xl p-6 max-w-lg w-full border-t-4 border-blue-600">
