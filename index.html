@@ -19,10 +19,232 @@
     body { font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background-color: #f8fafc; color: #1e293b; margin: 0; padding: 0; height: 100vh; overflow: hidden; }
     input:focus, select:focus, textarea:focus { outline: none; border-color: #b91c1c; box-shadow: 0 0 0 1px #b91c1c; }
   </style>
+<style>
+.correct-year-grid{display:grid;grid-template-columns:repeat(var(--correct-periods,6),minmax(54px,1fr));gap:5px;overflow:auto}.correct-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.correct-field{display:flex;flex-direction:column;gap:4px;font-size:10px;color:#475569;margin:5px 0}.correct-field input,.correct-field select,.correct-table input,.correct-table select,.correct-tree-tools input{padding:6px;border:1px solid #cbd5e1;border-radius:3px;background:#fff;color:#1e293b;min-width:54px;width:100%;font-size:11px}.correct-note{font-size:11px;line-height:1.7;padding:12px;margin:10px 0;background:#f1f5f9;border:1px solid #cbd5e1;color:#475569;overflow-wrap:anywhere}.correct-warning{border-left:3px solid #b91c1c}.correct-overflow{overflow:auto;margin:12px 0}.correct-table{border-collapse:collapse;width:100%;font-size:11px;white-space:nowrap;background:white}.correct-table th,.correct-table td{border-bottom:1px solid #e2e8f0;padding:7px 8px;text-align:right}.correct-table th:first-child{text-align:left}.correct-table thead{background:#f1f5f9;border-block:2px solid #1e293b}.correct-table td input{min-width:65px}.correct-check{display:flex;align-items:center;gap:6px;font-size:11px;margin:6px 0}.correct-check input{width:auto}.correct-tree{border-left:2px solid #cbd5e1;padding-left:8px;margin-block:12px}.correct-tree-tools{display:flex;gap:5px;align-items:center;font-size:10px;flex-wrap:wrap}.correct-tree-tools input{width:160px;flex:1}.correct-tree-tools button,.correct-button,.correct-tools button,.correct-upload{font-size:11px;padding:7px 9px;border:1px solid #cbd5e1;border-radius:3px;background:#fff;color:#1e293b;cursor:pointer;font-weight:700}.correct-print-tools,.correct-tools{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.correct-print-tools span{font-size:10px;color:#64748b}.correct-upload input{display:block;max-width:170px}.correct-preview{max-width:none!important;width:297mm;min-height:210mm;padding:8mm;box-shadow:0 2px 15px #94a3b8}.correct-month-report+.correct-month-report{break-before:page}.correct-paper table{min-width:600px}.correct-paper{overflow-x:auto!important}.correct-table input:focus,.correct-field input:focus{outline:2px solid #0f766e;outline-offset:1px}@media(max-width:850px){.correct-report-scroll{padding:12px!important}.correct-paper .p-10{padding:18px!important}.correct-grid{grid-template-columns:1fr}}@page{size:A4 landscape;margin:12mm}@media print{html,body,#root{height:auto!important;overflow:visible!important;background:white!important}#root>div{display:block!important;height:auto!important;overflow:visible!important}#root>div>div:not(:has(.correct-report-scroll)){display:none!important}#root>div>div:has(.correct-report-scroll){display:block!important;overflow:visible!important;height:auto!important}#root>div>div:has(.correct-report-scroll)>:not(.correct-report-scroll){display:none!important}.correct-report-scroll{padding:0!important;overflow:visible!important;height:auto!important}.correct-report-scroll>.correct-note,.correct-print-tools{display:none!important}.correct-paper,.correct-preview{width:100%!important;max-width:none!important;padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;overflow:visible!important}.correct-paper table{width:100%!important;min-width:0!important;table-layout:fixed;font-size:8px!important}.correct-paper td,.correct-paper th{padding:5px 3px!important;white-space:normal!important;overflow-wrap:anywhere;font-size:8px!important}.correct-paper th:first-child,.correct-paper td:first-child{width:24%}.correct-paper thead{display:table-header-group}.correct-paper tr{break-inside:avoid}.correct-paper h2,.correct-paper h3{break-after:avoid}.correct-overflow{overflow:visible!important}.correct-paper .p-10,.correct-paper .p-8{padding:0!important}.correct-paper button,.correct-paper select{display:none!important}.correct-paper .grid-cols-4{gap:8px!important}.correct-paper .text-3xl{font-size:20px!important}.fixed{display:none!important}}
+
+</style>
 </head>
 <body>
   <div id="root"></div>
 
+<script>
+(()=>{'use strict';
+const copy=x=>JSON.parse(JSON.stringify(x)),sum=a=>a.reduce((s,v)=>s+v,0),nonneg=v=>Math.max(0,v),EPS=1e-8;
+const accountNames={advances:'선수금/선수수익',payables:'미지급금/예수금',prepayments:'선급금/선급비용',receivables:'미수금/미수수익'};const liability=k=>k==='advances'||k==='payables';
+function valuation(p,rows,irr,initialInvestment){const flows=[-initialInvestment,...rows.map(r=>r.fcff)],last=rows.at(-1),recovery=p.terminal?last.nwc+last.assets:0;flows[flows.length-1]+=recovery;let cumulative=flows[0],payback=cumulative<0?null:0;for(let i=1;i<flows.length;i++){const prev=cumulative;cumulative+=flows[i];if(payback===null&&cumulative>=0&&flows[i]>0)payback=i-1-prev/flows[i];}return{flows,recovery,npv:sum(flows.map((v,i)=>v/(1+p.discount/100)**i)),irr:irr(flows),payback};}
+function assertFinite(result){for(const row of [...result.rows,...(result.monthly||[])]){for(const [k,v] of Object.entries(row))if(typeof v==='number'&&!Number.isFinite(v))throw Error('계산 범위 초과: '+k+' 입력을 줄이세요.');for(const v of Object.values(row.checks))if(!Number.isFinite(v))throw Error('대사 계산 범위를 초과했습니다.');}if(!Number.isFinite(result.npv)||result.flows.some(v=>!Number.isFinite(v)))throw Error('평가 계산 범위를 초과했습니다.');}
+function inventory(p,base,irr){
+const q=p,o=p.inventoryPlan;
+// 연간 엔진은 인건비·감가상각 스케줄만 제공. 월 원장의 매출/이자/세금/현금을 재계산하지 않는다.
+const templates=p.templates,accounts=copy(o.openingAccounts),openingInventory=o.openingQuantity*o.openingUnitCost;
+const openingOtherAssets=accounts.prepayments+accounts.receivables,openingOtherLiabilities=accounts.advances+accounts.payables;
+const openingNetAssets=o.openingCash+o.openingAR+openingInventory+openingOtherAssets+p.initialCapex-o.openingAP-openingOtherLiabilities-p.initialDebt;
+const openingEquity=o.capitalMode==='derive'?openingNetAssets:p.equity,openingMismatch=openingNetAssets-openingEquity;let equity=openingEquity;
+let otherNonCash=0;let cash=o.openingCash,quantity=o.openingQuantity,stock=openingInventory,ar=o.openingAR,ap=o.openingAP,debt=p.initialDebt,retained=0,arrears=0,capexArrears=0,assets=p.initialCapex;
+const arSchedule=Array(260).fill(0),apSchedule=Array(260).fill(0),monthly=[],rows=[];
+// 30일 계획월: 일수를 인접 월에 선형 배분. 30일 초과는 과거 청구의 만기를 추적한다.
+function dueParts(days){const lag=days/30,whole=Math.floor(lag),frac=lag-whole;return[[whole,1-frac],[whole+1,frac]].filter(([,w])=>w>0);}
+function schedule(a,idx,amount,days){for(const [lag,w] of dueParts(days))a[idx+lag]=(a[idx+lag]||0)+amount*w;}
+function openingSchedule(a,amount,days){schedule(a,0,amount,days);}
+openingSchedule(arSchedule,ar,o.months[0].arDays??q.years[0].arDays);openingSchedule(apSchedule,ap,o.months[0].apDays??q.years[0].apDays);
+let priorNwc=ar+stock+openingOtherAssets-ap-openingOtherLiabilities,initialNwc=priorNwc;
+for(let t=0;t<p.horizon*12;t++){
+const yi=Math.floor(t/12),mi=t%12,y=q.years[yi],tpl=templates[yi],m=o.months[t],startCash=cash,startDebt=debt,startRetained=retained,startAR=ar,startAP=ap,startStock=stock,startQuantity=quantity,startArrears=arrears,startCapexArrears=capexArrears;
+const target=m.target*y._salesFactor,price=m.price,annualTarget=sum(o.months.slice(yi*12,yi*12+12).map(v=>v.target*y._salesFactor));
+const unitCost=(false?(annualTarget>0?y.baseMfg*100*(1+y.directRate/100)/annualTarget:0):m.unitCost)*y._costFactor;
+const annualCostUnallocated=false&&annualTarget===0?y._variable/12:0;
+const arDays=m.arDays??y.arDays,apDays=m.apDays??y.apDays,invDays=m.inventoryDays??y.inventoryDays;
+const targetEnd=target*(invDays+o.leadDays+o.safetyDays)/30,needRaw=nonneg(target+targetEnd-quantity),requiredPurchase=o.minOrder>0&&needRaw>0?Math.ceil(needRaw/o.minOrder)*o.minOrder:needRaw;
+const fixedCash=tpl.payroll.total/12+(y.fixed+y.mfgFixed)/12+annualCostUnallocated,dep=tpl.dep/12,capex=y.capex/12,otherIncome=y.otherIncome/12,otherExpense=y.otherExpense/12,nonCashIncome=y.nonCashIncome/12,nonCashExpense=y.nonCashExpense/12,nonCashNet=nonCashIncome-nonCashExpense;
+const requestedEquity=y.equityDraw/12;const requestedDraw=y.draw/12,draw=Math.min(requestedDraw,nonneg(o.financeLimit-debt));debt+=draw;
+const requestedRepay=Math.min(y.repay/12,debt),interest=nonneg(startDebt+draw)*y.interest/100/12;
+const dueAR=Math.min(ar,arSchedule[t]||0),dueAP=Math.min(ap,apSchedule[t]||0),arNow=dueParts(arDays).find(([lag])=>lag===0)?.[1]||0,apNow=dueParts(apDays).find(([lag])=>lag===0)?.[1]||0;
+let accountCash=0,otherAssets=0,otherLiabilities=0;const accountDelta={};for(const k of Object.keys(accountNames)){const v=m.accounts[k],prev=accounts[k],next=v.value===null?prev:v.mode==='delta'?prev+v.value:v.value;if(next<-EPS)throw Error((p.startYear+yi)+'년 '+(mi+1)+'월 '+accountNames[k]+' 잔액이 음수입니다.');accounts[k]=nonneg(next);accountDelta[k]=accounts[k]-prev;accountCash+=(liability(k)?1:-1)*accountDelta[k];if(liability(k))otherLiabilities+=accounts[k];else otherAssets+=accounts[k];}
+function candidate(purchase){const available=quantity+purchase,sold=Math.min(target,available),avg=available>EPS?(stock+purchase*unitCost)/available:0,cogs=sold*avg,revenue=sold*price,variableSga=revenue*y.sgaRate/100,ebit=revenue-cogs-variableSga-fixedCash-dep,pretax=ebit+otherIncome-otherExpense+nonCashNet-interest,tax=nonneg(pretax)*y.tax/100;
+const beforePayments=cash+dueAR+revenue*arNow+draw+requestedEquity+otherIncome+accountCash;
+const obligations=dueAP+purchase*unitCost*apNow+fixedCash+variableSga+otherExpense+interest+tax+capex+requestedRepay+arrears+capexArrears;
+return{purchase,sold,avg,cogs,revenue,variableSga,ebit,pretax,tax,beforePayments,obligations,capacity:beforePayments-obligations-o.minCash};}
+// cash(q) is piecewise linear, kink at demand/stock and tax=0. Max feasible q by interval solve.
+// Scan breakpoints including tax breakpoints; unlike fixed-point iteration it also supports cash-generative sales.
+const knots=[0,requiredPurchase,Math.min(requiredPurchase,nonneg(target-quantity))];
+// Weighted-average cogs can be nonlinear with opening stock; interval feasibility uses dense partitions + bisection.
+// Within [0,demand-stock], cogs=all available cost (linear); beyond demand, cash is monotone decreasing.
+const lowK=knots[2],points=[0,lowK,requiredPurchase];
+for(const [left,right] of [[0,lowK],[lowK,requiredPurchase]])if(right-left>EPS&&candidate(left).pretax*candidate(right).pretax<0){let a=left,b=right;const sign=Math.sign(candidate(left).pretax);for(let j=0;j<70;j++){const m=(a+b)/2;if(Math.sign(candidate(m).pretax)===sign)a=m;else b=m;}points.push((a+b)/2);}
+// Above demand, weighted-average COGS can give one interior cash maximum.
+if(unitCost*apNow>EPS){const d=target*(unitCost*quantity-stock),critical=d>0?Math.sqrt(y.tax/100*d/(unitCost*apNow))-quantity:-1;if(critical>lowK&&critical<requiredPurchase&&candidate(critical).pretax>0)points.push(critical);}
+points.sort((a,b)=>a-b);let affordable=0,found=false;
+for(let k=0;k<points.length-1;k++){let lo=points[k],hi=points[k+1],a=candidate(lo),b=candidate(hi);if(b.capacity>=-EPS){affordable=hi;found=true;continue;}if(a.capacity>=-EPS){found=true;for(let j=0;j<70;j++){const mid=(lo+hi)/2;if(candidate(mid).capacity>=0)lo=mid;else hi=mid;}affordable=Math.max(affordable,lo);}}
+if(requiredPurchase===0)found=candidate(0).capacity>=-EPS;
+// MOQ: rounded candidate must itself satisfy cash constraints (a low-cash feasible island may have a lower bound).
+if(o.minOrder>0)affordable=Math.floor((affordable+EPS)/o.minOrder)*o.minOrder;
+if(candidate(affordable).capacity<-EPS)found=false;
+affordable=Math.min(requiredPurchase,nonneg(affordable));if(!found)affordable=0;
+let c=candidate(affordable);
+// If even no purchase leaves no cash to meet settlement obligations, no fictitious collection/payments.
+// Positive asset balance increases consume cash: reject unfunded discretionary balance plans explicitly.
+if(c.beforePayments<-EPS)throw Error((p.startYear+yi)+'년 '+(mi+1)+'월 기타계정 계획잔액을 위한 현금이 부족합니다. 잔액/증감을 조정하세요.');
+let availableCash=nonneg(c.beforePayments),budget=nonneg(availableCash-o.minCash);
+const pay=amount=>{const paid=Math.min(budget,nonneg(amount));budget-=paid;availableCash-=paid;return paid;};
+const tradeDue=dueAP+c.purchase*unitCost*apNow,paidAP=pay(tradeDue),operatingDue=fixedCash+c.variableSga+otherExpense+interest+c.tax+startArrears,paidOperating=pay(operatingDue),paidCapex=pay(capex+startCapexArrears),repay=pay(requestedRepay);
+// CAPEX incurred but not paid is included in disclosed funding arrears, not fabricated debt/equity.
+arrears=nonneg(operatingDue-paidOperating);capexArrears=nonneg(startCapexArrears+capex-paidCapex);const tradeUnpaid=nonneg(tradeDue-paidAP);
+if(tradeUnpaid>EPS)apSchedule[t+1]=(apSchedule[t+1]||0)+tradeUnpaid;
+schedule(arSchedule,t,c.revenue,arDays);schedule(apSchedule,t,c.purchase*unitCost,apDays);
+ar=nonneg(ar+c.revenue-dueAR-c.revenue*arNow);ap=nonneg(ap+c.purchase*unitCost-paidAP);stock=nonneg(stock+c.purchase*unitCost-c.cogs);quantity=nonneg(quantity+c.purchase-c.sold);cash=nonneg(availableCash);debt-=repay;assets+=capex-dep;
+const net=c.pretax-c.tax;retained+=net;equity+=requestedEquity;otherNonCash+=nonCashNet;const nwc=ar+stock+otherAssets-ap-otherLiabilities-arrears,dNwc=nwc-priorNwc,cfo=net+dep-nonCashNet-dNwc,cfi=-paidCapex,cff=draw+requestedEquity-repay,fcff=c.ebit-nonneg(c.ebit)*y.tax/100+dep-paidCapex-dNwc;
+const totalAssets=cash+ar+stock+otherAssets+assets+Math.max(0,otherNonCash),totalLiabilities=ap+otherLiabilities+arrears+capexArrears+debt+Math.max(0,-otherNonCash),totalEquity=equity+retained;
+const checks={balance:totalAssets-totalLiabilities-totalEquity,cash:cash-startCash-cfo-cfi-cff,profit:c.revenue-(c.cogs+tpl.payroll.mfg/12+y.mfgFixed/12+annualCostUnallocated+dep)-(tpl.payroll.total-tpl.payroll.mfg+y.fixed)/12-c.variableSga-c.ebit,retained:retained-startRetained-net,fixed:fixedCash+dep-(tpl.payroll.total+y.fixed+y.mfgFixed)/12-annualCostUnallocated-dep,fcff:fcff-(cfo-(otherIncome-otherExpense)+interest+c.tax-nonneg(c.ebit)*y.tax/100-paidCapex),stock:stock-(startStock+c.purchase*unitCost-c.cogs),quantity:quantity-(startQuantity+c.purchase-c.sold),ar:ar-(startAR+c.revenue-dueAR-c.revenue*arNow),ap:ap-(startAP+c.purchase*unitCost-paidAP)};
+monthly.push({year:p.startYear+yi,month:mi+1,target,price,unitCost,arDays,apDays,targetEnd,requiredInventory:targetEnd,securedInventory:quantity,requiredPurchase,purchase:c.purchase,purchaseCost:c.purchase*unitCost,actualSales:c.sold,salesShortfall:nonneg(target-c.sold),quantity,revenue:c.revenue,variable:c.cogs,cogs:c.cogs+tpl.payroll.mfg/12+y.mfgFixed/12+annualCostUnallocated+dep,sgna:(tpl.payroll.total-tpl.payroll.mfg+y.fixed)/12+c.variableSga,variableSga:c.variableSga,gross:c.revenue-(c.cogs+tpl.payroll.mfg/12+y.mfgFixed/12+annualCostUnallocated+dep),fixedCash,managementFixed:fixedCash+dep,cm:c.revenue-c.cogs-c.variableSga,ebit:c.ebit,otherIncome,otherExpense,otherNet:otherIncome-otherExpense,nonCashIncome,nonCashExpense,otherNonCash,interest,pretax:c.pretax,tax:c.tax,net,dep,capex:paidCapex,accruedCapex:capex,assets,ar,inventory:stock,ap,accounts:copy(accounts),accountDelta,otherAssets,otherLiabilities,arrears:arrears+capexArrears,operatingArrears:arrears,capexArrears,unpaidOperating:arrears,tradeUnpaid,openingCash:startCash,cash,minimumCashShortfall:nonneg(o.minCash-cash),fundingShortfall:arrears+capexArrears+tradeUnpaid+nonneg(o.minCash-cash),purchaseFundingGap:nonneg(requiredPurchase-c.purchase)*unitCost,openingDebt:startDebt,debt,requestedDraw,unfundedDraw:requestedDraw-draw,draw,equityDraw:requestedEquity,repay,unpaidRepay:requestedRepay-repay,bridge:0,nwc,dNwc,cfo,cfi,cff,fcff,equity,retained,totalAssets,totalLiabilities,totalEquity,checks});priorNwc=nwc;
+if(mi===11){const ms=monthly.slice(-12),row={...ms.at(-1),year:p.startYear+yi,openingCash:ms[0].openingCash,openingDebt:ms[0].openingDebt,payroll:tpl.payroll,rankCosts:tpl.rankCosts,growth:tpl.growth,mfgFixed:y.mfgFixed+annualCostUnallocated*12,otherFixed:y.fixed,months:ms};for(const k of ['revenue','variable','variableSga','cogs','sgna','gross','fixedCash','managementFixed','cm','ebit','otherIncome','otherExpense','otherNet','nonCashIncome','nonCashExpense','interest','pretax','tax','net','dep','capex','accruedCapex','draw','equityDraw','repay','bridge','dNwc','cfo','cfi','cff','fcff','actualSales','salesShortfall','purchase','purchaseCost','unfundedDraw','unpaidRepay'])row[k]=sum(ms.map(m=>m[k]));row.checks={};for(const k of Object.keys(checks))row.checks[k]=k==='balance'?ms.at(-1).checks.balance:sum(ms.map(m=>m.checks[k]));rows.push(row);}
+}
+const result={rows,monthly,inventoryLinked:p.salesMode==='inventory',openingCash:o.openingCash,openingNetAssets,openingMismatch,equity,negativeCapital:equity<0,initialBridge:0,bridgeTotal:0,initialNwc,initialInvestment:p.initialCapex+initialNwc,maxError:Math.max(Math.abs(openingMismatch),...monthly.flatMap(m=>Object.values(m.checks).map(Math.abs))),...valuation(p,rows,irr,p.initialCapex+initialNwc)};assertFinite(result);return result;
+}
+window.CorrectInventory={inventory};
+})();
+/* 올바른 원본의 자료구조/원화 계산을 보존하는 보완 계층. 새 독립 앱이 아니다. */
+(()=>{'use strict';
+const C=window.CorrectCore={},copy=x=>JSON.parse(JSON.stringify(x)),S=a=>a.reduce((s,v)=>s+(Number(v)||0),0),keys=['countries','brands','bizTypes','salesModes','channels','clients','categories','products'];
+let horizon=5;C.setHorizon=n=>{if(![3,5,7,10].includes(n))throw Error('평가기간은 3/5/7/10년입니다.');horizon=n;};C.horizon=()=>horizon;C.count=()=>horizon+1;C.indices=()=>Array.from({length:horizon+1},(_,i)=>i);
+C.padAll=(a,fillLast=true)=>{a=Array.isArray(a)?a.slice(0,11):[];while(a.length<11)a.push(fillLast?(a.at(-1)||0):0);return a;};C.periods=a=>C.padAll(a).slice(0,horizon+1);
+C.ranks=['사원','대리','과장','차장','부장','이사','상무','전무','부사장','사장'];
+const yr=v=>Array(11).fill(v),newId=()=>globalThis.crypto?.randomUUID?.()||'n'+Date.now()+Math.random();
+const accountNames={advances:'선수금/선수수익',payables:'미지급금/예수금',prepayments:'선급금/선급비용',receivables:'미수금/미수수익'};C.accountNames=accountNames;
+const payrollDefaults=()=>({enabled:false,excludedIds:[],ranks:C.ranks.map((rank,i)=>({rank,annual:[3200,4000,5000,6000,7500,9000,11000,13000,15000,18000][i],welfare:20,card:[0,0,10,20,30,50,70,100,150,200][i],mfg:0,pension:true,health:true,employment:i<5,accident:i<5,retirement:i<5,heads:yr(0)})),raise:yr(3),pension:yr(4.75),health:yr(3.595),care:yr(13.14),employment:yr(1.15),accident:yr(.7),retirement:yr(100/12),pensionFloor:yr(41),pensionCap:yr(659)});
+const month=()=>({target:0,price:0,unitCost:0,arDays:null,inventoryDays:null,apDays:null,accounts:Object.fromEntries(Object.keys(accountNames).map(k=>[k,{mode:'balance',value:null}]))});
+const invDefaults=()=>({selectedYear:1,minCash:0,openingCash:0,openingQuantity:0,openingUnitCost:0,openingAR:0,openingAP:0,openingAccounts:{advances:0,payables:0,prepayments:0,receivables:0},capitalMode:'derive',leadDays:0,safetyDays:0,minOrder:0,financeLimit:0,accountSource:'monthly',costSource:'monthly',months:Array.from({length:120},month)});
+function missing(a,b){if(a===undefined)return copy(b);if(b&&typeof b==='object'&&!Array.isArray(b)&&a&&typeof a==='object'&&!Array.isArray(a))for(const k of Object.keys(b))a[k]=missing(a[k],b[k]);return a;}
+const additions=()=>({correctVersion:1,horizon:5,priceUnit:'won',salesSource:'tree',manufacturingMode:'original',directRevenue:yr(0),variableMfgRate:yr(40),exchangeBase:1300,costInflation:yr(0),importShare:yr(0),salesAdjustment:yr(0),rateSpread:yr(0),debtRepayment:yr(0),payroll:payrollDefaults(),inventoryPlan:invDefaults(),documents:[],assetRefs:[]});
+C.migrate=(raw,base)=>{if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('계획 JSON 객체가 필요합니다.');let p=missing(copy(raw),base||{});p=missing(p,additions());
+function pad(v,k){if(Array.isArray(v)){if(['amounts','rates','prices','volumes','supplyCosts','purchaseVolumes','heads',...Object.keys(additions()).filter(k=>Array.isArray(additions()[k]))].includes(k))return C.padAll(v);return v.map(x=>pad(x,''));}if(v&&typeof v==='object')for(const key of Object.keys(v))v[key]=pad(v[key],key);return v;}
+p=pad(p,'');for(const k of ['inflationRate','interestRate','exchangeRate','industryGrowth','taxRate','costOfEquity','equityValuation','capexMaxCapa','utilization','lossRate','arDays','invDays','apDays'])p[k]=C.padAll(p[k]);for(const k of ['raise','pension','health','care','employment','accident','retirement','pensionFloor','pensionCap'])p.payroll[k]=C.padAll(p.payroll[k]);C.validate(p);return p;};
+function num(v,name,min=0,max=1e12){if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error(name+' 범위를 확인하세요.');}
+C.validate=p=>{C.setHorizon(p.horizon);if(p.correctVersion!==1)throw Error('지원하지 않는 보완 버전입니다.');if(!['tree','direct','inventory'].includes(p.salesSource)||!['original','ratio'].includes(p.manufacturingMode)||!['won','manwon'].includes(p.priceUnit))throw Error('계산 방식 오류');num(p.exchangeBase,'기준환율',.000001);const arrayFields=['inflationRate','interestRate','exchangeRate','industryGrowth','taxRate','costOfEquity','equityValuation','capexMaxCapa','utilization','lossRate','arDays','invDays','apDays','directRevenue','variableMfgRate','costInflation','importShare','salesAdjustment','rateSpread','debtRepayment'];for(const k of arrayFields){if(!Array.isArray(p[k])||p[k].length!==11)throw Error(k+' 기간은 개시 포함 11개입니다.');p[k].forEach(v=>num(v,k,['inflationRate','industryGrowth','costInflation','salesAdjustment','rateSpread'].includes(k)?-100:0,['taxRate','importShare','variableMfgRate','utilization','lossRate'].includes(k)?100:1e12));}p.exchangeRate.forEach(v=>num(v,'환율',.000001));
+const lists=['equityList','debtList','capexList','intangibleList','baseCostList','directExpList','indirectExpList','advancesList','accruedList','prepaidList','receivableList','sgaVarList','sgaSemiList','sgaFixList','nonOpIncCashList','nonOpIncNonCashList','nonOpExpCashList','nonOpExpNonCashList'];for(const k of lists){if(!Array.isArray(p[k]))throw Error(k+' 목록 오류');for(const it of p[k]){if(typeof it.name!=='string')throw Error('항목명 오류');for(const f of ['amounts','rates'])if(it[f]){if(it[f].length!==11)throw Error('연도 배열 오류');it[f].forEach(v=>num(v,k));}if('usefulLife'in it)num(it.usefulLife,'내용연수',1,100);}}
+const ids=new Set();let count=0;function walk(nodes,d){if(!Array.isArray(nodes)||d>8)throw Error('트리는 최대 9단계입니다.');for(const n of nodes){if(++count>1000||!n.id||ids.has(String(n.id))||typeof n.name!=='string')throw Error('트리 항목/식별자 오류');ids.add(String(n.id));const child=keys[d]&&n[keys[d]];if(child&&child.length){if(n.prices?.some(v=>v!==0)||n.volumes?.some(v=>v!==0))throw Error('가지의 수량·단가를 자식으로 이전해야 합니다.');walk(child,d+1);}else for(const f of ['prices','volumes','supplyCosts','purchaseVolumes'])if(n[f])n[f].forEach(v=>num(v,f));}}walk(p.salesHierarchy,0);
+const l=p.payroll;if(typeof l.enabled!=='boolean'||!Array.isArray(l.ranks)||l.ranks.length!==10||!Array.isArray(l.excludedIds))throw Error('임금표 구조 오류');l.ranks.forEach(r=>{for(const k of ['annual','welfare','card','mfg'])num(r[k],k,0,k==='mfg'?100:1e12);if(r.heads.length!==11)throw Error('인원기간 오류');r.heads.forEach(v=>{num(v,'인원');if(!Number.isInteger(v))throw Error('인원은 정수입니다.');});for(const k of ['pension','health','employment','accident','retirement'])if(typeof r[k]!=='boolean')throw Error('보험 적용 오류');});for(const k of ['raise','pension','health','care','employment','accident','retirement','pensionFloor','pensionCap']){if(l[k].length!==11)throw Error('요율기간 오류');l[k].forEach(v=>num(v,k));}l.pensionFloor.forEach((v,i)=>{if(v>l.pensionCap[i])throw Error('연금 하한 초과');});
+const o=p.inventoryPlan;if(!['derive','linked'].includes(o.capitalMode)||!['monthly','annual'].includes(o.accountSource)||!['monthly','annual'].includes(o.costSource))throw Error('재고모형 설정 오류');for(const k of ['openingCash','openingQuantity','openingUnitCost','openingAR','openingAP','minCash','financeLimit','leadDays','safetyDays','minOrder'])num(o[k],k);for(const k of Object.keys(accountNames))num(o.openingAccounts[k],k);num(o.selectedYear,'선택연도',1,10);if(!Number.isInteger(o.selectedYear))throw Error('선택연도는 정수');if(!Array.isArray(o.months)||o.months.length!==120)throw Error('재고원장은 120개월입니다.');o.months.forEach(m=>{for(const k of ['target','price','unitCost'])num(m[k],k);for(const k of ['arDays','inventoryDays','apDays'])if(m[k]!==null)num(m[k],k,0,3650);for(const k of Object.keys(accountNames)){const a=m.accounts[k];if(!a||!['balance','delta'].includes(a.mode))throw Error('계정 모드 오류');if(a.value!==null)num(a.value,k,a.mode==='delta'?-1e12:0);}});return p;};
+C.fresh=base=>{const p=C.migrate(base,base);p.companyMission='';p.companyVision='';for(const k of ['irPptFileName','irPptFileUrl','irPptFilePath','missionImageBase64','visionImageBase64','majorClientsImageBase64','govInvestRoadmapImageBase64'])p[k]=k==='irPptFileName'?'':null;for(const k of ['irSlideImages','brandImages','majorClientsImages','govInvestRoadmapImages','documents','assetRefs'])p[k]=[];for(const k of Object.keys(p)){if(k.endsWith('List'))p[k].forEach(it=>{if(it.amounts)it.amounts=yr(0);});}function clear(nodes,d){nodes.forEach(n=>{for(const k of ['prices','volumes','supplyCosts','purchaseVolumes'])if(n[k])n[k]=yr(0);if(keys[d]&&n[keys[d]])clear(n[keys[d]],d+1);});}clear(p.salesHierarchy,0);p.capexMaxCapa=yr(0);p.payroll=payrollDefaults();p.inventoryPlan=invDefaults();return p;};
+C.payroll=p=>{let growth=1;return Array.from({length:11},(_,i)=>{if(i>1)growth*=1+p.payroll.raise[i]/100;const rows=p.payroll.ranks.map(r=>{const salary=r.annual*growth*r.heads[i],health=r.health?salary*p.payroll.health[i]/100:0;const v={salary,pension:r.pension&&r.annual>0?Math.min(p.payroll.pensionCap[i],Math.max(p.payroll.pensionFloor[i],Math.floor(r.annual*growth/12*10)/10))*12*r.heads[i]*p.payroll.pension[i]/100:0,health,care:health*p.payroll.care[i]/100,employment:r.employment?salary*p.payroll.employment[i]/100:0,accident:r.accident?salary*p.payroll.accident[i]/100:0,retirement:r.retirement?salary*p.payroll.retirement[i]/100:0,welfare:r.welfare*12*r.heads[i],card:r.card*12*r.heads[i]};return{...v,total:S(Object.values(v)),mfg:S(Object.values(v))*r.mfg/100,heads:r.heads[i]};});return{growth,rows,total:S(rows.map(r=>r.total))*10000,mfg:S(rows.map(r=>r.mfg))*10000,heads:S(rows.map(r=>r.heads)),...Object.fromEntries(['salary','pension','health','care','employment','accident','retirement','welfare','card'].map(k=>[k,S(rows.map(r=>r[k]))*10000]))};});};
+C.leaves=(nodes,d=0,out=[])=>{nodes.forEach(n=>{const child=keys[d]&&n[keys[d]];if(child?.length)C.leaves(child,d+1,out);else if(n.prices||n.volumes)out.push(n);});return out;};
+C.childKey=d=>keys[d];C.newId=newId;
+C.addChild=(nodes,path)=>{const p=copy(nodes);let arr=p,n;path.forEach((id,d)=>{n=arr.find(n=>n.id===id);if(!n)throw Error('트리 경로 오류');if(d<path.length-1)arr=n[keys[d]];});const d=path.length-1;if(d>=8)throw Error('최대 9단계입니다.');const k=keys[d],has=(n.prices||[]).some(v=>v)||(n.volumes||[]).some(v=>v);if(has&&!window.confirm('기존 잎의 수량·단가·외부조달값을 첫 자식으로 이전할까요?'))return nodes;const child={id:newId(),name:has?'기존 매출 (이전)':'새 항목',prices:copy(n.prices||yr(0)),volumes:copy(n.volumes||yr(0)),supplyCosts:copy(n.supplyCosts||yr(0)),purchaseVolumes:copy(n.purchaseVolumes||yr(0)),isInternal:n.isInternal!==false,isForeignCurrency:!!n.isForeignCurrency};n[k]=[...(n[k]||[]),child];for(const f of ['prices','volumes','supplyCosts','purchaseVolumes'])if(n[f])n[f]=yr(0);return p;};
+C.treeUpdate=(nodes,path,fn)=>{const p=copy(nodes);let arr=p;path.forEach((id,d)=>{const i=arr.findIndex(n=>n.id===id);if(i<0)throw Error('트리 경로 오류');if(d===path.length-1)fn(arr[i],arr,i);else arr=arr[i][keys[d]];});return p;};
+function extendTree(nodes,d=0){return nodes.map(n=>{n=copy(n);const k=keys[d];if(d===8){n.prices=C.padAll(n.prices);n.volumes=C.padAll(n.volumes);n.supplyCosts=C.padAll(n.supplyCosts);n.purchaseVolumes=C.padAll(n.purchaseVolumes);return n;}if(n[k]?.length)n[k]=extendTree(n[k],d+1);else n[k]=extendTree([{...n,id:n.id+'_leaf_'+d,name:n.name}],d+1);delete n.prices;delete n.volumes;delete n.supplyCosts;delete n.purchaseVolumes;return n;});}
+function sumList(p,k,i){return S((p[k]||[]).map(it=>(it.amounts?.[i]||0)*1e6));}C.sumList=sumList;
+function factors(p){const inf=yr(1),cost=yr(1),sales=yr(1);for(let i=1;i<11;i++){inf[i]=inf[i-1]*(1+p.inflationRate[i]/100);cost[i]=cost[i-1]*(1+p.costInflation[i]/100);sales[i]=sales[i-1]*(1+p.salesAdjustment[i]/100);}return{inf,cost,sales};}
+function prepared(p){const q=copy(p),pay=C.payroll(p),f=factors(p);q.salesHierarchy=extendTree(p.salesHierarchy);for(let i=0;i<11;i++){q.interestRate[i]=Math.max(0,Math.min(100,p.interestRate[i]+p.rateSpread[i]));const fx=1+p.importShare[i]/100*(p.exchangeRate[i]/p.exchangeBase-1);q.baseCostList.forEach(it=>it.amounts[i]*=f.cost[i]*fx);C.leaves(q.salesHierarchy).forEach(n=>{if(p.priceUnit==='manwon'&&!n.isForeignCurrency){n.prices[i]*=10000;n.supplyCosts[i]*=10000;}n.volumes[i]*=f.sales[i];});}
+if(p.salesSource==='direct')q.salesHierarchy=extendTree([{id:'direct-source',name:'연간 직접매출',prices:yr(1e6),volumes:p.directRevenue.map((v,i)=>v*f.sales[i]),isInternal:true}],0);
+if(p.payroll.enabled){q.sgaFixList=q.sgaFixList.filter(it=>!p.payroll.excludedIds.includes('sgaFixList:'+it.id));q.sgaSemiList=q.sgaSemiList.filter(it=>!p.payroll.excludedIds.includes('sgaSemiList:'+it.id));q.sgaVarList=q.sgaVarList.filter(it=>!p.payroll.excludedIds.includes('sgaVarList:'+it.id));q.baseCostList=q.baseCostList.filter(it=>!p.payroll.excludedIds.includes('baseCostList:'+it.id));q.sgaFixList.push({id:'correct-payroll',name:'10직급 인건비 자동원장',calcType:'amount',amounts:pay.map((v,i)=>(v.total-v.mfg)/1e6/f.inf[i]),rates:yr(0)});}
+return{q,pay,f};}
+C.calculate=(raw,original)=>{const p=C.migrate(raw,window.CorrectDefaults||raw);C.setHorizon(p.horizon);const {q,pay,f}=prepared(p),res=original(q);res.correctWarnings=[];res.payroll=pay;res.correctInputs=p;
+// 원본 리스트/생산능력 기반 제조계산을 보존. 선택 시 변동비율만 대체.
+for(let i=0;i<=p.horizon;i++){
+const fin=res.is_financial[i],mgr=res.is_managerial[i],oldCogs=fin.cogs,oldVar=mgr.variableCosts,ratio=mgr.actualProdVol>0?S(C.leaves(q.salesHierarchy).filter(n=>n.isInternal!==false).map(n=>{let v=n.volumes[i];for(let t=1;t<=i;t++)v*=1+p.industryGrowth[t]/100;return v;}))/mgr.actualProdVol:0;
+const payrollMfg=p.payroll.enabled?pay[i].mfg:0;
+if(payrollMfg||p.manufacturingMode==='ratio'){
+const fixedMfg=S(q.indirectExpList.map(it=>res.totalBaseCostArr[i]*(it.rates[i]||0)/100))*ratio+(res.cf[i].cfDetails.depreciation||0)*ratio;
+const newVariable=p.manufacturingMode==='ratio'?fin.revenue*p.variableMfgRate[i]/100:oldVar-fin.sgaDetails.totalSgaVar-fin.externalCogs;
+const newCogs=newVariable+fixedMfg+fin.externalCogs+payrollMfg;
+adjustYear(res,i,newCogs-oldCogs,p.taxRate[i]/100);mgr.variableCosts=newVariable+fin.externalCogs+fin.sgaDetails.totalSgaVar;mgr.contributionMargin=fin.revenue-mgr.variableCosts;mgr.fixedCosts=fin.cogs-mgr.variableCosts+fin.sgaDetails.totalSgaVar+fin.totalSga;mgr.operatingProfit=fin.operatingProfit;
+}
+fin.ebt=fin.operatingProfit+fin.totalNonOpInc-fin.totalNonOpExp;
+if(mgr.actualProdVol===0&&res.totalBaseCostArr[i]>0)res.correctWarnings.push('Y'+i+': 원본 CAPA가 0입니다. 원본 방식 제조단가는 0으로 계산되므로 생산능력 또는 원가방식을 확인하세요.');
+}
+// 비현금 손익의 음수 누적을 음수자산 대신 기타부채로 분류.
+res.bs.forEach(b=>{if(b.bsDetails.otherNetAssets<0){b.nonCurrentAssets-=b.bsDetails.otherNetAssets;b.totalAssets-=b.bsDetails.otherNetAssets;b.totalLiabilities-=b.bsDetails.otherNetAssets;b.nonCurrentLiabilities-=b.bsDetails.otherNetAssets;b.bsDetails.otherNonCashLiability=-b.bsDetails.otherNetAssets;b.bsDetails.otherNetAssets=0;}});
+res.inventory=monthly(p,original,q,pay,f);
+if(p.salesSource==='inventory')mapMonthly(p,res,res.inventory);
+else res.correctWarnings.push('적정재고는 독립 시뮬레이션입니다. 연간 재무제표에 연결하려면 매출 원장을 월별 재고 연동으로 선택하세요.');
+res.is_financial.forEach(fin=>{const rev=fin.revenue;fin.ratios={cogsRatio:rev?fin.cogs/rev:0,grossMargin:rev?fin.grossProfit/rev:0,sgaRatio:rev?fin.totalSga/rev:0,opMargin:rev?fin.operatingProfit/rev:0,netMargin:rev?fin.netIncome/rev:0};});res.is_managerial.forEach(m=>{m.bepRevenue=m.contributionMargin>0?m.fixedCosts*m.revenue/m.contributionMargin:0;m.ratios={varRatio:m.revenue?m.variableCosts/m.revenue:0,cmRatio:m.revenue?m.contributionMargin/m.revenue:0,fixedRatio:m.revenue?m.fixedCosts/m.revenue:0};});
+revalue(p,res);res.checks=checks(p,res);res.maxError=Math.max(...res.checks.flatMap(r=>Object.values(r).map(Math.abs)));
+res.bs.forEach((b,i)=>{if(b.bsDetails.cash<0)res.correctWarnings.push('Y'+i+': 원본 연간모형 현금 부족 '+Math.round(-b.bsDetails.cash/1e6)+'백만원. 자동 차입은 추가하지 않았습니다.');});
+if(res.inventory.openingMismatch)res.correctWarnings.push('월별 개시 자본 불일치 '+(res.inventory.openingMismatch/100).toFixed(2)+'백만원. 임의 자본 보정 없음.');
+if(p.payroll.enabled&&p.payroll.excludedIds.length===0)res.correctWarnings.push('10직급 인건비 사용 중입니다. 6번 중복방지 목록에서 기존 직접노무/급여/복리후생/보험 항목의 제외 여부를 확인하세요. 기존 항목을 임의 삭제하지 않았습니다.');
+if(p.salesSource==='inventory'&&p.inventoryPlan.costSource==='monthly')res.correctWarnings.push('월별 제조단가 직접입력 모드입니다. 기존 기본+직접 제조원가는 보존하지만 변동원가 계산에는 다시 더하지 않습니다. 간접경비·제조배부 인건비·감가는 별도로 반영합니다.');
+if(res.inventory.negativeCapital)res.correctWarnings.push('월별 기초순자산이 음수입니다. 도출 납입자본을 정상 자본금으로 해석하지 마세요.');
+for(const r of [...res.is_financial,...res.bs,...res.cf])for(const [k,v] of Object.entries(r))if(typeof v==='number'&&!Number.isFinite(v))throw Error('계산 범위 초과: '+k);return res;};
+function adjustYear(res,i,delta,taxRate){const fin=res.is_financial[i],oldNet=fin.netIncome;fin.cogs+=delta;fin.internalCogs+=delta;fin.grossProfit-=delta;fin.operatingProfit-=delta;fin.ebt=fin.operatingProfit+fin.totalNonOpInc-fin.totalNonOpExp;fin.tax=Math.max(0,fin.ebt)*taxRate;fin.netIncome=fin.ebt-fin.tax;const dn=fin.netIncome-oldNet;for(let j=i;j<res.bs.length;j++){const b=res.bs[j],c=res.cf[j];b.bsDetails.cash+=dn;b.currentAssets+=dn;b.totalAssets+=dn;b.totalEquity+=dn;b.bsDetails.retainedEarnings+=dn;c.endingCash+=dn;if(j>i)c.beginningCash+=dn;}res.cf[i].operatingCf+=dn;res.cf[i].netCf+=dn;res.cf[i].cfDetails.netIncome=fin.netIncome;}
+function monthly(p,original,q,pay,f){
+const o=copy(p.inventoryPlan),N=p.horizon,template=original(q),sum=(k,i)=>sumList(p,k,i)/10000;
+const initAssets=sum('capexList',0)+sum('intangibleList',0),initDebt=sum('debtList',0),initEquity=sum('equityList',0);
+const plan={horizon:N,startYear:1,discount:template.wacc*100,tax:p.taxRate[1],initialCapex:initAssets,initialDebt:initDebt,equity:initEquity,manufacturingMode:'ratio',terminal:false,inventoryPlan:o,years:[],templates:[]};
+o.selectedYear=Math.min(N,o.selectedYear)-1;
+let carryOpening=o.openingAccounts;
+for(let i=1;i<=N;i++){
+const fin=template.is_financial[i],mgr=template.is_managerial[i],auto=p.payroll.enabled?pay[i]:{total:0,mfg:0},infl=f.inf[i];
+const evaluate=(it)=>{const type=it.calcType||(it.isRate?'rate':'amount');return type==='rate'?fin.revenue*(it.rates[i]||0)/100:type==='labor_rate'?template.totalLaborArr[i]*(it.rates[i]||0)/100:(it.amounts[i]||0)*1e6*infl;};
+const rateItems=[...q.sgaVarList,...q.sgaSemiList,...q.sgaFixList].filter(it=>(it.calcType||(it.isRate?'rate':'amount'))==='rate');
+const sgaRate=S(rateItems.map(it=>it.rates[i]||0));
+const nonRateItems=[...q.sgaVarList,...q.sgaSemiList,...q.sgaFixList].filter(it=>(it.calcType||(it.isRate?'rate':'amount'))!=='rate'&&it.id!=='correct-payroll');
+const fixedSga=S(nonRateItems.map(evaluate));
+const base=resBase(q,i,infl),direct=S(q.directExpList.map(it=>base*(it.rates[i]||0)/100)),indirect=S(q.indirectExpList.map(it=>base*(it.rates[i]||0)/100));
+const y={revenue:fin.revenue/10000,_salesFactor:f.sales[i],_costFactor:f.cost[i]*(1+p.importShare[i]/100*(p.exchangeRate[i]/p.exchangeBase-1)),_fixedFactor:infl,baseMfg:0,directRate:0,_variable:0,mfgFixed:indirect/10000,fixed:fixedSga/10000,capex:(sumList(p,'capexList',i)+sumList(p,'intangibleList',i))/10000,draw:sum('debtList',i),equityDraw:sum('equityList',i),repay:p.debtRepayment[i]*100,interest:Math.max(0,Math.min(100,p.interestRate[i]+p.rateSpread[i])),tax:p.taxRate[i],arDays:p.arDays[i],inventoryDays:p.invDays[i],apDays:p.apDays[i],otherIncome:sum('nonOpIncCashList',i),otherExpense:sum('nonOpExpCashList',i),nonCashIncome:sum('nonOpIncNonCashList',i),nonCashExpense:sum('nonOpExpNonCashList',i),sgaRate};
+let industry=1;for(let g=1;g<=i;g++)industry*=1+p.industryGrowth[g]/100;y._salesFactor*=industry;plan.years.push(y);
+const dep=depreciation(p,i)/10000;plan.templates.push({payroll:{total:auto.total/10000,mfg:auto.mfg/10000,heads:auto.heads||0},rankCosts:auto.rows||[],growth:auto.growth||1,dep});
+let annualTarget=S(o.months.slice((i-1)*12,i*12).map(m=>m.target*y._salesFactor));
+for(let m=0;m<12;m++){const mo=o.months[(i-1)*12+m];if(o.costSource==='annual'){const budget=p.manufacturingMode==='ratio'?fin.revenue*p.variableMfgRate[i]/100:base+direct;mo.unitCost=annualTarget>0?budget/10000/annualTarget/y._costFactor:0;}
+if(o.accountSource==='annual'){for(const [k,list] of Object.entries({advances:'advancesList',payables:'accruedList',prepayments:'prepaidList',receivables:'receivableList'})){const end=S(p[list].map(it=>it.calcType==='rate'||it.isRate&&it.calcType!=='amount'?fin.revenue*(it.rates[i]||0)/100:(it.amounts[i]||0)*1e6*infl))/10000;const start=i===1?p.inventoryPlan.openingAccounts[k]:annualAccountEnd(p,list,i-1,template,f)/10000;mo.accounts[k]={mode:'balance',value:start+(end-start)*(m+1)/12};}}
+}
+if(o.costSource==='annual'&&annualTarget===0)y.mfgFixed+=(base+direct)/10000;
+}
+return window.CorrectInventory.inventory(plan,null,C.irr);
+}
+function annualAccountEnd(p,list,i,template,f){return S(p[list].map(it=>it.calcType==='rate'||it.isRate&&it.calcType!=='amount'?template.is_financial[i].revenue*(it.rates[i]||0)/100:(it.amounts[i]||0)*1e6*f.inf[i]));}
+function resBase(q,i,inf){return S(q.baseCostList.map(it=>(it.amounts[i]||0)*1e6*inf));}
+function depreciation(p,i){return S([...p.capexList,...p.intangibleList].flatMap(it=>it.amounts.map((v,j)=>i>=j&&i<j+it.usefulLife?v*1e6/it.usefulLife:0)));}
+function mapMonthly(p,res,inv){
+const openingAssets=sumList(p,'capexList',0)+sumList(p,'intangibleList',0),o=p.inventoryPlan;
+// Y0는 월별 시작 전 기초잔액. Y1..선택기말만 월합/기말 집계.
+const zero={revenue:0,cogs:0,grossProfit:0,totalSga:0,operatingProfit:0,totalNonOpInc:0,totalNonOpExp:0,interestExpense:0,nonOpIncC:0,nonOpIncNC:0,nonOpExpC:0,nonOpExpNC:0,ebt:0,tax:0,netIncome:0,internalCogs:0,externalCogs:0,sgaDetails:{totalSgaVar:0,totalSgaSemi:0,totalSgaFixOnly:0,amortization:0,fixBadDebt:0},ratios:{}};
+res.is_financial=[zero];res.is_managerial=[{actualProdVol:0,revenue:0,variableCosts:0,contributionMargin:0,fixedCosts:0,operatingProfit:0,bepRevenue:0,varCostDetails:{totalSgaVar:0},ratios:{}}];res.bs=[];res.cf=[];
+const assets=(o.openingCash+o.openingAR+o.openingQuantity*o.openingUnitCost+o.openingAccounts.prepayments+o.openingAccounts.receivables)*10000+openingAssets;
+const liabilities=(o.openingAP+o.openingAccounts.advances+o.openingAccounts.payables)*10000+sumList(p,'debtList',0);
+res.bs.push({currentAssets:assets-openingAssets,nonCurrentAssets:openingAssets,totalAssets:assets,currentLiabilities:liabilities-sumList(p,'debtList',0),nonCurrentLiabilities:sumList(p,'debtList',0),totalLiabilities:liabilities,totalEquity:inv.equity*10000-S(inv.rows.map(r=>r.equityDraw))*10000,bsDetails:{cash:o.openingCash*10000,ar:o.openingAR*10000,inv:o.openingQuantity*o.openingUnitCost*10000,invBase:o.openingQuantity*o.openingUnitCost*10000,unsoldInvValue:0,unsoldExtInvValue:0,prepaidNet:o.openingAccounts.prepayments*10000,receivableNet:o.openingAccounts.receivables*10000,ppeNet:sumList(p,'capexList',0),intangibleNet:sumList(p,'intangibleList',0),otherNetAssets:0,ap:o.openingAP*10000,advancesNet:o.openingAccounts.advances*10000,accruedNet:o.openingAccounts.payables*10000,debt:sumList(p,'debtList',0),capital:inv.openingNetAssets*10000-inv.openingMismatch*10000,retainedEarnings:0}});
+res.bs[0].totalEquity=res.bs[0].bsDetails.capital;
+res.cf.push({beginningCash:o.openingCash*10000,endingCash:o.openingCash*10000,operatingCf:0,investingCf:0,financingCf:0,netCf:0,nonCashExpAdd:0,nonCashIncDed:0,deltaWc:0,cfDetails:Object.fromEntries(['netIncome','depreciation','amortization','badDebtExp','nonOpExpNonCash','nonOpIncNonCash','deltaArGross','deltaInv','deltaAp','advancesInflow','accruedInflow','prepaidOutflow','receivableOutflow','capex','intangibleCapex','equity','debt'].map(k=>[k,0]))});
+let ppe=sumList(p,'capexList',0),intang=sumList(p,'intangibleList',0),prev=res.bs[0].bsDetails;
+for(let j=0;j<inv.rows.length;j++){const r=inv.rows[j],i=j+1,K=10000,depPpe=S(p.capexList.flatMap(it=>it.amounts.map((v,k)=>i>=k&&i<k+it.usefulLife?v*1e6/it.usefulLife:0))),depInt=depreciation(p,i)-depPpe;ppe+=sumList(p,'capexList',i)-depPpe;intang+=sumList(p,'intangibleList',i)-depInt;
+const fi={revenue:r.revenue*K,cogs:r.cogs*K,grossProfit:r.gross*K,totalSga:r.sgna*K,operatingProfit:r.ebit*K,totalNonOpInc:(r.otherIncome+r.nonCashIncome)*K,totalNonOpExp:(r.otherExpense+r.nonCashExpense+r.interest)*K,interestExpense:r.interest*K,nonOpIncC:r.otherIncome*K,nonOpIncNC:r.nonCashIncome*K,nonOpExpC:r.otherExpense*K,nonOpExpNC:r.nonCashExpense*K,ebt:r.pretax*K,tax:r.tax*K,netIncome:r.net*K,internalCogs:r.cogs*K,externalCogs:0,sgaDetails:{totalSgaVar:r.variableSga*K,totalSgaSemi:0,totalSgaFixOnly:r.sgna*K-r.variableSga*K,amortization:0,fixBadDebt:0},ratios:{}};res.is_financial.push(fi);
+const variable=(r.variable+r.variableSga)*K,fixed=(r.fixedCash+r.dep)*K;res.is_managerial.push({actualProdVol:r.purchase,revenue:fi.revenue,variableCosts:variable,contributionMargin:fi.revenue-variable,fixedCosts:fixed,operatingProfit:fi.operatingProfit,bepRevenue:fi.revenue>variable?fixed*fi.revenue/(fi.revenue-variable):0,varCostDetails:{totalSgaVar:r.variableSga*K},ratios:{}});
+const d={cash:r.cash*K,ar:r.ar*K,inv:r.inventory*K,invBase:r.inventory*K,unsoldInvValue:0,unsoldExtInvValue:0,prepaidNet:r.accounts.prepayments*K,receivableNet:r.accounts.receivables*K,ppeNet:ppe,intangibleNet:intang,otherNetAssets:Math.max(0,r.otherNonCash)*K,otherNonCashLiability:Math.max(0,-r.otherNonCash)*K,ap:r.ap*K,advancesNet:r.accounts.advances*K,accruedNet:(r.accounts.payables+r.arrears)*K,debt:r.debt*K,capital:r.equity*K,retainedEarnings:r.retained*K};
+res.bs.push({currentAssets:(r.cash+r.ar+r.inventory+r.otherAssets)*K,nonCurrentAssets:ppe+intang+d.otherNetAssets,totalAssets:r.totalAssets*K,currentLiabilities:(r.ap+r.otherLiabilities+r.arrears)*K,nonCurrentLiabilities:r.debt*K+d.otherNonCashLiability,totalLiabilities:r.totalLiabilities*K,totalEquity:r.totalEquity*K,bsDetails:d});
+const capTotal=sumList(p,'capexList',i)+sumList(p,'intangibleList',i),ppeShare=capTotal>0?sumList(p,'capexList',i)/capTotal:1;
+const delta={deltaArGross:prev.ar-d.ar,deltaInv:prev.inv-d.inv,deltaAp:d.ap-prev.ap,advancesInflow:d.advancesNet-prev.advancesNet,accruedInflow:d.accruedNet-prev.accruedNet-(r.capexArrears-(j?inv.rows[j-1].capexArrears:0))*K,prepaidOutflow:prev.prepaidNet-d.prepaidNet,receivableOutflow:prev.receivableNet-d.receivableNet};
+res.cf.push({beginningCash:r.openingCash*K,endingCash:r.cash*K,operatingCf:r.cfo*K,investingCf:r.cfi*K,financingCf:r.cff*K,netCf:(r.cfo+r.cfi+r.cff)*K,nonCashExpAdd:(r.dep+r.nonCashExpense)*K,nonCashIncDed:r.nonCashIncome*K,deltaWc:-r.dNwc*K,cfDetails:{netIncome:r.net*K,depreciation:depPpe,amortization:depInt,badDebtExp:0,nonOpExpNonCash:r.nonCashExpense*K,nonOpIncNonCash:r.nonCashIncome*K,...delta,capex:-r.capex*K*ppeShare,intangibleCapex:-r.capex*K*(1-ppeShare),equity:r.equityDraw*K,debt:(r.draw-r.repay)*K}});prev=d;
+}
+// 다른 매출원장으로 계산한 가지 상세를 재고 결과에 섞지 않는다.
+res.revenueDetails=[{id:'monthly-ledger',label:'월별 원장 실제판매',level:1,values:res.is_financial.map(r=>r.revenue)}];res.internalCogsDetails=[{id:'monthly-ledger',label:'월별 원장 제조원가',level:1,values:res.is_financial.map(r=>r.cogs)}];res.externalCogsDetails=[];res.internalCogsFactorTree=[{label:'월별 실제 변동원가',level:2,values:[0,...inv.rows.map(r=>r.variable*10000)]},{label:'월별 제조고정비·감가상각',level:2,values:[0,...inv.rows.map(r=>(r.cogs-r.variable)*10000)]}];res.gpAnalysisTree=[];res.cmAnalysisTree=[];res.inventoryLinked=true;
+res.correctWarnings.push('월별 재고 원장 연동: Y0는 개시잔액이며 Y1~선택기말은 월합/월말 값입니다. 기존 트리의 예상매출 상세는 합산하지 않습니다.');
+}
+function revalue(p,r){const n=p.horizon;r.fcffData=[];let netCapital=0;
+for(let i=0;i<=n;i++){const fin=r.is_financial[i],cf=r.cf[i],b=r.bs[i],de=cf.cfDetails.depreciation,am=cf.cfDetails.amortization,operatingTax=r.inventoryLinked?(i?S(r.inventory.rows[i-1].months.map(m=>Math.max(0,m.ebit)*p.taxRate[i]/100))*10000:0):Math.max(0,fin.operatingProfit)*p.taxRate[i]/100;
+let nopat=fin.operatingProfit-operatingTax,fcff=nopat+de+am+cf.deltaWc+cf.investingCf;
+if(r.inventoryLinked&&i===0)fcff=-r.inventory.initialInvestment*10000;
+const otherNoncash=(fin.nonOpIncNC||0)-(fin.nonOpExpNC||0),bridge=cf.operatingCf-(fin.nonOpIncC-fin.nonOpExpC)+fin.interestExpense+fin.tax-operatingTax+cf.investingCf;
+let tv=0;if(i===n&&p.terminalValueMethod==='nav')tv=b.totalAssets-b.bsDetails.cash-b.totalLiabilities+b.bsDetails.debt;else if(i===n&&p.terminalValueMethod==='pgm'){const g=p.perpetualGrowthRate/100;if(r.wacc<=g)r.correctWarnings.push('WACC가 영구성장률 이하입니다. 영구가치는 미산출(0)합니다.');else tv=Math.max(0,fcff*(1+g)/(r.wacc-g));}
+r.fcffData.push({nopat,depreciation:de,amortization:am,terminalValue:tv,capex:-cf.cfDetails.capex,intangibleCapex:-cf.cfDetails.intangibleCapex,deltaWc:cf.deltaWc,fcff:fcff+tv,pvFcff:(fcff+tv)/(1+r.wacc)**i,bridgeDifference:r.inventoryLinked&&i===0?0:fcff-bridge});
+}
+const flows=r.fcffData.map(d=>d.fcff);r.npv=S(r.fcffData.map(d=>d.pvFcff));const irr=C.irr(flows);r.irr=irr===null?NaN:irr;let acc=flows[0];r.paybackPeriod=acc>=0?0:null;for(let i=1;i<flows.length;i++){const before=acc;acc+=flows[i];if(r.paybackPeriod===null&&acc>=0&&flows[i]>0)r.paybackPeriod=i-1-before/flows[i];}
+r.equityIRRs=(p.equityList||[]).map(eq=>{const amount=S(C.periods(eq.amounts))*1e6,own=r.ownershipHistory?.[n]?.[eq.id]||0,end=r.bs[n],exit=p.terminalValueMethod==='none'?0:Math.max(0,r.fcffData[n].terminalValue+end.bsDetails.cash-end.bsDetails.debt),flows=C.indices().map(i=>-(eq.amounts[i]||0)*1e6+(i===n?exit*own:0)),v=C.irr(flows);return{name:eq.name,irr:v===null?NaN:v,moic:amount>0?exit*own/amount:0};});
+}
+C.irr=flows=>{const signs=flows.filter(v=>Math.abs(v)>1e-9).map(Math.sign);if(!signs.includes(1)||!signs.includes(-1)||signs.slice(1).filter((v,i)=>v!==signs[i]).length>1)return null;const f=r=>S(flows.map((v,i)=>v/(1+r)**i));let a=-.9999,b=1;while(f(a)*f(b)>0&&b<1e6)b*=2;if(f(a)*f(b)>0)return null;for(let i=0;i<160;i++){const m=(a+b)/2;if(f(a)*f(m)<=0)b=m;else a=m;}return(a+b)/2;};
+function checks(p,r){return C.indices().map(i=>{const b=r.bs[i],f=r.is_financial[i],c=r.cf[i],prior=i?r.bs[i-1].bsDetails.retainedEarnings:0;return{balance:b.totalAssets-b.totalLiabilities-b.totalEquity,cash:c.endingCash-c.beginningCash-c.operatingCf-c.investingCf-c.financingCf,profit:f.operatingProfit-r.is_managerial[i].operatingProfit,retained:b.bsDetails.retainedEarnings-prior-f.netIncome,fcff:r.fcffData[i].bridgeDifference,monthly:r.inventoryLinked&&i?Math.max(...Object.values(r.inventory.rows[i-1].checks).map(Math.abs))*10000:0};});}
+})();
+
+/* DB 계약: feasibility_projects / feasibility_documents / private feasibility-assets */
+(()=>{'use strict';const bucket='feasibility-assets',table='feasibility_documents';
+const mime={pdf:'application/pdf',ppt:'application/vnd.ms-powerpoint',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',txt:'text/plain',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',webp:'image/webp'};
+async function signed(client,path){const {data,error}=await client.storage.from(bucket).createSignedUrl(path,3600);if(error)throw error;if(!data?.signedUrl)throw Error('서명 URL이 반환되지 않았습니다.');return data.signedUrl;}
+async function upload(client,{file,projectId,ownerId,kind,title}){if(!projectId||!ownerId)throw Error('프로젝트 저장 및 로그인이 필요합니다.');if(!file||file.size>20*1024*1024)throw Error('파일은 20MB 이하여야 합니다.');const ext=file.name.split('.').pop().toLowerCase();if(!mime[ext])throw Error('지원하지 않는 파일 형식입니다.');const id=crypto.randomUUID(),path=`${ownerId}/${projectId}/${id}.${ext}`,row={id,project_id:projectId,owner_id:ownerId,kind,title:title||file.name,storage_path:path,original_name:file.name,mime_type:mime[ext],size_bytes:file.size};
+const {error}=await client.storage.from(bucket).upload(path,file,{contentType:row.mime_type,upsert:false});if(error)throw error;
+const saved=await client.from(table).insert(row).select().single();if(saved.error){const clean=await client.storage.from(bucket).remove([path]);throw Error(saved.error.message+(clean.error?' / 업로드 파일 정리 실패: '+path:' / 업로드 파일 정리됨'));}if(!saved.data)throw Error('메타데이터 저장 결과가 없습니다.');return{...saved.data,url:await signed(client,path),bucket};}
+async function list(client,projectId){const {data,error}=await client.from(table).select('*').eq('project_id',projectId).order('created_at',{ascending:false});if(error)throw error;return data||[];}
+async function remove(client,asset){const {error}=await client.storage.from(bucket).remove([asset.storage_path]);if(error)throw error;const deleted=await client.from(table).delete().eq('id',asset.id).select('id');if(deleted.error)throw deleted.error;if(!deleted.data?.length)throw Error('파일은 삭제되었지만 메타데이터 삭제 권한/결과를 확인하세요.');}
+function apply(p,ref,url){const q=JSON.parse(JSON.stringify(p));if(ref.itemId!==undefined){const item=(q[ref.field]||[]).find(v=>String(v.id)===String(ref.itemId));if(item)item[ref.imageKey||'imageBase64']=url;}else q[ref.field]=url;return q;}
+window.CorrectAssets={bucket,table,signed,upload,list,remove,apply};})();
+
+</script>
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
@@ -30,11 +252,7 @@
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml5dmZ5Ynd6bGFtdWNhbnFlZGZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMyNTI4NDcsImV4cCI6MjA5ODgyODg0N30.DnMoQGjTPrzf1UaMFsZdSzS21ALYufS6Sa3OKegXVM0';
     const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    const pad6 = (arr) => {
-        let res = Array.isArray(arr) ? [...arr] : [0,0,0,0,0,0];
-        while(res.length < 6) res.push(res[res.length-1] || 0);
-        return res.slice(0, 6);
-    };
+    const pad6 = (arr) => CorrectCore.periods(arr);
 
     const DEFAULT_INPUTS = {
       irPptFileName: '',
@@ -105,6 +323,28 @@
       nonOpExpNonCashList: [{ id: 1, name: '외환차손 등', amounts: pad6([0]) }],
       salesHierarchy: [{ id: 'rt1', name: '제품/상품 판매', countries: [{ id: 'c1', name: '대한민국', brands: [{ id: 'br1', name: '기본 브랜드', bizTypes: [{ id: 'bt1', name: 'B2B/B2C 통합', salesModes: [{ id: 'sm1', name: '온/오프라인 통합', channels: [{ id: 'ch1', name: '기본 채널', clients: [{ id: 'cl1', name: 'A상사', categories: [{ id: 'cat1', name: '기본 품목군', products: [{ id: 'p1', name: '기본 자체생산 제품', isInternal: true, isForeignCurrency: false, prices: pad6([15000]), volumes: pad6([100000, 110000, 120000, 130000, 140000, 150000]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0]) }] }] }] }] }] }] }] }] }, { id: 'rt2', name: '서비스 용역 매출', countries: [] }]
     };
+
+    const ORIGINAL_DEFAULTS = cloneOriginalDefaults(DEFAULT_INPUTS);
+    const initialDefaults = CorrectCore.migrate(DEFAULT_INPUTS, DEFAULT_INPUTS);
+    function cloneOriginalDefaults(v){return JSON.parse(JSON.stringify(v));}
+    window.CorrectDefaults=ORIGINAL_DEFAULTS;
+/* 원본 React 컴포넌트와 같은 입력 이벤트/색상/표 구조 사용 */
+const CorrectNumber=({label,value,onChange,signed=false,blank=false})=><label className="correct-field">{label}<input aria-label={label} type="number" step="any" min={signed?undefined:0} value={value??''} placeholder={blank?'기본값':''} onChange={e=>{const v=e.target.value===''&&blank?null:Number(e.target.value);if(v===null||Number.isFinite(v)&& (signed||v>=0))onChange(v);}}/></label>;
+const CorrectSelect=({label,value,onChange,options})=><label className="correct-field">{label}<select value={value} onChange={e=>onChange(e.target.value)}>{options.map(([v,n])=><option key={v} value={v}>{n}</option>)}</select></label>;
+const correctSet=(setter,path,value)=>setter(p=>{const q=cloneDeep(p);let at=q;path.slice(0,-1).forEach(k=>at=at[k]);at[path.at(-1)]=value;return q;});
+const CorrectYears=({inputs,setInputs,name,label,signed=false})=><div className="mb-3"><b className="text-xs">{label}</b><div className="correct-year-grid">{CorrectCore.indices().map(i=><CorrectNumber key={i} label={'Y'+i} value={inputs[name][i]} signed={signed} onChange={v=>correctSet(setInputs,[name,i],v)}/>)}</div></div>;
+const CorrectEvaluation=({inputs,setInputs})=><div className="space-y-3"><CorrectSelect label="평가기간 (Y0 개시 + 선택 사업연도)" value={inputs.horizon} onChange={v=>setInputs(p=>({...p,horizon:Number(v)}))} options={[3,5,7,10].map(v=>[v,v+'년'])}/><CorrectSelect label="매출 원장 · 한 방식만 반영" value={inputs.salesSource} onChange={v=>setInputs(p=>({...p,salesSource:v}))} options={[["tree","기존 9단계 트리"],["direct","연간 직접매출"],["inventory","월별 재고 연동 실제매출"]]}/><CorrectSelect label="원본 제품단가 입력단위" value={inputs.priceUnit} onChange={v=>{if(confirm('숫자는 유지하고 해석 단위만 변경합니다. 기존 원화 단가를 만원으로 바꾸려면 숫자를 10,000으로 나누어 입력하세요.'))setInputs(p=>({...p,priceUnit:v}));}} options={[["won","원 (기존 자료 보존)"],["manwon","만원 (외화 USD 제외)"]]}/>{inputs.salesSource==='direct'&&<CorrectYears inputs={inputs} setInputs={setInputs} name="directRevenue" label="연간 직접매출 (백만원)"/>}<p className="correct-note">Y0와 Y1~선택기말 표시. 11기간 원장을 저장하므로 기간 축소 후 복원해도 뒤 연도 값은 남습니다. 원본은 내부 원화·연간 백만원·제품 원/USD였습니다. 단위를 임의 변환하지 않았습니다. 새 월별 입력 및 임금표는 만원이며 원화 원장에 ×10,000 변환합니다.</p></div>;
+const CorrectMacro=({inputs,setInputs})=><><CorrectNumber label="수입원가 환율 기준값 (원/USD)" value={inputs.exchangeBase} onChange={v=>v>0&&setInputs(p=>({...p,exchangeBase:v}))}/>{[['salesAdjustment','추가 매출 성장 보정 (%)',true],['costInflation','추가 제조원가 상승률 (%)',true],['importShare','수입원가 비중 (%)'],['rateSpread','금리 가산 (%p)',true]].map(([k,n,signed])=><CorrectYears key={k} inputs={inputs} setInputs={setInputs} name={k} label={n} signed={signed}/>)}<p className="correct-note">원본 물가·산업성장은 Y1부터 누적(개시 Y0는 계수 1). 추가 성장도 Y1부터 ∏(1+보정/100). 원본 트리 수량에는 산업성장×추가성장, 월별 목표에는 동일 보정 적용. 기본제조원가=입력×원본누적물가×추가누적원가×[1+수입비중×(계획환율/기준환율−1)]. 외화 제품 가격/매입단가는 원본 환율을 별도 적용합니다. 원본 물가와 추가 제조상승은 합산이 아닌 곱이므로 추가분만 입력하세요. 고정비는 원본 누적물가, 임금은 임금상승률. 금리는 기존+가산(0~100%). 모두 수정 가능한 계획가정입니다.</p></>;
+const CorrectManufacturing=({inputs,setInputs})=><><CorrectSelect label="제조원가 방식" value={inputs.manufacturingMode} onChange={v=>setInputs(p=>({...p,manufacturingMode:v}))} options={[["original","기존 연간 기본+직접+간접 / 생산량 단가"],["ratio","매출비례 변동제조원가 + 기존 고정제조원가"]]}/>{inputs.manufacturingMode==='ratio'&&<CorrectYears inputs={inputs} setInputs={setInputs} name="variableMfgRate" label="매출 대비 변동제조원가율 (%)"/>}<p className="correct-note">기존 기본원가(백만원)와 직접·간접 경비율은 보존합니다. 기본+직접은 변동제조원가, 간접+제조배부 인건비+감가는 제조고정비입니다. 원본 방식은 생산량 단가에 배부하는 기존 계산 유지. 매출비례 선택 시 기본+직접 대신 비례원가만 사용하여 중복하지 않습니다. 백만원×100=만원, ×1,000,000=원. 월별 단가원천은 7-1에서 선택합니다.</p></>;
+const CorrectPayroll=({inputs,setInputs,model})=>{const p=inputs.payroll;return <><label className="correct-check"><input type="checkbox" checked={p.enabled} onChange={e=>correctSet(setInputs,['payroll','enabled'],e.target.checked)}/>10직급 인건비 자동원장 사용 (기존 입력은 지우지 않음)</label><p className="correct-note">기준연봉 만원/인·년, 복리후생·카드 만원/인·월. Y1은 기준연봉, Y2부터 누적 임금상승. Y0 인원은 개시 연간 원본모형에만 사용하고 재고모드에서는 Y1부터 계산합니다. 보험/퇴직은 실제 규정이 아닌 편집 가능한 계획요율, 퇴직은 현금납입 적립형입니다. 자동원장 사용 시 6번에서 중복되는 기존 항목을 직접 제외 선택하세요.</p><div className="correct-overflow"><table className="correct-table"><thead><tr><th>직급</th>{['연봉','월복지','월카드','제조%','연금','건강','고용','산재','퇴직'].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{p.ranks.map((r,j)=><tr key={r.rank}><th>{r.rank}</th>{['annual','welfare','card','mfg'].map(k=><td key={k}><input aria-label={r.rank+k} type="number" min="0" max={k==='mfg'?100:undefined} value={r[k]} onChange={e=>correctSet(setInputs,['payroll','ranks',j,k],Math.max(0,Number(e.target.value)||0))}/></td>)}{['pension','health','employment','accident','retirement'].map(k=><td key={k}><input aria-label={r.rank+k} type="checkbox" checked={r[k]} onChange={e=>correctSet(setInputs,['payroll','ranks',j,k],e.target.checked)}/></td>)}</tr>)}</tbody></table></div><div className="correct-overflow"><table className="correct-table"><thead><tr><th>인원/요율</th>{CorrectCore.indices().map(i=><th key={i}>Y{i}</th>)}</tr></thead><tbody>{p.ranks.map((r,j)=><tr key={r.rank}><th>{r.rank} 인원</th>{CorrectCore.indices().map(i=><td key={i}><input aria-label={r.rank+' Y'+i+' 인원'} type="number" min="0" step="1" value={r.heads[i]} onChange={e=>correctSet(setInputs,['payroll','ranks',j,'heads',i],Math.floor(Math.max(0,Number(e.target.value)||0)))}/></td>)}</tr>)}{[['raise','임금상승%'],['pension','연금%'],['health','건강%'],['care','요양/건강%'],['employment','고용%'],['accident','산재%'],['retirement','퇴직/연봉%'],['pensionFloor','연금 월하한(만원)'],['pensionCap','연금 월상한(만원)']].map(([k,n])=><tr key={k}><th>{n}</th>{CorrectCore.indices().map(i=><td key={i}><input aria-label={n+' Y'+i} type="number" min="0" step="any" value={p[k][i]} onChange={e=>correctSet(setInputs,['payroll',k,i],Math.max(0,Number(e.target.value)||0))}/></td>)}</tr>)}</tbody></table></div><div className="correct-overflow"><table className="correct-table"><thead><tr><th>집계 (백만원)</th>{CorrectCore.indices().map(i=><th key={i}>Y{i}</th>)}</tr></thead><tbody>{[['salary','급여'],['pension','연금'],['health','건강'],['care','요양'],['employment','고용'],['accident','산재'],['retirement','퇴직'],['welfare','복지'],['card','카드'],['total','총액'],['mfg','제조배부']].map(([k,n])=><tr key={k}><th>{n}</th>{CorrectCore.indices().map(i=><td key={i}>{(model.payroll[i][k]/1e6).toLocaleString('ko-KR',{maximumFractionDigits:2})}</td>)}</tr>)}</tbody></table></div></>;};
+const CorrectLegacyLaborExclusions=({inputs,setInputs})=><details className="correct-note"><summary>인건비 자동원장 중복 방지 · 기존 항목 제외 선택</summary>{['baseCostList','sgaVarList','sgaSemiList','sgaFixList'].map(list=><div key={list}>{inputs[list].map(it=>{const id=list+':'+it.id;return <label key={id} className="correct-check"><input type="checkbox" checked={inputs.payroll.excludedIds.includes(id)} onChange={e=>correctSet(setInputs,['payroll','excludedIds'],e.target.checked?[...inputs.payroll.excludedIds,id]:inputs.payroll.excludedIds.filter(x=>x!==id))}/>{it.name||'이름없음'} · {list} (자동원장 사용 시만 제외)</label>;})}</div>)}</details>;
+const CorrectTreeEditor=({inputs,setInputs})=>{function nodeRows(list,path=[],depth=0){return list.map(n=>{const ids=[...path,n.id],child=CorrectCore.childKey(depth),branch=!!n[child]?.length,update=(k,v)=>setInputs(p=>({...p,salesHierarchy:CorrectCore.treeUpdate(p.salesHierarchy,ids,n=>n[k]=v)}));return <div key={n.id} className="correct-tree" style={{marginLeft:depth?12:0}}><div className="correct-tree-tools"><span>{depth+1}/9</span><input aria-label="매출 항목명" value={n.name} onChange={e=>update('name',e.target.value)}/>{depth<8&&<button onClick={()=>setInputs(p=>({...p,salesHierarchy:CorrectCore.addChild(p.salesHierarchy,ids)}))}>자식 추가</button>}<button onClick={()=>{if(confirm('항목과 하위 매출값을 삭제할까요?'))setInputs(p=>({...p,salesHierarchy:CorrectCore.treeUpdate(p.salesHierarchy,ids,(n,a,i)=>a.splice(i,1))}));}}>삭제</button></div>{branch?<><div className="correct-note">하위 잎 합계 (원, 거시 적용 전): {CorrectCore.indices().map(i=>{const leaves=CorrectCore.leaves([n],depth);return 'Y'+i+' '+leaves.reduce((s,l)=>s+(l.prices?.[i]||0)*(l.volumes?.[i]||0)*(l.isForeignCurrency?inputs.exchangeRate[i]:inputs.priceUnit==='manwon'?10000:1),0).toLocaleString('ko-KR');}).join(' / ')}</div>{nodeRows(n[child],ids,depth+1)}</>:<><div className="flex gap-3 my-2"><label className="correct-check"><input type="checkbox" checked={n.isInternal!==false} onChange={e=>update('isInternal',e.target.checked)}/>자체생산</label><label className="correct-check"><input type="checkbox" checked={!!n.isForeignCurrency} onChange={e=>update('isForeignCurrency',e.target.checked)}/>USD 단가</label></div>{[['prices','단가 ('+(n.isForeignCurrency?'USD':inputs.priceUnit==='manwon'?'만원':'원')+')'],['volumes','판매수량'],...(n.isInternal===false?[['supplyCosts','외부조달 단가'],['purchaseVolumes','외부조달 구매수량']]:[])].map(([k,label])=><div key={k}><b className="text-[11px]">{label}</b><div className="correct-year-grid">{CorrectCore.indices().map(i=><CorrectNumber key={i} label={'Y'+i} value={n[k]?.[i]||0} onChange={v=>{const a=CorrectCore.padAll(n[k]);a[i]=v;update(k,a);}}/>)}</div></div>)}</>}</div>;});}return <><p className="correct-note">어느 단계도 잎으로 사용할 수 있습니다. 최대 9단계, 가지는 하위 잎만 합계. 자식 추가 시 기존 값은 확인 후 첫 자식으로 이전합니다. 기존 국가·브랜드·거래처·제품 자료구조와 외부조달 속성을 보존합니다.</p>{nodeRows(inputs.salesHierarchy)}<button className="correct-button" onClick={()=>setInputs(p=>({...p,salesHierarchy:[...p.salesHierarchy,{id:CorrectCore.newId(),name:'새 매출',prices:Array(11).fill(0),volumes:Array(11).fill(0),supplyCosts:Array(11).fill(0),purchaseVolumes:Array(11).fill(0),isInternal:true}]}))}>최상위 매출 추가</button></>;};
+const CorrectInventoryInputs=({inputs,setInputs,model})=>{const o=inputs.inventoryPlan,y=Math.min(inputs.horizon,o.selectedYear),off=(y-1)*12,put=(k,v)=>correctSet(setInputs,['inventoryPlan',k],v);return <><p className="correct-note">{inputs.salesSource==='inventory'?'연간 재무 연동':'독립 시뮬레이션 (평가조건에서 연동 선택)'} · 120개월 보존. 금액 만원, 수량 개. 월별 원장 actual sales / COGS / CFO / 기말현금이 연간 보고서의 단일 근거입니다.</p><div className="correct-grid">{[['openingCash','개시 보유현금 (설비 취득 후)'],['minCash','최소 유지현금'],['openingQuantity','기초재고 수량'],['openingUnitCost','기초재고 단가'],['openingAR','기초 AR'],['openingAP','기초 AP'],['financeLimit','금융한도 (총 차입잔액)'],['leadDays','리드타임 (일)'],['safetyDays','안전일수'],['minOrder','발주배수 / 최소발주 수량']].map(([k,n])=><CorrectNumber key={k} label={n} value={o[k]} onChange={v=>put(k,v)}/>)}{Object.entries(CorrectCore.accountNames).map(([k,n])=><CorrectNumber key={k} label={'기초 '+n} value={o.openingAccounts[k]} onChange={v=>correctSet(setInputs,['inventoryPlan','openingAccounts',k],v)}/>)}</div><CorrectSelect label="기초 납입자본" value={o.capitalMode} onChange={v=>put('capitalMode',v)} options={[["derive","기초순자산으로 명시적 도출"],["linked","기존 Y0 자본 사용 · 불일치 공개"]]}/><CorrectSelect label="월별 제조단가 원천" value={o.costSource} onChange={v=>put('costSource',v)} options={[["monthly","월별 제조/매입단가 입력"],["annual","기존 연간 기본+직접 / 보정목표수량 (비례방식 선택 시 비례예산)"]]}/><CorrectSelect label="기타계정 잔액 원천 (중복 금지)" value={o.accountSource} onChange={v=>put('accountSource',v)} options={[["monthly","월별 잔액/증감 직접입력"],["annual","기존 연간 4계정 잔액까지 월별 선형배분"]]}/><p className="correct-note">기초순자산 {(model.inventory.openingNetAssets/100).toFixed(2)}백만원 · 개시차이 {(model.inventory.openingMismatch/100).toFixed(2)}백만원. Y0 자본/차입/유형·무형투자와 연결합니다. 연간 금융조달은 Y1부터 1/12 배분하고 금융한도 내 차입만 실행합니다.</p><CorrectYears inputs={inputs} setInputs={setInputs} name="debtRepayment" label="원금상환 계획 (백만원)"/><CorrectSelect label="편집 사업연도" value={y} onChange={v=>put('selectedYear',Number(v))} options={Array.from({length:inputs.horizon},(_,i)=>[i+1,'Y'+(i+1)])}/><div className="correct-overflow"><table className="correct-table"><thead><tr><th>월별 입력 (만원/수량)</th>{Array.from({length:12},(_,i)=><th key={i}>{i+1}월</th>)}</tr></thead><tbody>{[['target','목표 판매수량'],['price','판매단가 (만원)'],['unitCost','매입/제조단가 (만원)'],['arDays','AR 회수일수'],['inventoryDays','재고일수'],['apDays','AP 지급일수']].map(([k,n])=><tr key={k}><th>{n}</th>{o.months.slice(off,off+12).map((m,j)=><td key={j}><input aria-label={'Y'+y+' '+(j+1)+'월 '+n} type="number" step="any" min="0" placeholder="연간기본" value={m[k]??''} onChange={e=>correctSet(setInputs,['inventoryPlan','months',off+j,k],e.target.value===''&&k.endsWith('Days')?null:Math.max(0,Number(e.target.value)||0))}/></td>)}</tr>)}{Object.entries(CorrectCore.accountNames).map(([k,n])=><tr key={k}><th>{n}</th>{o.months.slice(off,off+12).map((m,j)=><td key={j}><select value={m.accounts[k].mode} onChange={e=>correctSet(setInputs,['inventoryPlan','months',off+j,'accounts',k,'mode'],e.target.value)}><option value="balance">잔액</option><option value="delta">증감</option></select><input aria-label={n+(j+1)+'월'} type="number" step="any" min={m.accounts[k].mode==='balance'?0:undefined} placeholder="유지" value={m.accounts[k].value??''} onChange={e=>correctSet(setInputs,['inventoryPlan','months',off+j,'accounts',k,'value'],e.target.value===''?null:Number(e.target.value))}/></td>)}</tr>)}</tbody></table></div><p className="correct-note">30일 계획월, AR/AP는 과거청구 만기스케줄로 회수/지급하며 30일 초과에도 회수액이 채권잔액을 넘지 않습니다. 리드타임은 목표재고 버퍼이며 물리적 배송지연은 미모형화. 기말 필요재고=보정수요×(재고일+리드타임+안전일)/30. 총평균 재고원가. 최소 발주금액 제한은 없고 수량 배수와 현금/금융한도만 적용. 지급은 최소현금 유보 후 AP→영업의무→투자→상환. 미지급은 공개 부채이며 자동 가교차입 없음. 같은 달 현금판매대금을 구매자금으로 사용하는 동시결제 가정. 기타계정은 자산증가 현금유출·부채증가 현금유입, 손익은 별도 입력하는 현금결제 가정. 영업외 비현금손익은 현금없이 기타자산/부채에 누적. 연간 월별원가 선택 시 미입력 단가는 0이므로 반드시 확인하세요.</p></>;};
+const CorrectInventoryReport=({model})=>{const inv=model.inventory,fields=[['target','보정 목표수량'],['requiredInventory','수요기준 필요기말재고'],['requiredPurchase','필요 구매수량'],['purchase','자금제약 가능구매'],['securedInventory','확보 기말재고수량'],['actualSales','실제판매'],['salesShortfall','판매부족'],['revenue','매출액'],['variable','재고 매출원가'],['inventory','기말재고원가'],['ar','기말AR'],['ap','기말AP'],['cash','기말현금'],['fundingShortfall','미지급/현금 부족자금'],['purchaseFundingGap','미확보 구매자금'],['unfundedDraw','미실행 계획차입'],['unpaidRepay','미실행 상환'],['debt','차입잔액'],['arrears','미지급 영업/투자'],['capexArrears','미지급 투자대금'],['ebit','영업이익'],['interest','금융이자'],['tax','세금'],['net','순이익'],['cfo','CFO'],['cfi','CFI'],['cff','CFF'],['totalAssets','자산'],['totalLiabilities','부채'],['totalEquity','자본']];return <div className="p-8"><h2 className="text-2xl font-black">적정재고 월별보고서 · 대사</h2><p className="correct-note">{model.inventoryLinked?'동일 월별 원장을 연간 집계':'독립 시뮬레이션 · 연간 미연결'} / 금액 만원, 수량 개. 수요기준과 자금제약 결과를 구분합니다. 개시순자산 {inv.openingNetAssets.toFixed(2)}만원, 기초불일치 {inv.openingMismatch.toFixed(2)}만원.</p>{Array.from({length:CorrectCore.horizon()},(_,y)=>{const ms=inv.monthly.slice(y*12,y*12+12);return <section key={y} className="correct-month-report"><h3 className="font-bold my-4">Y{y+1} 월별 원장</h3><div className="correct-overflow"><table className="correct-table"><thead><tr><th>항목</th>{ms.map(m=><th key={m.month}>{m.month}월</th>)}</tr></thead><tbody>{fields.map(([k,n])=><tr key={k}><th>{n}</th>{ms.map(m=><td key={m.month}>{m[k].toLocaleString('ko-KR',{maximumFractionDigits:1})}</td>)}</tr>)}{Object.entries(CorrectCore.accountNames).map(([k,n])=><tr key={k}><th>{n}</th>{ms.map(m=><td key={m.month}>{m.accounts[k].toLocaleString('ko-KR',{maximumFractionDigits:1})}</td>)}</tr>)}{['balance','cash','profit','retained','fcff','stock','quantity','ar','ap'].map(k=><tr key={k}><th>{k} 대사</th>{ms.map(m=><td key={m.month}>{m.checks[k].toExponential(1)}</td>)}</tr>)}</tbody></table></div></section>;})}</div>;};
+const CorrectChecks=({model})=><div className="p-8"><h2 className="text-2xl font-black mb-5">정합성 대사표</h2><p className="correct-note">금액 원. FCFF=영업CFO−현금영업외순손익+이자+실제세금−EBIT기준세금+CFI. 비현금손익은 CFO에서 조정하여 이중차감하지 않습니다. 수치 대사는 모형 내부 일치이며 실제 회계/세무 검증이 아닙니다.</p><table className="correct-table"><thead><tr><th>대사 항목</th>{CorrectCore.indices().map(i=><th key={i}>Y{i}</th>)}</tr></thead><tbody>{[['balance','자산−부채−자본'],['cash','현금증감−CFO−CFI−CFF'],['profit','재무−관리 EBIT'],['retained','잉여금증감−순이익'],['fcff','FCFF−CFO조정'],['monthly','월별 원장 최대대사']].map(([k,n])=><tr key={k}><th>{n}</th>{model.checks.map((r,i)=><td key={i}>{r[k].toExponential(2)}</td>)}</tr>)}</tbody></table><p className="correct-note">최대 절대오차 {model.maxError.toExponential(3)}원. 1원 미만은 반올림 범위. 기초자본 불일치는 대사오차로 그대로 표시합니다.</p></div>;
+const CorrectPrintTools=({preview,setPreview})=><div className="correct-print-tools"><button className="correct-button" onClick={()=>setPreview(!preview)}>{preview?'미리보기 닫기':'A4 가로 미리보기'}</button><button className="correct-button" onClick={()=>window.print()}>현재 보고서 인쇄 / PDF 저장</button><span>표제목 반복 · 가로 A4 · 실제 나눔은 인쇄창 확인</span></div>;
+const CorrectProjectTools=({inputs,onApply,projectName,onMessage})=><div className="correct-tools"><button onClick={()=>{try{CorrectCore.validate(inputs);localStorage.setItem('correct-feasibility-v1',JSON.stringify({name:projectName,inputs}));onMessage('현재 브라우저에 저장했습니다.');}catch(e){onMessage(e.message);}}}>로컬 보관</button><button onClick={()=>{try{const q=JSON.parse(localStorage.getItem('correct-feasibility-v1')||'null');if(!q)throw Error('로컬 자료가 없습니다.');if(confirm('현재 계획을 로컬 자료로 바꿀까요?'))onApply(q.inputs,q.name);}catch(e){onMessage(e.message);}}}>로컬 불러오기</button><button onClick={()=>{const u=URL.createObjectURL(new Blob([JSON.stringify({name:projectName,inputs},null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='사업계획.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);}}>JSON 내보내기</button><label className="correct-upload">JSON 가져오기<input type="file" accept=".json" onChange={async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>20*1024*1024)throw Error('JSON은 20MB 이하만 가능합니다.');const q=JSON.parse(await file.text());if(confirm('현재 계획을 JSON으로 바꿀까요?'))onApply(q.inputs||q,q.name);}catch(err){onMessage(err.message);}}}/></label></div>;
+const CorrectDocuments=({inputs,setInputs,user,client,onMessage,ensureProject,persist,projectId,documents,onRefresh})=>{const [file,setFile]=React.useState(null),[title,setTitle]=React.useState(''),[kind,setKind]=React.useState('ir'),[busy,setBusy]=React.useState(false);const upload=async()=>{if(!file||!title.trim())return onMessage('문서 제목과 파일을 선택하세요.');setBusy(true);try{const id=await ensureProject(),a=await CorrectAssets.upload(client,{file,projectId:id,ownerId:user.id,kind,title:title.trim()}),next={...inputs,documents:[...(inputs.documents||[]),{id:a.id,kind,title:a.title,name:a.original_name,path:a.storage_path,bucket:CorrectAssets.bucket,size:a.size_bytes}]};await persist(id,next);setInputs(next);await onRefresh();setFile(null);setTitle('');onMessage('문서와 메타데이터 및 프로젝트 연결을 저장했습니다.');}catch(e){onMessage(e.message);}finally{setBusy(false);}};return <details className="correct-note"><summary>IR · 미션 · 비전 · 로드맵 비공개 문서 (20MB 이하)</summary><label className="correct-field">문서 종류<select value={kind} onChange={e=>setKind(e.target.value)}>{[['ir','IR'],['mission','미션'],['vision','비전'],['roadmap','로드맵']].map(([k,n])=><option value={k} key={k}>{n}</option>)}</select></label><label className="correct-field">문서 제목<input value={title} onChange={e=>setTitle(e.target.value)}/></label><input type="file" accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.webp" onChange={e=>setFile(e.target.files[0]||null)}/><p>{file?file.name+' (선택 유지)':'선택 파일 없음'}</p><button className="correct-button" disabled={busy} onClick={upload}>{busy?'업로드 중':'비공개 업로드 및 저장'}</button><button onClick={onRefresh}>목록 갱신</button>{documents.map(d=><div key={d.id} className="flex gap-2 my-2"><span>{d.title} · {d.original_name}</span><button onClick={async()=>{try{window.open(await CorrectAssets.signed(client,d.storage_path),'_blank','noopener');}catch(e){onMessage(e.message);}}}>열기</button><button onClick={async()=>{if(!confirm('문서를 삭제할까요?'))return;try{await CorrectAssets.remove(client,d);const next={...inputs,documents:(inputs.documents||[]).filter(x=>x.id!==d.id)};await persist(projectId,next);setInputs(next);await onRefresh();}catch(e){onMessage(e.message);}}}>삭제</button></div>)}</details>;};
 
     const formatCurrency = (val) => (val || 0).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
     const formatPercent = (val) => `${((val || 0) * 100).toFixed(1)}%`;
@@ -182,7 +422,7 @@
     const YearlyInputField = React.memo(({ label, arrName, values, onChangeArray }) => (
       <div className="flex flex-col gap-1 mb-3">
         <label className="text-[12px] font-bold text-slate-800 tracking-wide">{label}</label>
-        <div className="grid grid-cols-6 gap-1.5 mt-0.5">
+        <div className="grid correct-year-grid gap-1.5 mt-0.5">
           {pad6(values).map((v, i) => (
             <div key={i} className="flex flex-col">
               <span className="text-[9px] text-slate-400 mb-0.5 text-center font-bold">Y{i}</span>
@@ -213,7 +453,7 @@
                 ) : null}
                 <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
               </div>
-              <div className="grid grid-cols-6 gap-1 mt-1">
+              <div className="grid correct-year-grid gap-1 mt-1">
                 {pad6(item.amounts).map((amt, idx) => (
                   <div key={idx} className="flex flex-col relative">
                     <span className="text-[9px] text-slate-400 text-center mb-0.5 font-bold">Y{idx}</span>
@@ -257,7 +497,7 @@
                                          if(!cleanExpr) return;
                                          const val = new Function('return ' + cleanExpr)();
                                          if (!isNaN(val) && isFinite(val)) {
-                                             for (let i = 0; i < 6; i++) onAmountChange(listName, item.id, i, val, isRateType ? 'rates' : 'amounts');
+                                             for (let i = 0; i < CorrectCore.count(); i++) onAmountChange(listName, item.id, i, val, isRateType ? 'rates' : 'amounts');
                                          }
                                          e.target.value = '';
                                      } catch(err) { e.target.value = ''; }
@@ -274,7 +514,7 @@
                    })()}
                 </div>
               </div>
-              <div className="grid grid-cols-6 gap-1 mt-1">
+              <div className="grid correct-year-grid gap-1 mt-1">
                 {(() => {
                    const cType = item.calcType || (item.isRate ? 'rate' : 'amount');
                    const isRateType = cType === 'rate' || cType === 'labor_rate';
@@ -323,7 +563,7 @@
                 <input type="text" value={item.name} placeholder="기본원가 항목명" onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)} className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none text-slate-800" />
                 <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
               </div>
-              <div className="grid grid-cols-6 gap-1 mt-1">
+              <div className="grid correct-year-grid gap-1 mt-1">
                 {pad6(item.amounts).map((amt, idx) => {
                   const val = toMil(amt) * (model?.infMultArr?.[idx] || 1);
                   const up = (model?.is_managerial?.[idx]?.actualProdVol > 0) ? val / model?.is_managerial?.[idx]?.actualProdVol : 0;
@@ -356,7 +596,7 @@
                 <input type="text" value={item.name} placeholder="비율 적용 항목명" onChange={(e) => onFieldChange(listName, item.id, 'name', e.target.value)} className="flex-1 min-w-0 text-[12px] font-bold bg-transparent focus:border-b focus:border-red-700 outline-none text-slate-800" />
                 <button onClick={() => onRemove(listName, item.id)} className="text-slate-400 hover:text-red-700 text-xs font-bold px-1">&times;</button>
               </div>
-              <div className="grid grid-cols-6 gap-1 mt-1">
+              <div className="grid correct-year-grid gap-1 mt-1">
                 {pad6(item.rates || item.amounts).map((rate, idx) => {
                   const bc = model?.totalBaseCostArr?.[idx] || 0;
                   const val = bc * ((rate||0)/100);
@@ -388,7 +628,7 @@
       <thead>
         <tr className="bg-slate-100 border-y-2 border-slate-800">
           <th className={`py-3 px-4 text-left text-[13px] font-black text-slate-800 tracking-wider ${compact ? 'w-1/3' : 'w-[28%]'}`}>항목</th>
-          {[0,1,2,3,4,5].map(y => <th key={y} className="py-3 px-4 text-right text-[12px] font-black text-slate-800">Y{y}</th>)}
+          {CorrectCore.indices().map(y => <th key={y} className="py-3 px-4 text-right text-[12px] font-black text-slate-800">Y{y}</th>)}
         </tr>
       </thead>
     );
@@ -491,7 +731,7 @@
                          <div className="flex flex-col gap-3 px-3 w-full">
                              <div className="w-full bg-white p-2.5 rounded border border-slate-300 shadow-sm">
                                  <div className="text-[11px] font-bold text-slate-700 mb-2">단가 (Price - {product.isForeignCurrency ? 'USD' : '원'})</div>
-                                 <div className="grid grid-cols-6 gap-1">
+                                 <div className="grid correct-year-grid gap-1">
                                     {pad6(product.prices).map((p, idx) => (
                                        <div key={`p-${idx}`} className="flex flex-col">
                                           <span className="text-[9px] text-slate-400 font-bold text-center mb-0.5">Y{idx}</span>
@@ -502,7 +742,7 @@
                              </div>
                              <div className="w-full bg-white p-2.5 rounded border border-slate-300 shadow-sm">
                                  <div className="text-[11px] font-bold text-slate-700 mb-2">목표 수량 (Volume - 개)</div>
-                                 <div className="grid grid-cols-6 gap-1">
+                                 <div className="grid correct-year-grid gap-1">
                                     {pad6(product.volumes).map((v, idx) => (
                                        <div key={`v-${idx}`} className="flex flex-col">
                                           <span className="text-[9px] text-slate-400 font-bold text-center mb-0.5">Y{idx}</span>
@@ -514,7 +754,7 @@
                              {product.isInternal === false && (
                                  <div className="w-full bg-orange-50 p-2.5 rounded border border-orange-300 shadow-sm">
                                      <div className="text-[11px] font-black text-orange-700 mb-2">외부조달원가 ({product.isForeignCurrency ? 'USD' : '원'})</div>
-                                     <div className="grid grid-cols-6 gap-1">
+                                     <div className="grid correct-year-grid gap-1">
                                         {pad6(product.supplyCosts||[]).map((sc, idx) => (
                                            <div key={`sc-${idx}`} className="flex flex-col">
                                               <span className="text-[9px] text-orange-400 font-bold text-center mb-0.5">Y{idx}</span>
@@ -552,663 +792,16 @@
         );
     };
 
-    function App() {
-      const [user, setUser] = useState(null);
-      const [isAdmin, setIsAdmin] = useState(false);
-      const [authLoading, setAuthLoading] = useState(true);
-      const [authError, setAuthError] = useState('');
-      const [signUpMessage, setSignUpMessage] = useState('');
-      const [email, setEmail] = useState('');
-      const [password, setPassword] = useState('');
-      const [rememberId, setRememberId] = useState(false);
-      const [activeTab, setActiveTab] = useState('ir_data');
-      const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-      const [inputs, setInputs] = useState(DEFAULT_INPUTS);
-      const [projects, setProjects] = useState([]);
-      const [projectName, setProjectName] = useState('새 프로젝트');
-      const [currentProjectId, setCurrentProjectId] = useState(null);
-      const [saveStatus, setSaveStatus] = useState('');
-      const [isPublicProject, setIsPublicProject] = useState(false);
-      const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
-      const [zoomedImg, setZoomedImg] = useState(null);
-      const [appMessage, setAppMessage] = useState(null);
-      const [pendingPasteImage, setPendingPasteImage] = useState(null);
-      const [uploadingPpt, setUploadingPpt] = useState(false); // New state for PPT upload progress
-
-      const checkApprovalAndSetUser = async (sessionUser) => {
-        if (!sessionUser) {
-          setUser(null); setAuthLoading(false); return;
-        }
-        try {
-          const { data, error } = await supabaseClient.from('user_profiles').select('is_approved').eq('id', sessionUser.id);
-          const userEmail = sessionUser.email.toLowerCase();
-          const isSuperAdmin = userEmail === 'ceo@hyminternational.com';
-          let isApproved = false;
-          let isAdminCheck = isSuperAdmin || userEmail.includes('admin');
-
-          if (error) console.warn("DB 프로필 조회 실패:", error.message);
-          else if (data && data.length > 0) isApproved = data[0].is_approved === true;
-          if (isSuperAdmin) { isApproved = true; isAdminCheck = true; }
-
-          if (isApproved || isAdminCheck) {
-            setUser(sessionUser); setIsAdmin(isAdminCheck); setIsSidebarOpen(isAdminCheck); setAuthError('');
-          } else {
-            await supabaseClient.auth.signOut(); setUser(null); setAuthError('⏳ 관리자 승인 대기 중입니다.');
-          }
-        } catch (e) { 
-          const userEmail = sessionUser.email?.toLowerCase() || '';
-          const isAdminCheck = userEmail === 'ceo@hyminternational.com' || userEmail.includes('admin');
-          setUser(sessionUser); setIsAdmin(isAdminCheck); setIsSidebarOpen(isAdminCheck); setAuthError('');
-        }
-        setAuthLoading(false);
-      };
-
-      useEffect(() => {
-        supabaseClient.auth.getSession().then(({ data }) => checkApprovalAndSetUser(data?.session?.user));
-        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
-          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') checkApprovalAndSetUser(session?.user);
-          else if (event === 'SIGNED_OUT') setUser(null);
-        });
-        const savedEmail = localStorage.getItem('feasibility_saved_email');
-        if(savedEmail) { setEmail(savedEmail); setRememberId(true); }
-        return () => subscription.unsubscribe();
-      }, []);
-
-      useEffect(() => {
-        if (!user) return;
-        const fetchProjects = async () => {
-          let { data, error } = await supabaseClient.from('feasibility_projects')
-             .select('id, name, updated_at, inputs, is_public, user_id')
-             .order('updated_at', { ascending: false });
-
-          if (error) {
-             const fallback = await supabaseClient.from('feasibility_projects')
-                .select('id, name, updated_at, inputs')
-                .order('updated_at', { ascending: false });
-             data = fallback.data;
-          }
-
-          if (data) {
-             if (!isAdmin) {
-                data = data.filter(p => p.is_public === true || p.user_id === user.id);
-             }
-             setProjects(data);
-          }
-        };
-        fetchProjects();
-      }, [user, isAdmin]);
-
-      const handleLogin = async (e) => {
-        e.preventDefault(); setAuthError(''); setSignUpMessage(''); setAuthLoading(true);
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-        if (error) setAuthError(`❌ 로그인 실패: ${error.message === 'Invalid login credentials' ? '정보 불일치' : error.message}`);
-        else if(rememberId) localStorage.setItem('feasibility_saved_email', email);
-        else localStorage.removeItem('feasibility_saved_email');
-        setAuthLoading(false);
-      };
-
-      const handleSignUp = async (e) => {
-        e.preventDefault(); setAuthError(''); setSignUpMessage('');
-        if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
-        setAuthLoading(true);
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
-        if (error) setAuthError(`❌ 가입 실패: ${error.message}`);
-        else if (data?.user) { await supabaseClient.auth.signOut(); setSignUpMessage('✅ 가입 완료! 관리자 승인 후 로그인 가능합니다.'); }
-        setAuthLoading(false);
-      };
-
-      const handleLogout = async () => { await supabaseClient.auth.signOut(); setUser(null); };
-
-      const handleSave = async () => {
-        if (!user) return; setSaveStatus('저장 중...');
-        try {
-          const basePayload = { name: projectName, inputs, updated_at: new Date().toISOString() };
-          let savedId = currentProjectId;
-
-          if (currentProjectId) {
-            const { error } = await supabaseClient.from('feasibility_projects').update({ ...basePayload, is_public: isPublicProject }).eq('id', currentProjectId);
-            if(error) await supabaseClient.from('feasibility_projects').update(basePayload).eq('id', currentProjectId);
-          } else {
-            const { data, error } = await supabaseClient.from('feasibility_projects').insert([{ ...basePayload, is_public: isPublicProject, user_id: user.id }]).select();
-            if (error) {
-               const fallback = await supabaseClient.from('feasibility_projects').insert([{ ...basePayload }]).select();
-               if(fallback.data && fallback.data.length > 0) savedId = fallback.data[0].id;
-            } else if (data && data.length > 0) {
-               savedId = data[0].id;
-            }
-            if(savedId) setCurrentProjectId(savedId);
-          }
-          
-          setSaveStatus('✅ 저장 완료');
-          let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
-          if(error) {
-             const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
-             data = fb.data;
-          }
-          if(data) setProjects(isAdmin ? data : data.filter(p => p.is_public === true || p.user_id === user.id));
-          setTimeout(() => setSaveStatus(''), 3000);
-        } catch (e) { setSaveStatus('❌ 권한 오류'); }
-      };
-
-      const handleDelete = async () => {
-        if (!currentProjectId || !isAdmin) return;
-        try {
-          await supabaseClient.from('feasibility_projects').delete().eq('id', currentProjectId);
-          setInputs(DEFAULT_INPUTS); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false); setAutoSaveEnabled(false);
-          let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
-          if(error) {
-             const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
-             data = fb.data;
-          }
-          if(data) setProjects(isAdmin ? data : data.filter(p => p.is_public === true || p.user_id === user.id));
-        } catch (e) { setAppMessage({ type: 'alert', text: '삭제 권한이 없습니다.' }); }
-      };
-
-      const handleLoad = (id) => {
-        const proj = projects.find(p => p.id == id);
-        if (proj) {
-          try {
-            let loaded = cloneDeep(proj.inputs);
-            
-            if (loaded.laborFix && !proj.inputs.sgaFixList) {
-                loaded.sgaVarList = [
-                    { id: 1, name: '물류/수출비용', amounts: pad6([0]), rates: pad6(loaded.logisticsRate||[2.0]), isRate: true, calcType: 'rate' },
-                    { id: 2, name: '판매수수료', amounts: pad6([0]), rates: pad6(loaded.salesCommRate||[1.5]), isRate: true, calcType: 'rate' },
-                    { id: 3, name: 'A/S 비용', amounts: pad6([0]), rates: pad6(loaded.asCostRate||[0.5]), isRate: true, calcType: 'rate' }
-                ];
-                loaded.sgaSemiList = [
-                    { id: 1, name: '수도광열비', amounts: pad6(loaded.utilities||[10]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 2, name: '여비교통비', amounts: pad6(loaded.travel||[8]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 3, name: '통신비', amounts: pad6(loaded.telecom||[5]), rates: pad6([0]), isRate: false, calcType: 'amount' }
-                ];
-                loaded.sgaFixList = [
-                    { id: 1, name: '인건비 (급여/퇴직금)', amounts: pad6(loaded.laborFix||[150]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 2, name: '복리후생비', amounts: pad6(loaded.benefits||[20]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 3, name: '임차료', amounts: pad6(loaded.rent||[60]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 4, name: '세금과공과', amounts: pad6(loaded.taxes||[5]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 5, name: '보험료', amounts: pad6(loaded.insurance||[12]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 6, name: '지급수수료', amounts: pad6(loaded.fees||[15]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 7, name: '연구개발비', amounts: pad6(loaded.rnd||[20]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 8, name: '마케팅/광고선전비', amounts: pad6(loaded.marketing||[50]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 9, name: '소모품비', amounts: pad6(loaded.supplies||[12]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 10, name: '대손상각비 (추정)', amounts: pad6(loaded.badDebt||[0]), rates: pad6([0]), isRate: false, calcType: 'amount' },
-                    { id: 11, name: '기타 판관비', amounts: pad6(loaded.otherSga||[10]), rates: pad6([0]), isRate: false, calcType: 'amount' }
-                ];
-            }
-
-            if (loaded.nonOpIncCash && !proj.inputs.nonOpIncCashList) {
-                loaded.nonOpIncCashList = [{ id: 1, name: '현금성 수익', amounts: pad6(loaded.nonOpIncCash) }];
-                loaded.nonOpIncNonCashList = [{ id: 1, name: '비현금성 수익', amounts: pad6(loaded.nonOpIncNonCash) }];
-                loaded.nonOpExpCashList = [{ id: 1, name: '현금성 비용', amounts: pad6(loaded.nonOpExpCash) }];
-                loaded.nonOpExpNonCashList = [{ id: 1, name: '비현금성 비용', amounts: pad6(loaded.nonOpExpNonCash) }];
-            }
-
-            loaded = { ...DEFAULT_INPUTS, ...loaded };
-            loaded.terminalValueMethod = loaded.terminalValueMethod || 'nav';
-            loaded.perpetualGrowthRate = loaded.perpetualGrowthRate ?? 1.0;
-            
-            loaded.irPptFileName = loaded.irPptFileName || '';
-            loaded.irPptFileUrl = loaded.irPptFileUrl || null; // Map correctly from potential old data if needed
-            loaded.irPptFilePath = loaded.irPptFilePath || null;
-            if(loaded.irPptBase64) {
-               // Handle legacy data where base64 was stored
-               loaded.irPptFileUrl = loaded.irPptBase64;
-               delete loaded.irPptBase64;
-            }
-            loaded.irSlideImages = loaded.irSlideImages || [];
-
-            loaded.companyMission = loaded.companyMission || DEFAULT_INPUTS.companyMission;
-            loaded.companyVision = loaded.companyVision || DEFAULT_INPUTS.companyVision;
-            loaded.missionImageBase64 = loaded.missionImageBase64 || null;
-            loaded.visionImageBase64 = loaded.visionImageBase64 || null;
-            loaded.brandImages = loaded.brandImages || [];
-            
-            loaded.majorClientsImages = loaded.majorClientsImages || [];
-            if (loaded.majorClientsImageBase64 && loaded.majorClientsImages.length === 0) {
-                loaded.majorClientsImages = [{ id: Date.now(), name: '기존 이미지', imageBase64: loaded.majorClientsImageBase64, isVisible: true }];
-                loaded.majorClientsImageBase64 = null;
-            }
-            
-            loaded.govInvestRoadmapImages = loaded.govInvestRoadmapImages || [];
-            if (loaded.govInvestRoadmapImageBase64 && loaded.govInvestRoadmapImages.length === 0) {
-                loaded.govInvestRoadmapImages = [{ id: Date.now()+1, name: '기존 이미지', imageBase64: loaded.govInvestRoadmapImageBase64, isVisible: true }];
-                loaded.govInvestRoadmapImageBase64 = null;
-            }
-
-            ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'equityValuation'].forEach(k => {
-               loaded[k] = pad6(loaded[k] || DEFAULT_INPUTS[k]);
-            });
-            
-            ['advancesList', 'accruedList', 'prepaidList', 'receivableList', 'sgaVarList', 'sgaSemiList', 'sgaFixList'].forEach(k => {
-               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts), rates: pad6(it.rates || [0]), isRate: it.isRate ?? true, calcType: it.calcType || (it.isRate ? 'rate' : 'amount')}));
-            });
-
-            ['equityList', 'debtList', 'capexList', 'intangibleList', 'baseCostList', 'nonOpIncCashList', 'nonOpIncNonCashList', 'nonOpExpCashList', 'nonOpExpNonCashList'].forEach(k => {
-               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: pad6(it.amounts)}));
-            });
-            
-            ['directExpList', 'indirectExpList'].forEach(k => {
-               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: pad6(it.rates || it.amounts)}));
-            });
-
-            if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && !loaded.salesHierarchy[0].countries) {
-               if (loaded.salesHierarchy[0].clients) {
-                   loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
-                      id: c.id, name: c.name, brands: [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: [{ id: `bt_${c.id}`, name: 'B2B/B2C 통합', salesModes: [{ id: `sm_${c.id}`, name: '온/오프 통합', channels: [{ id: `ch_${c.id}`, name: '기본 채널', clients: (c.clients||[]).map(cl => ({
-                         id: cl.id, name: cl.name, categories: [{ id: `cat_${cl.id}`, name: '기본 품목군', products: cl.products }]
-                      })) }] }] }] }]
-                   }));
-               }
-               loaded.salesHierarchy = [{ id: 'rt_legacy', name: '제품/상품 판매', countries: loaded.salesHierarchy }];
-            }
-
-            const fixTree = (cList) => (cList||[]).map(rt => {
-               rt.countries = (rt.countries||[]).map(c => {
-                   if (c.bizTypes && !c.brands) {
-                       c.brands = [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: c.bizTypes }];
-                       delete c.bizTypes;
-                   }
-                   c.brands = (c.brands||[]).map(br => {
-                       br.bizTypes = (br.bizTypes||[]).map(bt => {
-                           bt.salesModes = (bt.salesModes||[]).map(sm => {
-                               sm.channels = (sm.channels||[]).map(ch => {
-                                   ch.clients = (ch.clients||[]).map(cl => {
-                                       cl.categories = (cl.categories||[]).map(cat => {
-                                           cat.products = (cat.products||[]).map(p => {
-                                               p.prices = pad6(p.prices); p.volumes = pad6(p.volumes); p.supplyCosts = pad6(p.supplyCosts||[0]);
-                                               p.purchaseVolumes = pad6(p.purchaseVolumes||[0]);
-                                               p.isForeignCurrency = p.isForeignCurrency || false;
-                                               if(p.isInternal === undefined) p.isInternal = true;
-                                               return p;
-                                           }); return cat;
-                                       }); return cl;
-                                   }); return ch;
-                               }); return sm;
-                           }); return bt;
-                       }); return br;
-                   }); return c;
-               }); return rt;
-            });
-
-            loaded.salesHierarchy = fixTree(loaded.salesHierarchy);
-            setInputs(loaded); setProjectName(proj.name); setCurrentProjectId(proj.id); setIsPublicProject(proj.is_public || false); setAutoSaveEnabled(true);
-          } catch (error) {
-            console.error("데이터 불러오기 중 오류 발생:", error);
-            setAppMessage({ type: 'alert', text: "과거 버전의 데이터를 변환하는 중 구조적 오류가 발생했습니다." });
-          }
-        }
-      };
-
-      const handleArrayChange = (name, index, value) => setInputs(prev => { const newArr = pad6(prev[name]); newArr[index] = value; return { ...prev, [name]: newArr }; });
-      const handleListAmt = (listName, id, index, value, targetField = 'amounts') => setInputs(prev => ({ 
-          ...prev, 
-          [listName]: prev[listName].map(item => {
-              if (item.id === id) {
-                  const arr = pad6(item[targetField] || [0]);
-                  arr[index] = value;
-                  return { ...item, [targetField]: arr };
-              }
-              return item;
-          }) 
-      }));
-      const handleListField = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
-      const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), isRate: true, calcType: 'rate', usefulLife: 5 }] }));
-      const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
-
-      const handleImageUpload = (e, targetField) => {
-          const file = e.target.files[0];
-          if (!file) return;
-
-          if (file.size > 2 * 1024 * 1024) {
-              setAppMessage({ type: 'alert', text: "이미지 크기는 2MB 이하로 업로드해주세요." });
-              e.target.value = '';
-              return;
-          }
-
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              setInputs(prev => ({ ...prev, [targetField]: reader.result }));
-          };
-          reader.readAsDataURL(file);
-      };
-
-      const handleMultiImageUploadGeneric = (e, targetArray) => {
-          const files = Array.from(e.target.files);
-          if (!files.length) return;
-          
-          const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-          if (validFiles.length < files.length) {
-              setAppMessage({ type: 'alert', text: "2MB 이하의 이미지만 업로드되었습니다. 용량이 큰 파일은 제외되었습니다." });
-          }
-
-          let newSlides = [];
-          let processed = 0;
-
-          validFiles.forEach((file, idx) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                  newSlides.push({ id: Date.now() + Math.random(), name: file.name, imageBase64: reader.result, isVisible: true });
-                  processed++;
-                  if (processed === validFiles.length) {
-                      setInputs(prev => ({
-                          ...prev,
-                          [targetArray]: [...(prev[targetArray] || []), ...newSlides]
-                      }));
-                  }
-              };
-              reader.readAsDataURL(file);
-          });
-          e.target.value = '';
-      };
-
-      const moveImage = (targetArrayName, index, direction) => {
-          setInputs(prev => {
-              const arr = [...(prev[targetArrayName] || [])];
-              if (direction === -1 && index > 0) {
-                  [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-              } else if (direction === 1 && index < arr.length - 1) {
-                  [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
-              }
-              return { ...prev, [targetArrayName]: arr };
-          });
-      };
-
-      const toggleImageVisibility = (targetArrayName, id) => {
-          setInputs(prev => ({
-              ...prev,
-              [targetArrayName]: prev[targetArrayName].map(item =>
-                  item.id === id ? { ...item, isVisible: item.isVisible === false ? true : false } : item
-              )
-          }));
-      };
-
-      const removeMultiImage = (targetArrayName, id) => {
-          setInputs(prev => ({
-              ...prev,
-              [targetArrayName]: prev[targetArrayName].filter(item => item.id !== id)
-          }));
-      };
-
-      const handleIrSlideUpload = (e) => {
-          const files = Array.from(e.target.files);
-          if (!files.length) return;
-          
-          const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-          if (validFiles.length < files.length) {
-              setAppMessage({ type: 'alert', text: "2MB 이하의 이미지만 업로드되었습니다. 용량이 큰 파일은 제외되었습니다." });
-          }
-
-          let newSlides = [];
-          let processed = 0;
-
-          validFiles.forEach((file, idx) => {
-              const reader = new FileReader();
-              reader.onloadend = () => {
-                  newSlides.push({ id: Date.now() + Math.random(), name: file.name, imageBase64: reader.result });
-                  processed++;
-                  if (processed === validFiles.length) {
-                      setInputs(prev => ({
-                          ...prev,
-                          irSlideImages: [...(prev.irSlideImages || []), ...newSlides].sort((a,b)=>a.name.localeCompare(b.name)) 
-                      }));
-                  }
-              };
-              reader.readAsDataURL(file);
-          });
-          e.target.value = '';
-      };
-      
-      const handlePptUpload = async (e) => {
-          const file = e.target.files[0];
-          if (!file) return;
-          
-          setUploadingPpt(true);
-          setAppMessage({ type: 'alert', text: "PPT 파일을 업로드 중입니다. 잠시만 기다려주세요..." });
-
-          try {
-              // Generate a unique file path within the 'feasibility_files' bucket
-              const fileExt = file.name.split('.').pop();
-              const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-              const filePath = `ppt_uploads/${fileName}`;
-
-              // Upload to Supabase Storage
-              const { data, error } = await supabaseClient.storage
-                  .from('feasibility_files')
-                  .upload(filePath, file, {
-                      cacheControl: '3600',
-                      upsert: false
-                  });
-
-              if (error) {
-                  throw error;
-              }
-
-              // Get public URL
-              const { data: { publicUrl } } = supabaseClient.storage
-                  .from('feasibility_files')
-                  .getPublicUrl(filePath);
-
-              // Update inputs state
-              setInputs(prev => ({ 
-                  ...prev, 
-                  irPptFileName: file.name, 
-                  irPptFileUrl: publicUrl,
-                  irPptFilePath: filePath
-              }));
-              
-              setAppMessage({ type: 'alert', text: "PPT 파일 업로드가 완료되었습니다." });
-
-          } catch (error) {
-              console.error("PPT Upload Error:", error);
-              setAppMessage({ type: 'alert', text: `PPT 업로드 실패: ${error.message}` });
-          } finally {
-              setUploadingPpt(false);
-              e.target.value = ''; // Reset input
-          }
-      };
-
-      const handlePptRemove = async () => {
-          if (!inputs.irPptFilePath) {
-              // If no file path, just clear the state (might be legacy base64)
-              setInputs(p => ({...p, irPptFileName: '', irPptFileUrl: null, irPptFilePath: null}));
-              return;
-          }
-
-          try {
-              // Attempt to delete from Supabase storage to save space
-              const { error } = await supabaseClient.storage
-                  .from('feasibility_files')
-                  .remove([inputs.irPptFilePath]);
-                  
-              if (error) console.warn("Failed to delete file from storage:", error);
-          } catch (e) {
-              console.error("Error deleting file:", e);
-          } finally {
-              // Clear state regardless of storage deletion success
-              setInputs(p => ({...p, irPptFileName: '', irPptFileUrl: null, irPptFilePath: null}));
-          }
-      };
-
-      const addBrandImage = () => {
-          setInputs(prev => ({
-              ...prev,
-              brandImages: [...(prev.brandImages || []), { id: Date.now(), name: '', imageBase64: null }]
-          }));
-      };
-
-      const removeBrandImage = (id) => {
-          setInputs(prev => ({
-              ...prev,
-              brandImages: prev.brandImages.filter(b => b.id !== id)
-          }));
-      };
-
-      const updateBrandImageField = (id, field, value) => {
-          setInputs(prev => ({
-              ...prev,
-              brandImages: prev.brandImages.map(b => b.id === id ? { ...b, [field]: value } : b)
-          }));
-      };
-
-      const handleBrandImageUpload = (e, id) => {
-          const file = e.target.files[0];
-          if (!file) return;
-          if (file.size > 2 * 1024 * 1024) {
-              setAppMessage({ type: 'alert', text: "이미지 크기는 2MB 이하로 업로드해주세요." });
-              e.target.value = '';
-              return;
-          }
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              updateBrandImageField(id, 'imageBase64', reader.result);
-          };
-          reader.readAsDataURL(file);
-      };
-
-      const hHandlers = {
-          addLevelItem: (pathIds, newObj, targetKey) => setInputs(p => {
-              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
-              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
-              targetArr.push(newObj); return {...p, salesHierarchy: h};
-          }),
-          rmLevelItem: (pathIds, targetId) => setInputs(p => {
-              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
-              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
-              const idx = targetArr.findIndex(x => x.id === targetId); if(idx > -1) targetArr.splice(idx, 1);
-              return {...p, salesHierarchy: h};
-          }),
-          updateName: (pathIds, targetId, val) => setInputs(p => {
-              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
-              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
-              const node = targetArr.find(x => x.id === targetId); if(node) node.name = val;
-              return {...p, salesHierarchy: h};
-          }),
-          updateField: (pathIds, targetId, field, arrIdx, val) => setInputs(p => {
-              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
-              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
-              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
-              const node = targetArr.find(x => x.id === targetId);
-              if(node) { if(arrIdx !== null) { node[field] = pad6(node[field]); node[field][arrIdx] = val; } else node[field] = val; }
-              return {...p, salesHierarchy: h};
-          })
-      };
-
-      const treeActions = {
-          addRevType: () => hHandlers.addLevelItem([], {id: Date.now().toString(), name: '', countries: []}, 'salesHierarchy'),
-          rmRevType: (p, id) => hHandlers.rmLevelItem(p, id),
-          addCountry: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', brands: []}, 'countries'),
-          rmCountry: (p, id) => hHandlers.rmLevelItem(p, id),
-          addBrand: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', bizTypes: []}, 'brands'),
-          rmBrand: (p, id) => hHandlers.rmLevelItem(p, id),
-          addBizType: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', salesModes: []}, 'bizTypes'),
-          rmBizType: (p, id) => hHandlers.rmLevelItem(p, id),
-          addSalesMode: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', channels: []}, 'salesModes'),
-          rmSalesMode: (p, id) => hHandlers.rmLevelItem(p, id),
-          addChannel: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', clients: []}, 'channels'),
-          rmChannel: (p, id) => hHandlers.rmLevelItem(p, id),
-          addClient: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', categories: []}, 'clients'),
-          rmClient: (p, id) => hHandlers.rmLevelItem(p, id),
-          addCategory: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', products: []}, 'categories'),
-          rmCategory: (p, id) => hHandlers.rmLevelItem(p, id),
-          addProduct: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', isInternal: true, isForeignCurrency: false, prices: pad6([0]), volumes: pad6([0]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0])}, 'products'),
-          rmProduct: (p, id) => hHandlers.rmLevelItem(p, id),
-          updateName: hHandlers.updateName, updateField: hHandlers.updateField
-      };
-
-      useEffect(() => {
-        if (!autoSaveEnabled || !user || !currentProjectId) return;
-        const timer = setTimeout(async () => {
-          setSaveStatus('자동 저장 중...');
-          try {
-            const basePayload = { name: projectName, inputs, updated_at: new Date().toISOString() };
-            const { error } = await supabaseClient.from('feasibility_projects').update({ ...basePayload, is_public: isPublicProject }).eq('id', currentProjectId);
-            if(error) await supabaseClient.from('feasibility_projects').update(basePayload).eq('id', currentProjectId);
-            
-            setSaveStatus('✅ 자동 저장 완료');
-            setTimeout(() => setSaveStatus(''), 2000);
-          } catch (e) { setSaveStatus('❌ 자동 저장 실패'); }
-        }, 2000);
-        return () => clearTimeout(timer);
-      }, [inputs, projectName, isPublicProject, autoSaveEnabled, currentProjectId, user]);
-
-      useEffect(() => {
-        const handlePaste = (e) => {
-          if (!isAdmin) return;
-          
-          const items = e.clipboardData?.items;
-          if (!items) return;
-          
-          for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-              const blob = items[i].getAsFile();
-              
-              if (blob.size > 2 * 1024 * 1024) {
-                setAppMessage({ type: 'alert', text: "이미지 용량이 2MB를 초과하여 붙여넣을 수 없습니다." });
-                return;
-              }
-              
-              const reader = new FileReader();
-              reader.onload = (event) => setPendingPasteImage(event.target.result);
-              reader.readAsDataURL(blob);
-              break; 
-            }
-          }
-        };
-        
-        window.addEventListener('paste', handlePaste);
-        return () => window.removeEventListener('paste', handlePaste);
-      }, [isAdmin]);
-
-      const applyPaste = (targetField, isMulti) => {
-        const timeStr = new Date().toLocaleTimeString('ko-KR');
-        if (isMulti) {
-          setInputs(prev => ({
-            ...prev,
-            [targetField]: [...(prev[targetField] || []), { id: Date.now() + Math.random(), name: `클립보드 캡처 (${timeStr})`, imageBase64: pendingPasteImage, isVisible: true }]
-          }));
-        } else {
-          setInputs(prev => ({ ...prev, [targetField]: pendingPasteImage }));
-        }
-        setPendingPasteImage(null);
-      };
-
-      const handleZoomNav = (direction) => {
-          setZoomedImg(prev => {
-              if (!prev || !prev.images || prev.images.length <= 1) return prev;
-              let nextIndex = prev.index + direction;
-              if (nextIndex < 0) nextIndex = prev.images.length - 1;
-              if (nextIndex >= prev.images.length) nextIndex = 0;
-              return { ...prev, index: nextIndex };
-          });
-      };
-
-      useEffect(() => {
-          const handleKeyDown = (e) => {
-              if (!zoomedImg) return;
-              if (e.key === 'Escape') { setZoomedImg(null); return; }
-              
-              if (!zoomedImg.images || zoomedImg.images.length <= 1) return;
-              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') handleZoomNav(1);
-              else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') handleZoomNav(-1);
-          };
-          
-          if (zoomedImg) window.addEventListener('keydown', handleKeyDown);
-          return () => window.removeEventListener('keydown', handleKeyDown);
-      }, [zoomedImg]);
-
-      const model = useMemo(() => {
+    function calculateOriginalModel(inputs) {
         const infRate = pad6(inputs.inflationRate || [2.5]);
         const infMultArr = [1];
-        for(let i=1; i<6; i++) infMultArr[i] = infMultArr[i-1] * (1 + (infRate[i]/100));
+        for(let i=1; i < CorrectCore.count(); i++) infMultArr[i] = infMultArr[i-1] * (1 + (infRate[i]/100));
 
         const sumMil = (list, i) => (list||[]).reduce((s, it) => s + toMil((it.amounts||[])[i]), 0);
-        const totalEquity = [0,1,2,3,4,5].map(i => sumMil(inputs.equityList, i));
-        const totalDebt = [0,1,2,3,4,5].map(i => sumMil(inputs.debtList, i));
-        const totalCapex = [0,1,2,3,4,5].map(i => sumMil(inputs.capexList, i));
-        const totalIntangible = [0,1,2,3,4,5].map(i => sumMil(inputs.intangibleList, i));
+        const totalEquity = CorrectCore.indices().map(i => sumMil(inputs.equityList, i));
+        const totalDebt = CorrectCore.indices().map(i => sumMil(inputs.debtList, i));
+        const totalCapex = CorrectCore.indices().map(i => sumMil(inputs.capexList, i));
+        const totalIntangible = CorrectCore.indices().map(i => sumMil(inputs.intangibleList, i));
 
         const initV = totalEquity[0] + totalDebt[0];
         const wE = initV > 0 ? totalEquity[0]/initV : 0;
@@ -1222,7 +815,7 @@
 
         let prevWcBal = { advances: 0, accrued: 0, prepaid: 0, receivable: 0 };
 
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < CorrectCore.count(); i++) {
           accumCapital += totalEquity[i]; accumDebt += totalDebt[i];
 
           const capa = (inputs.capexMaxCapa||[])[i]||0;
@@ -1439,7 +1032,7 @@
           const endingCash = prevCash + netCf;
 
           res.is_financial.push({
-            revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, nonOpIncC: totalNonOpIncC, nonOpIncNC: totalNonOpIncNC, nonOpExpC: totalNonOpExpC, nonOpExpNC: totalNonOpExpNC, tax, netIncome, internalCogs, externalCogs,
+            revenue, cogs, grossProfit, totalSga, operatingProfit, totalNonOpInc, totalNonOpExp, interestExpense, ebt, nonOpIncC: totalNonOpIncC, nonOpIncNC: totalNonOpIncNC, nonOpExpC: totalNonOpExpC, nonOpExpNC: totalNonOpExpNC, tax, netIncome, internalCogs, externalCogs,
             sgaDetails: { totalSgaVar, totalSgaSemi, totalSgaFixOnly, amortization, fixBadDebt },
             ratios: { cogsRatio: revenue>0?cogs/revenue:0, grossMargin: revenue>0?grossProfit/revenue:0, sgaRatio: revenue>0?totalSga/revenue:0, opMargin: revenue>0?operatingProfit/revenue:0, netMargin: revenue>0?netIncome/revenue:0 }
           });
@@ -1473,7 +1066,7 @@
           const nopat = operatingProfit * (1 - (((inputs.taxRate||[])[i]||0)/100));
           
           let terminalValue = 0;
-          if (i === 5) {
+          if (i === CorrectCore.horizon()) {
               const method = inputs.terminalValueMethod || 'nav';
               if (method === 'nav') {
                   terminalValue = Math.max(0, arGross-accumBadDebt) + inv - ap + ppeNet + intangibleNet + balPrepaid + balReceivable - balAdvances - balAccrued + accumOtherNonCash;
@@ -1517,7 +1110,7 @@
         });
         ownershipHistory.push({ ...currentOwnership });
 
-        for(let t = 1; t < 6; t++) {
+        for(let t = 1; t < CorrectCore.count(); t++) {
             const tTotal = totalEquity[t];
             let v_t = valuationArr[t];
             
@@ -1548,18 +1141,18 @@
             let totalInvest = 0;
             let totalReturn = 0;
 
-            const cf_j = [0,1,2,3,4,5].map(i => {
+            const cf_j = CorrectCore.indices().map(i => {
                 const eqInvest = toMil((eq.amounts || [])[i]);
                 totalInvest += eqInvest;
                 const share = ownershipHistory[i][eq.id] || 0;
                 
                 let j_cf = -eqInvest;
                 
-                if (i === 5) {
+                if (i === CorrectCore.horizon()) {
                    const method = inputs.terminalValueMethod || 'nav';
-                   const tv_entity = res.fcffData[5].terminalValue;
-                   const endingCash = res.cf[5].endingCash;
-                   const accumDebt = res.bs[5].bsDetails.debt;
+                   const tv_entity = res.fcffData[CorrectCore.horizon()].terminalValue;
+                   const endingCash = res.cf[CorrectCore.horizon()].endingCash;
+                   const accumDebt = res.bs[CorrectCore.horizon()].bsDetails.debt;
                    
                    let tv_equity = (method === 'none' ? 0 : tv_entity) + endingCash - accumDebt;
                    
@@ -1592,13 +1185,13 @@
             return (revNodes || []).map(r => {
                 const iNode = intCogsNodes?.find(x => x.id === r.id);
                 const eNode = extCogsNodes?.find(x => x.id === r.id);
-                const gpValues = [0,1,2,3,4,5].map(y => {
+                const gpValues = CorrectCore.indices().map(y => {
                     const rev = r.values[y] || 0;
                     const intCogs = iNode?.values?.[y] || 0;
                     const extCogs = eNode?.values?.[y] || 0;
                     return rev - (intCogs + extCogs);
                 });
-                const gpRatios = [0,1,2,3,4,5].map(y => r.values[y] > 0 ? gpValues[y] / r.values[y] : 0);
+                const gpRatios = CorrectCore.indices().map(y => r.values[y] > 0 ? gpValues[y] / r.values[y] : 0);
                 
                 let sub = [];
                 if (r.sub) {
@@ -1613,7 +1206,7 @@
             return revNodes.map(r => {
                 const iNode = intCogsNodes?.find(x => x.id === r.id);
                 const eNode = extCogsNodes?.find(x => x.id === r.id);
-                const cmValues = [0,1,2,3,4,5].map(y => {
+                const cmValues = CorrectCore.indices().map(y => {
                     const rev = r.values[y] || 0;
                     const intCogs = iNode?.values?.[y] || 0;
                     const extCogs = eNode?.values?.[y] || 0;
@@ -1622,7 +1215,7 @@
                     const totalVar = intVarCogs + extCogs + varSga;
                     return rev - totalVar;
                 });
-                const cmRatios = [0,1,2,3,4,5].map(y => r.values[y] > 0 ? cmValues[y] / r.values[y] : 0);
+                const cmRatios = CorrectCore.indices().map(y => r.values[y] > 0 ? cmValues[y] / r.values[y] : 0);
                 
                 let sub = [];
                 if (r.sub) {
@@ -1634,7 +1227,487 @@
         res.cmAnalysisTree = buildCmTree(res.revenueDetails, res.internalCogsDetails, res.externalCogsDetails);
 
         return res;
-      }, [inputs]);
+    }
+    window.CorrectOriginalModel=calculateOriginalModel;
+    function App() {
+      const [user, setUser] = useState(null);
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [authLoading, setAuthLoading] = useState(true);
+      const [authError, setAuthError] = useState('');
+      const [signUpMessage, setSignUpMessage] = useState('');
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [rememberId, setRememberId] = useState(false);
+      const [activeTab, setActiveTab] = useState('ir_data');
+      const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+      const [inputs, setRawInputs] = useState(()=>CorrectCore.migrate(DEFAULT_INPUTS,DEFAULT_INPUTS));
+      const [projects, setProjects] = useState([]);
+      const [projectName, setProjectName] = useState('새 프로젝트');
+      const [currentProjectId, setCurrentProjectId] = useState(null);
+      const [saveStatus, setSaveStatus] = useState('');
+      const [isPublicProject, setIsPublicProject] = useState(false);
+      const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+      const [zoomedImg, setZoomedImg] = useState(null);
+      const [appMessage, setAppMessage] = useState(null);
+      const [pendingPasteImage, setPendingPasteImage] = useState(null);
+      const [uploadingPpt, setUploadingPpt] = useState(false);
+      const setInputs=update=>setRawInputs(prev=>{try{const next=typeof update==='function'?update(prev):update;if(next.assetRefs)next.assetRefs=next.assetRefs.filter(r=>r.itemId!==undefined?(next[r.field]||[]).some(x=>String(x.id)===String(r.itemId)&&x[r.imageKey||'imageBase64']):!!next[r.field]);CorrectCore.validate(next);CorrectCore.calculate(next,calculateOriginalModel);return next;}catch(e){setTimeout(()=>setAppMessage({type:'alert',text:e.message}),0);return prev;}}); // New state for PPT upload progress
+
+      const checkApprovalAndSetUser = async (sessionUser) => {
+        if (!sessionUser) {
+          setUser(null); setAuthLoading(false); return;
+        }
+        try {
+          const { data, error } = await supabaseClient.from('user_profiles').select('is_approved').eq('id', sessionUser.id);
+          const userEmail = sessionUser.email.toLowerCase();
+          const isSuperAdmin = userEmail === 'ceo@hyminternational.com';
+          let isApproved = false;
+          let isAdminCheck = isSuperAdmin || userEmail.includes('admin');
+
+          if(error) throw error;
+           if (data && data.length > 0) isApproved = data[0].is_approved === true;
+          if (isSuperAdmin) { isApproved = true; isAdminCheck = true; }
+
+          if (isApproved || isAdminCheck) {
+            setUser(sessionUser); setIsAdmin(isAdminCheck); setIsSidebarOpen(isAdminCheck); setAuthError('');
+          } else {
+            await supabaseClient.auth.signOut(); setUser(null); setAuthError('⏳ 관리자 승인 대기 중입니다.');
+          }
+        } catch (e) {
+          setUser(null);setIsAdmin(false);setIsSidebarOpen(false);setAuthError('승인 확인에 실패하여 접근을 차단했습니다. 다시 로그인하세요.');try{await supabaseClient.auth.signOut();}catch(_){}
+        }
+        setAuthLoading(false);
+      };
+
+      useEffect(() => {
+        supabaseClient.auth.getSession().then(({ data }) => checkApprovalAndSetUser(data?.session?.user));
+        const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') checkApprovalAndSetUser(session?.user);
+          else if (event === 'SIGNED_OUT') setUser(null);
+        });
+        const savedEmail = localStorage.getItem('feasibility_saved_email');
+        if(savedEmail) { setEmail(savedEmail); setRememberId(true); }
+        return () => subscription.unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!user) return;
+        const fetchProjects = async () => {
+          let { data, error } = await supabaseClient.from('feasibility_projects')
+             .select('id, name, updated_at, inputs, is_public, user_id')
+             .order('updated_at', { ascending: false });
+
+          if (error) {
+             const fallback = await supabaseClient.from('feasibility_projects')
+                .select('id, name, updated_at, inputs')
+                .order('updated_at', { ascending: false });
+             data = fallback.data;
+          }
+
+          if (data) {
+             if (!isAdmin) {
+                data = data.filter(p => p.is_public === true || p.user_id === user.id);
+             }
+             setProjects(data);
+          }
+        };
+        fetchProjects();
+      }, [user, isAdmin]);
+
+      const handleLogin = async (e) => {
+        e.preventDefault(); setAuthError(''); setSignUpMessage(''); setAuthLoading(true);
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) setAuthError(`❌ 로그인 실패: ${error.message === 'Invalid login credentials' ? '정보 불일치' : error.message}`);
+        else if(rememberId) localStorage.setItem('feasibility_saved_email', email);
+        else localStorage.removeItem('feasibility_saved_email');
+        setAuthLoading(false);
+      };
+
+      const handleSignUp = async (e) => {
+        e.preventDefault(); setAuthError(''); setSignUpMessage('');
+        if(password.length < 6) return setAuthError('비밀번호는 6자리 이상이어야 합니다.');
+        setAuthLoading(true);
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) setAuthError(`❌ 가입 실패: ${error.message}`);
+        else if (data?.user) { await supabaseClient.auth.signOut(); setSignUpMessage('✅ 가입 완료! 관리자 승인 후 로그인 가능합니다.'); }
+        setAuthLoading(false);
+      };
+
+      const handleLogout = async () => { await supabaseClient.auth.signOut(); setUser(null); };
+
+      const handleSave=async()=>{if(!user){setSaveStatus('로그인이 필요합니다.');return null;}setSaveStatus('저장 중...');try{CorrectCore.validate(inputs);const payload={name:projectName,inputs:CorrectCore.migrate(inputs,ORIGINAL_DEFAULTS),updated_at:new Date().toISOString(),is_public:isPublicProject};let row;if(currentProjectId){const {data,error}=await supabaseClient.from('feasibility_projects').update(payload).eq('id',currentProjectId).select('id').single();if(error)throw error;if(!data?.id)throw Error('저장 결과가 없습니다.');row=data;}else{const {data,error}=await supabaseClient.from('feasibility_projects').insert({...payload,user_id:user.id}).select('id').single();if(error)throw error;if(!data?.id)throw Error('새 프로젝트 저장 결과가 없습니다.');row=data;}setCurrentProjectId(row.id);setSaveStatus('저장 완료');const refreshed=await supabaseClient.from('feasibility_projects').select('id,name,updated_at,inputs,is_public,user_id').order('updated_at',{ascending:false});if(refreshed.error)setSaveStatus('저장은 완료했으나 목록 갱신 실패: '+refreshed.error.message);else setProjects(isAdmin?refreshed.data:refreshed.data.filter(p=>p.is_public||p.user_id===user.id));return row.id;}catch(e){setSaveStatus('저장 실패: '+e.message);return null;}};
+
+
+      const handleDelete = async () => {
+        if (!currentProjectId || !isAdmin) return;
+        try {
+          await supabaseClient.from('feasibility_projects').delete().eq('id', currentProjectId);
+          setInputs(CorrectCore.fresh(ORIGINAL_DEFAULTS)); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false); setAutoSaveEnabled(false);
+          let { data, error } = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs, is_public, user_id').order('updated_at', { ascending: false });
+          if(error) {
+             const fb = await supabaseClient.from('feasibility_projects').select('id, name, updated_at, inputs').order('updated_at', { ascending: false });
+             data = fb.data;
+          }
+          if(data) setProjects(isAdmin ? data : data.filter(p => p.is_public === true || p.user_id === user.id));
+        } catch (e) { setAppMessage({ type: 'alert', text: '삭제 권한이 없습니다.' }); }
+      };
+
+      const handleLoad = (id) => {
+        const proj = projects.find(p => p.id == id);
+        if (proj) {
+          try {
+            let loaded = cloneDeep(proj.inputs);
+            
+            if (loaded.laborFix && !proj.inputs.sgaFixList) {
+                loaded.sgaVarList = [
+                    { id: 1, name: '물류/수출비용', amounts: CorrectCore.padAll([0]), rates: CorrectCore.padAll(loaded.logisticsRate||[2.0]), isRate: true, calcType: 'rate' },
+                    { id: 2, name: '판매수수료', amounts: CorrectCore.padAll([0]), rates: CorrectCore.padAll(loaded.salesCommRate||[1.5]), isRate: true, calcType: 'rate' },
+                    { id: 3, name: 'A/S 비용', amounts: CorrectCore.padAll([0]), rates: CorrectCore.padAll(loaded.asCostRate||[0.5]), isRate: true, calcType: 'rate' }
+                ];
+                loaded.sgaSemiList = [
+                    { id: 1, name: '수도광열비', amounts: CorrectCore.padAll(loaded.utilities||[10]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 2, name: '여비교통비', amounts: CorrectCore.padAll(loaded.travel||[8]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 3, name: '통신비', amounts: CorrectCore.padAll(loaded.telecom||[5]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' }
+                ];
+                loaded.sgaFixList = [
+                    { id: 1, name: '인건비 (급여/퇴직금)', amounts: CorrectCore.padAll(loaded.laborFix||[150]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 2, name: '복리후생비', amounts: CorrectCore.padAll(loaded.benefits||[20]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 3, name: '임차료', amounts: CorrectCore.padAll(loaded.rent||[60]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 4, name: '세금과공과', amounts: CorrectCore.padAll(loaded.taxes||[5]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 5, name: '보험료', amounts: CorrectCore.padAll(loaded.insurance||[12]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 6, name: '지급수수료', amounts: CorrectCore.padAll(loaded.fees||[15]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 7, name: '연구개발비', amounts: CorrectCore.padAll(loaded.rnd||[20]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 8, name: '마케팅/광고선전비', amounts: CorrectCore.padAll(loaded.marketing||[50]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 9, name: '소모품비', amounts: CorrectCore.padAll(loaded.supplies||[12]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 10, name: '대손상각비 (추정)', amounts: CorrectCore.padAll(loaded.badDebt||[0]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' },
+                    { id: 11, name: '기타 판관비', amounts: CorrectCore.padAll(loaded.otherSga||[10]), rates: CorrectCore.padAll([0]), isRate: false, calcType: 'amount' }
+                ];
+            }
+
+            if (loaded.nonOpIncCash && !proj.inputs.nonOpIncCashList) {
+                loaded.nonOpIncCashList = [{ id: 1, name: '현금성 수익', amounts: CorrectCore.padAll(loaded.nonOpIncCash) }];
+                loaded.nonOpIncNonCashList = [{ id: 1, name: '비현금성 수익', amounts: CorrectCore.padAll(loaded.nonOpIncNonCash) }];
+                loaded.nonOpExpCashList = [{ id: 1, name: '현금성 비용', amounts: CorrectCore.padAll(loaded.nonOpExpCash) }];
+                loaded.nonOpExpNonCashList = [{ id: 1, name: '비현금성 비용', amounts: CorrectCore.padAll(loaded.nonOpExpNonCash) }];
+            }
+
+            loaded = { ...DEFAULT_INPUTS, ...loaded };
+            loaded.terminalValueMethod = loaded.terminalValueMethod || 'nav';
+            loaded.perpetualGrowthRate = loaded.perpetualGrowthRate ?? 1.0;
+            
+            loaded.irPptFileName = loaded.irPptFileName || '';
+            loaded.irPptFileUrl = loaded.irPptFileUrl || null; // Map correctly from potential old data if needed
+            loaded.irPptFilePath = loaded.irPptFilePath || null;
+            if(loaded.irPptBase64) {
+               // Handle legacy data where base64 was stored
+               loaded.irPptFileUrl = loaded.irPptBase64;
+               delete loaded.irPptBase64;
+            }
+            loaded.irSlideImages = loaded.irSlideImages || [];
+
+            loaded.companyMission = loaded.companyMission ?? DEFAULT_INPUTS.companyMission;
+            loaded.companyVision = loaded.companyVision ?? DEFAULT_INPUTS.companyVision;
+            loaded.missionImageBase64 = loaded.missionImageBase64 || null;
+            loaded.visionImageBase64 = loaded.visionImageBase64 || null;
+            loaded.brandImages = loaded.brandImages || [];
+            
+            loaded.majorClientsImages = loaded.majorClientsImages || [];
+            if (loaded.majorClientsImageBase64 && loaded.majorClientsImages.length === 0) {
+                loaded.majorClientsImages = [{ id: Date.now(), name: '기존 이미지', imageBase64: loaded.majorClientsImageBase64, isVisible: true }];
+                loaded.majorClientsImageBase64 = null;
+            }
+            
+            loaded.govInvestRoadmapImages = loaded.govInvestRoadmapImages || [];
+            if (loaded.govInvestRoadmapImageBase64 && loaded.govInvestRoadmapImages.length === 0) {
+                loaded.govInvestRoadmapImages = [{ id: Date.now()+1, name: '기존 이미지', imageBase64: loaded.govInvestRoadmapImageBase64, isVisible: true }];
+                loaded.govInvestRoadmapImageBase64 = null;
+            }
+
+            ['inflationRate', 'interestRate', 'exchangeRate', 'industryGrowth', 'taxRate', 'costOfEquity', 'capexMaxCapa', 'utilization', 'lossRate', 'arDays', 'invDays', 'apDays', 'equityValuation'].forEach(k => {
+               loaded[k] = CorrectCore.padAll(loaded[k] || DEFAULT_INPUTS[k]);
+            });
+            
+            ['advancesList', 'accruedList', 'prepaidList', 'receivableList', 'sgaVarList', 'sgaSemiList', 'sgaFixList'].forEach(k => {
+               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: CorrectCore.padAll(it.amounts), rates: CorrectCore.padAll(it.rates || [0]), isRate: it.isRate ?? true, calcType: it.calcType || (it.isRate ? 'rate' : 'amount')}));
+            });
+
+            ['equityList', 'debtList', 'capexList', 'intangibleList', 'baseCostList', 'nonOpIncCashList', 'nonOpIncNonCashList', 'nonOpExpCashList', 'nonOpExpNonCashList'].forEach(k => {
+               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, amounts: CorrectCore.padAll(it.amounts)}));
+            });
+            
+            ['directExpList', 'indirectExpList'].forEach(k => {
+               if(loaded[k]) loaded[k] = loaded[k].map(it => ({...it, rates: CorrectCore.padAll(it.rates || it.amounts)}));
+            });
+
+            if (loaded.salesHierarchy && loaded.salesHierarchy.length>0 && !loaded.salesHierarchy[0].countries) {
+               if (loaded.salesHierarchy[0].clients) {
+                   loaded.salesHierarchy = loaded.salesHierarchy.map(c => ({
+                      id: c.id, name: c.name, brands: [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: [{ id: `bt_${c.id}`, name: 'B2B/B2C 통합', salesModes: [{ id: `sm_${c.id}`, name: '온/오프 통합', channels: [{ id: `ch_${c.id}`, name: '기본 채널', clients: (c.clients||[]).map(cl => ({
+                         id: cl.id, name: cl.name, categories: [{ id: `cat_${cl.id}`, name: '기본 품목군', products: cl.products }]
+                      })) }] }] }] }]
+                   }));
+               }
+               loaded.salesHierarchy = [{ id: 'rt_legacy', name: '제품/상품 판매', countries: loaded.salesHierarchy }];
+            }
+
+            const fixTree = (cList) => (cList||[]).map(rt => {
+               rt.countries = (rt.countries||[]).map(c => {
+                   if (c.bizTypes && !c.brands) {
+                       c.brands = [{ id: `br_${c.id}`, name: '기본 브랜드', bizTypes: c.bizTypes }];
+                       delete c.bizTypes;
+                   }
+                   c.brands = (c.brands||[]).map(br => {
+                       br.bizTypes = (br.bizTypes||[]).map(bt => {
+                           bt.salesModes = (bt.salesModes||[]).map(sm => {
+                               sm.channels = (sm.channels||[]).map(ch => {
+                                   ch.clients = (ch.clients||[]).map(cl => {
+                                       cl.categories = (cl.categories||[]).map(cat => {
+                                           cat.products = (cat.products||[]).map(p => {
+                                               p.prices = CorrectCore.padAll(p.prices); p.volumes = CorrectCore.padAll(p.volumes); p.supplyCosts = CorrectCore.padAll(p.supplyCosts||[0]);
+                                               p.purchaseVolumes = CorrectCore.padAll(p.purchaseVolumes||[0]);
+                                               p.isForeignCurrency = p.isForeignCurrency || false;
+                                               if(p.isInternal === undefined) p.isInternal = true;
+                                               return p;
+                                           }); return cat;
+                                       }); return cl;
+                                   }); return ch;
+                               }); return sm;
+                           }); return bt;
+                       }); return br;
+                   }); return c;
+               }); return rt;
+            });
+
+            loaded.salesHierarchy = fixTree(loaded.salesHierarchy);
+            setInputs(CorrectCore.migrate(loaded,ORIGINAL_DEFAULTS)); setProjectName(proj.name); setCurrentProjectId(proj.id); setIsPublicProject(proj.is_public || false); setAutoSaveEnabled(true);
+          } catch (error) {
+            console.error("데이터 불러오기 중 오류 발생:", error);
+            setAppMessage({ type: 'alert', text: "과거 버전의 데이터를 변환하는 중 구조적 오류가 발생했습니다." });
+          }
+        }
+      };
+
+      const handleArrayChange = (name, index, value) => setInputs(prev => { const newArr = CorrectCore.padAll(prev[name]); newArr[index] = value; return { ...prev, [name]: newArr }; });
+      const handleListAmt = (listName, id, index, value, targetField = 'amounts') => setInputs(prev => ({ 
+          ...prev, 
+          [listName]: prev[listName].map(item => {
+              if (item.id === id) {
+                  const arr = CorrectCore.padAll(item[targetField] || [0]);
+                  arr[index] = value;
+                  return { ...item, [targetField]: arr };
+              }
+              return item;
+          }) 
+      }));
+      const handleListField = (listName, id, field, value) => setInputs(prev => ({ ...prev, [listName]: prev[listName].map(item => item.id === id ? { ...item, [field]: value } : item) }));
+      const addListItem = (listName) => setInputs(prev => ({ ...prev, [listName]: [...prev[listName], { id: Date.now(), name: '', amounts: pad6([0]), rates: pad6([0]), isRate: true, calcType: 'rate', usefulLife: 5 }] }));
+      const removeListItem = (listName, id) => setInputs(prev => ({ ...prev, [listName]: prev[listName].filter(item => item.id !== id) }));
+
+      const handleImageUpload=async(e,targetField)=>{const f=e.target.files[0];if(!f)return;try{if(f.size>2*1024*1024)throw Error('이미지는 2MB 이하여야 합니다.');await attachAsset(f,targetField,undefined,'image');}catch(err){setAppMessage({type:'alert',text:err.message});}};
+
+      const handleMultiImageUploadGeneric=async(e,targetArray)=>{const files=Array.from(e.target.files);if(!files.length)return;try{await attachAssetImages(files,targetArray);}catch(err){setAppMessage({type:'alert',text:err.message});}};
+
+      const moveImage = (targetArrayName, index, direction) => {
+          setInputs(prev => {
+              const arr = [...(prev[targetArrayName] || [])];
+              if (direction === -1 && index > 0) {
+                  [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
+              } else if (direction === 1 && index < arr.length - 1) {
+                  [arr[index + 1], arr[index]] = [arr[index], arr[index + 1]];
+              }
+              return { ...prev, [targetArrayName]: arr };
+          });
+      };
+
+      const toggleImageVisibility = (targetArrayName, id) => {
+          setInputs(prev => ({
+              ...prev,
+              [targetArrayName]: prev[targetArrayName].map(item =>
+                  item.id === id ? { ...item, isVisible: item.isVisible === false ? true : false } : item
+              )
+          }));
+      };
+
+      const removeMultiImage = (targetArrayName, id) => {
+          setInputs(prev => ({
+              ...prev,
+              [targetArrayName]: prev[targetArrayName].filter(item => item.id !== id)
+          }));
+      };
+
+      const handleIrSlideUpload=async(e)=>{const files=Array.from(e.target.files);try{await attachAssetImages(files,'irSlideImages',true);}catch(err){setAppMessage({type:'alert',text:err.message});}};
+
+      const handlePptUpload=async(e)=>{const file=e.target.files[0];if(!file)return;setUploadingPpt(true);try{await attachAsset(file,'irPptFileUrl',undefined,'ir');setAppMessage({type:'alert',text:'IR 문서와 프로젝트 연결을 저장했습니다.'});}catch(err){setAppMessage({type:'alert',text:err.message});}finally{setUploadingPpt(false);}};
+
+      const handlePptRemove=async()=>{if(!confirm('IR 문서 연결을 삭제할까요?'))return;try{const ref=(inputs.assetRefs||[]).find(r=>r.field==='irPptFileUrl');if(ref)await CorrectAssets.remove(supabaseClient,ref);const next={...inputs,irPptFileName:'',irPptFilePath:null,irPptFileUrl:null,assetRefs:(inputs.assetRefs||[]).filter(r=>r!==ref)};await persistAssetPlan(currentProjectId,next);setInputs(next);}catch(e){setAppMessage({type:'alert',text:e.message});}};
+
+      const addBrandImage = () => {
+          setInputs(prev => ({
+              ...prev,
+              brandImages: [...(prev.brandImages || []), { id: Date.now(), name: '', imageBase64: null }]
+          }));
+      };
+
+      const removeBrandImage = (id) => {
+          setInputs(prev => ({
+              ...prev,
+              brandImages: prev.brandImages.filter(b => b.id !== id)
+          }));
+      };
+
+      const updateBrandImageField = (id, field, value) => {
+          setInputs(prev => ({
+              ...prev,
+              brandImages: prev.brandImages.map(b => b.id === id ? { ...b, [field]: value } : b)
+          }));
+      };
+
+      const handleBrandImageUpload=async(e,id)=>{const f=e.target.files[0];if(!f)return;try{if(f.size>2*1024*1024)throw Error('이미지는 2MB 이하여야 합니다.');await attachAsset(f,'brandImages',id,'brand');}catch(err){setAppMessage({type:'alert',text:err.message});}};
+
+      const hHandlers = {
+          addLevelItem: (pathIds, newObj, targetKey) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              targetArr.push(newObj); return {...p, salesHierarchy: h};
+          }),
+          rmLevelItem: (pathIds, targetId) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              const idx = targetArr.findIndex(x => x.id === targetId); if(idx > -1) targetArr.splice(idx, 1);
+              return {...p, salesHierarchy: h};
+          }),
+          updateName: (pathIds, targetId, val) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              const node = targetArr.find(x => x.id === targetId); if(node) node.name = val;
+              return {...p, salesHierarchy: h};
+          }),
+          updateField: (pathIds, targetId, field, arrIdx, val) => setInputs(p => {
+              const h = cloneDeep(p.salesHierarchy); let targetArr = h;
+              const keys = ['countries', 'brands', 'bizTypes', 'salesModes', 'channels', 'clients', 'categories', 'products'];
+              pathIds.forEach((id, i) => { targetArr = targetArr.find(x => x.id === id)[keys[i]] = targetArr.find(x => x.id === id)[keys[i]]||[]; });
+              const node = targetArr.find(x => x.id === targetId);
+              if(node) { if(arrIdx !== null) { node[field] = CorrectCore.padAll(node[field]); node[field][arrIdx] = val; } else node[field] = val; }
+              return {...p, salesHierarchy: h};
+          })
+      };
+
+      const treeActions = {
+          addRevType: () => hHandlers.addLevelItem([], {id: Date.now().toString(), name: '', countries: []}, 'salesHierarchy'),
+          rmRevType: (p, id) => hHandlers.rmLevelItem(p, id),
+          addCountry: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', brands: []}, 'countries'),
+          rmCountry: (p, id) => hHandlers.rmLevelItem(p, id),
+          addBrand: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', bizTypes: []}, 'brands'),
+          rmBrand: (p, id) => hHandlers.rmLevelItem(p, id),
+          addBizType: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', salesModes: []}, 'bizTypes'),
+          rmBizType: (p, id) => hHandlers.rmLevelItem(p, id),
+          addSalesMode: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', channels: []}, 'salesModes'),
+          rmSalesMode: (p, id) => hHandlers.rmLevelItem(p, id),
+          addChannel: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', clients: []}, 'channels'),
+          rmChannel: (p, id) => hHandlers.rmLevelItem(p, id),
+          addClient: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', categories: []}, 'clients'),
+          rmClient: (p, id) => hHandlers.rmLevelItem(p, id),
+          addCategory: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', products: []}, 'categories'),
+          rmCategory: (p, id) => hHandlers.rmLevelItem(p, id),
+          addProduct: (p, id) => hHandlers.addLevelItem([...p, id], {id: Date.now().toString(), name: '', isInternal: true, isForeignCurrency: false, prices: pad6([0]), volumes: pad6([0]), supplyCosts: pad6([0]), purchaseVolumes: pad6([0])}, 'products'),
+          rmProduct: (p, id) => hHandlers.rmLevelItem(p, id),
+          updateName: hHandlers.updateName, updateField: hHandlers.updateField
+      };
+
+      useEffect(() => {
+        if (!autoSaveEnabled || !user || !currentProjectId) return;
+        const timer = setTimeout(async () => {
+          setSaveStatus('자동 저장 중...');
+          try {
+            const basePayload = { name: projectName, inputs, updated_at: new Date().toISOString() };
+            const {data:savedRows,error} = await supabaseClient.from('feasibility_projects').update({ ...basePayload, is_public: isPublicProject }).eq('id', currentProjectId).select('id');
+            if(error) throw error;if(!savedRows?.length)throw Error('저장 결과가 없습니다.');
+            setSaveStatus('✅ 자동 저장 완료');
+            setTimeout(() => setSaveStatus(''), 2000);
+          } catch (e) { setSaveStatus('❌ 자동 저장 실패'); }
+        }, 2000);
+        return () => clearTimeout(timer);
+      }, [inputs, projectName, isPublicProject, autoSaveEnabled, currentProjectId, user]);
+
+      useEffect(() => {
+        const handlePaste = (e) => {
+          if (!isAdmin) return;
+          
+          const items = e.clipboardData?.items;
+          if (!items) return;
+          
+          for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              const blob = items[i].getAsFile();
+              
+              if (blob.size > 2 * 1024 * 1024) {
+                setAppMessage({ type: 'alert', text: "이미지 용량이 2MB를 초과하여 붙여넣을 수 없습니다." });
+                return;
+              }
+              
+              const reader = new FileReader();
+              reader.onload = (event) => setPendingPasteImage(event.target.result);
+              reader.readAsDataURL(blob);
+              break; 
+            }
+          }
+        };
+        
+        window.addEventListener('paste', handlePaste);
+        return () => window.removeEventListener('paste', handlePaste);
+      }, [isAdmin]);
+
+      const applyPaste=async(targetField,isMulti)=>{try{const blob=await(await fetch(pendingPasteImage)).blob(),file=new File([blob],'clipboard.png',{type:blob.type||'image/png'});if(isMulti)await attachAssetImages([file],targetField);else await attachAsset(file,targetField,undefined,'image');setPendingPasteImage(null);}catch(e){setAppMessage({type:'alert',text:e.message});}};
+
+      const handleZoomNav = (direction) => {
+          setZoomedImg(prev => {
+              if (!prev || !prev.images || prev.images.length <= 1) return prev;
+              let nextIndex = prev.index + direction;
+              if (nextIndex < 0) nextIndex = prev.images.length - 1;
+              if (nextIndex >= prev.images.length) nextIndex = 0;
+              return { ...prev, index: nextIndex };
+          });
+      };
+
+      useEffect(() => {
+          const handleKeyDown = (e) => {
+              if (!zoomedImg) return;
+              if (e.key === 'Escape') { setZoomedImg(null); return; }
+              
+              if (!zoomedImg.images || zoomedImg.images.length <= 1) return;
+              if (e.key === 'ArrowRight' || e.key === 'ArrowDown') handleZoomNav(1);
+              else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') handleZoomNav(-1);
+          };
+          
+          if (zoomedImg) window.addEventListener('keydown', handleKeyDown);
+          return () => window.removeEventListener('keydown', handleKeyDown);
+      }, [zoomedImg]);
+
+      CorrectCore.setHorizon(inputs.horizon);
+      document.documentElement.style.setProperty('--correct-periods',String(inputs.horizon+1));
+      const model = useMemo(() => CorrectCore.calculate(inputs,calculateOriginalModel), [inputs]);
+
+
+      const [assetDocs,setAssetDocs]=useState([]);
+      const assetProjectRef=React.useRef(null),assetRefreshRef=React.useRef(null);
+      useEffect(()=>{assetProjectRef.current=currentProjectId;},[currentProjectId]);
+      const persistAssetPlan=async(id,next)=>{const {data,error}=await supabaseClient.from('feasibility_projects').update({inputs:next,updated_at:new Date().toISOString()}).eq('id',id).select('id');if(error)throw error;if(!data?.length)throw Error('프로젝트 자료 연결 저장 결과가 없습니다.');};
+      const ensureAssetProject=async()=>{if(assetProjectRef.current)return assetProjectRef.current;const id=await handleSave();if(!id)throw Error('프로젝트 저장에 실패해 업로드를 중단했습니다.');assetProjectRef.current=id;return id;};
+      const attachAsset=async(file,field,itemId,kind='image',imageKey='imageBase64')=>{const projectId=await ensureAssetProject(),asset=await CorrectAssets.upload(supabaseClient,{file,projectId,ownerId:user.id,kind,title:file.name}),ref={...asset,field,itemId,imageKey};delete ref.url;let next=CorrectAssets.apply(inputs,ref,asset.url);next.assetRefs=[...(inputs.assetRefs||[]).filter(r=>!(r.field===field&&String(r.itemId)===String(itemId))),ref];if(field==='irPptFileUrl'){next.irPptFileName=file.name;next.irPptFilePath=asset.storage_path;next.irPptBucket=CorrectAssets.bucket;}await persistAssetPlan(projectId,next);setInputs(next);return asset;};
+      const attachAssetImages=async(files,field,sort=false)=>{const valid=Array.from(files).filter(f=>/^image\/(png|jpeg|webp)$/.test(f.type));if(valid.length!==files.length)throw Error('PNG/JPEG/WebP 이미지만 가능합니다.');if(valid.some(f=>f.size>2*1024*1024))throw Error('이미지는 2MB 이하여야 합니다.');const projectId=await ensureAssetProject(),items=[],refs=[];for(const file of valid){const a=await CorrectAssets.upload(supabaseClient,{file,projectId,ownerId:user.id,kind:'image',title:file.name}),id=crypto.randomUUID();items.push({id,name:file.name,imageBase64:a.url,isVisible:true});const ref={...a,field,itemId:id,imageKey:'imageBase64'};delete ref.url;refs.push(ref);}const next={...inputs,[field]:[...(inputs[field]||[]),...items],assetRefs:[...(inputs.assetRefs||[]),...refs]};if(sort)next[field].sort((a,b)=>a.name.localeCompare(b.name));await persistAssetPlan(projectId,next);setInputs(next);};
+      const refreshAssetLinks=async()=>{const refs=inputs.assetRefs||[];let next=inputs,changed=false;for(const ref of refs){try{const url=await CorrectAssets.signed(supabaseClient,ref.storage_path);next=CorrectAssets.apply(next,ref,url);changed=true;}catch(e){setSaveStatus('자료 URL 갱신 실패: '+e.message);}}if(changed)setInputs(next);if(currentProjectId){try{setAssetDocs(await CorrectAssets.list(supabaseClient,currentProjectId));}catch(e){setSaveStatus('문서 목록 조회 실패: '+e.message);}}};
+      assetRefreshRef.current=refreshAssetLinks;
+      useEffect(()=>{if(!user||!currentProjectId){setAssetDocs([]);return;}assetRefreshRef.current();const timer=setInterval(()=>assetRefreshRef.current(),45*60*1000);const onFocus=()=>assetRefreshRef.current();window.addEventListener('focus',onFocus);return()=>{clearInterval(timer);window.removeEventListener('focus',onFocus);};},[user?.id,currentProjectId]);
+      const removeAssetRef=async(ref)=>{await CorrectAssets.remove(supabaseClient,ref);const next={...inputs,assetRefs:(inputs.assetRefs||[]).filter(r=>r.id!==ref.id)};await persistAssetPlan(currentProjectId,next);setInputs(next);};
+
+      const [correctPreview,setCorrectPreview]=useState(false);
+      const applyCorrectInputs=(q,name)=>{try{const next=CorrectCore.migrate(q,ORIGINAL_DEFAULTS);CorrectCore.calculate(next,calculateOriginalModel);setInputs(next);setCurrentProjectId(null);setAutoSaveEnabled(false);setIsPublicProject(false);if(name)setProjectName(name);}catch(e){setAppMessage({type:'alert',text:e.message});}};
+      const resetCorrectProject=()=>{if(!confirm('모든 금액·인원·본문·이미지·문서 연결을 초기화할까요? DB 기존 프로젝트는 삭제하지 않습니다.'))return;setInputs(CorrectCore.fresh(ORIGINAL_DEFAULTS));setProjectName('새 프로젝트');setCurrentProjectId(null);setIsPublicProject(false);setAutoSaveEnabled(false);setCorrectPreview(false);try{localStorage.removeItem('correct-feasibility-v1');}catch(e){}};
+      useEffect(()=>{if(!inputs.irPptFilePath)return;let alive=true;supabaseClient.storage.from(inputs.irPptBucket||'feasibility_files').createSignedUrl(inputs.irPptFilePath,3600).then(({data,error})=>{if(alive&&!error&&data)setInputs(p=>({...p,irPptFileUrl:data.signedUrl}));});return()=>{alive=false;};},[inputs.irPptFilePath]);
+      window.CorrectUI={getInputs:()=>cloneDeep(inputs),getModel:()=>model,setInputs:applyCorrectInputs,showTab:setActiveTab};
 
       const getF = (k1, k2) => model.is_financial.map(d => k2 ? d[k1][k2] : d[k1]);
       const getM = (k1, k2) => model.is_managerial.map(d => k2 ? d[k1][k2] : d[k1]);
@@ -1685,6 +1758,7 @@
 
               <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50">
                 <InputGroup title="📂 프로젝트 데이터 관리">
+<CorrectProjectTools inputs={inputs} onApply={applyCorrectInputs} projectName={projectName} onMessage={m=>setAppMessage({type:'alert',text:m})} />
                    <input type="text" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="프로젝트명 입력" className="w-full text-xs font-bold border border-slate-300 rounded focus:border-red-700 outline-none p-2 mb-2 bg-slate-50" />
                    
                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-700 mb-3 bg-white p-2 border border-slate-200 rounded cursor-pointer">
@@ -1693,7 +1767,7 @@
 
                    <div className="flex gap-2 mb-3">
                      <button onClick={handleSave} className="flex-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold py-2 rounded shadow-sm transition-colors">💾 클라우드 저장</button>
-                     <button onClick={() => { setInputs(DEFAULT_INPUTS); setProjectName('새 프로젝트'); setCurrentProjectId(null); setIsPublicProject(false); setAutoSaveEnabled(false); }} className="flex-1 bg-white border border-slate-300 hover:border-slate-800 text-slate-800 text-[11px] font-bold py-2 rounded shadow-sm transition-colors">📄 신규 캔버스</button>
+                     <button onClick={resetCorrectProject} className="flex-1 bg-white border border-slate-300 hover:border-slate-800 text-slate-800 text-[11px] font-bold py-2 rounded shadow-sm transition-colors">📄 신규 캔버스</button>
                      {currentProjectId && (
                         <button onClick={() => setAppMessage({ type: 'confirm', text: '정말 이 프로젝트를 삭제하시겠습니까? 복구할 수 없습니다.', onConfirm: handleDelete })} className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-[11px] font-bold py-2 px-3 rounded shadow-sm transition-colors">🗑️ 삭제</button>
                      )}
@@ -1712,9 +1786,10 @@
 
                 {}
                 <InputGroup title="0. IR 자료 등록">
+<CorrectDocuments inputs={inputs} setInputs={setInputs} user={user} client={supabaseClient} ensureProject={ensureAssetProject} persist={persistAssetPlan} projectId={currentProjectId} documents={assetDocs} onRefresh={()=>assetRefreshRef.current()} onMessage={m=>setAppMessage({type:'alert',text:m})}/>
                     <p className="text-[10px] text-slate-500 mb-4 font-semibold bg-slate-100 p-2 rounded border border-slate-200">
                         IR 발표용 PPT 원본 파일과 화면에 보여질 각 슬라이드 이미지들을 업로드하세요. <br/>
-                        * 파일 원본은 <b>Supabase Storage</b>에 저장되어 용량 제한 없이 안전하게 관리되며 다운로드 용도로 쓰입니다.
+                        * 파일 원본은 <b>Supabase Storage</b>에 저장되어 파일당 20MB까지 관리되며 다운로드 용도로 쓰입니다.
                     </p>
                     
                     <div className="mb-4 p-2 bg-indigo-50/50 border border-indigo-100 rounded">
@@ -1722,7 +1797,7 @@
                         <div className="flex items-center gap-2">
                            <input 
                               type="file" 
-                              accept=".ppt, .pptx, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                              accept=".ppt,.pptx,.pdf,.doc,.docx,.xls,.xlsx,.txt" 
                               onChange={handlePptUpload} 
                               disabled={uploadingPpt}
                               className={`block w-full text-[10px] text-slate-500 file:mr-4 file:py-1 file:px-2 file:rounded file:border-0 file:text-[10px] file:font-bold ${uploadingPpt ? 'file:bg-indigo-300' : 'file:bg-indigo-600 hover:file:bg-indigo-700'} file:text-white cursor-pointer border border-slate-300 rounded bg-white transition-colors`} 
@@ -1872,7 +1947,9 @@
                     </div>
                 </InputGroup>
 
-                <InputGroup title="2. 거시환경변수">
+                <InputGroup title="1-1. 평가기간 및 계산 방식"><CorrectEvaluation inputs={inputs} setInputs={setInputs}/></InputGroup>
+<InputGroup title="2. 거시환경변수">
+<CorrectMacro inputs={inputs} setInputs={setInputs}/>
                   <YearlyInputField label="물가상승률 (%)" arrName="inflationRate" values={inputs.inflationRate} onChangeArray={handleArrayChange} />
                   <YearlyInputField label="조달 금리 (%)" arrName="interestRate" values={inputs.interestRate} onChangeArray={handleArrayChange} />
                   <YearlyInputField label="환율 (원/$)" arrName="exchangeRate" values={inputs.exchangeRate} onChangeArray={handleArrayChange} />
@@ -1887,7 +1964,7 @@
                   <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">자기자본 (Equity) 지분율 시뮬레이션</div>
                   <YearlyInputField label="증자 시 기업가치 (Post-money, 단위: 백만원)" arrName="equityValuation" values={inputs.equityValuation} onChangeArray={handleArrayChange} />
                   <p className="text-[10px] text-slate-500 mb-5 font-semibold leading-relaxed bg-slate-100 p-2 border border-slate-200 rounded">
-                     * <strong className="text-slate-700">Y1~Y5 추가 증자 시</strong>, 위 평가된 기업가치를 기준으로 신주 발행에 따른 <b>지분 희석(Dilution)</b>이 자동 계산됩니다.<br/>
+                     * <strong className="text-slate-700">Y1~선택기말 추가 증자 시</strong>, 위 평가된 기업가치를 기준으로 신주 발행에 따른 <b>지분 희석(Dilution)</b>이 자동 계산됩니다.<br/>
                      * 0을 입력하거나 해당 연도 총 투자액보다 낮게 입력할 경우, 기존 누적 투자금 비율에 맞춰 액면가 증자(희석 없음)된 것으로 간주합니다.
                   </p>
 
@@ -1911,7 +1988,9 @@
                   <DynamicListYearly listName="intangibleList" items={inputs.intangibleList} title="무형자산 투자 (백만원)" namePlaceholder="항목" hasUsefulLife onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
                 </InputGroup>
 
-                <InputGroup title="5. 자금소요 (운전자본 및 제조경비)">
+                <InputGroup title="4-1. 인건비 · 보험 · 퇴직 · 배부"><CorrectPayroll inputs={inputs} setInputs={setInputs} model={model}/></InputGroup>
+<InputGroup title="5. 자금소요 (운전자본 및 제조경비)">
+<CorrectManufacturing inputs={inputs} setInputs={setInputs}/>
                   <DynamicBaseCostList listName="baseCostList" items={inputs.baseCostList} title="기본 제조원가 (연간 총액 백만원)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                   <DynamicExpRateList listName="directExpList" items={inputs.directExpList} title="직접 제조경비율 (기본원가 대비 %)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                   <DynamicExpRateList listName="indirectExpList" items={inputs.indirectExpList} title="간접 제조경비율 (기본원가 대비 %)" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
@@ -1950,7 +2029,7 @@
                       return extProds.map(p => (
                          <div key={p.id} className="bg-orange-50 border border-orange-200 rounded p-2 shadow-sm">
                            <div className="text-[11px] font-bold text-orange-800 mb-1.5 truncate">{p.name || '품목명 없음'}</div>
-                           <div className="grid grid-cols-6 gap-1">
+                           <div className="grid correct-year-grid gap-1">
                               {pad6(p.purchaseVolumes).map((vol, i) => {
                                  const currentExRate = p.isForeignCurrency ? ((inputs.exchangeRate||[])[i]||1) : 1;
                                  const cost = (p.supplyCosts||[])[i]||0;
@@ -2007,7 +2086,7 @@
                   <div className="my-6 border-t border-dashed border-slate-300"></div>
 
                   <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">고정비 설정</div>
-                  <DynamicMixedWcList listName="sgaFixList" items={inputs.sgaFixList} title="항목별 고정비" namePlaceholder="항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
+                  <CorrectLegacyLaborExclusions inputs={inputs} setInputs={setInputs}/><DynamicMixedWcList listName="sgaFixList" items={inputs.sgaFixList} title="항목별 고정비" namePlaceholder="항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} model={model} />
                 </InputGroup>
 
                 <InputGroup title="7. 매출액 추정 (완전 개방형 9단계 트리)">
@@ -2016,11 +2095,13 @@
                     <button onClick={treeActions.addRevType} className="text-[10px] font-bold bg-slate-800 text-white hover:bg-slate-700 px-3 py-1.5 rounded transition-colors shadow-sm">+ 매출 유형 추가</button>
                   </div>
                   <div className="flex flex-col border-t border-slate-200">
-                    <HierarchyEditor list={inputs.salesHierarchy} level={0} pathIds={[]} handlers={treeActions} />
+                    <CorrectTreeEditor inputs={inputs} setInputs={setInputs} />
                   </div>
                 </InputGroup>
 
-                <InputGroup title="8. 영업외수익/비용">
+                <InputGroup title="7-1. 적정재고 월별 통합모형"><CorrectInventoryInputs inputs={inputs} setInputs={setInputs} model={model}/></InputGroup>
+<InputGroup title="8. 영업외수익/비용">
+<p className="correct-note">금융이자는 2번 금리와 차입잔액으로 별도 계산합니다. 현금/비현금 영업외 항목은 세전·세금·순이익에 반영하며 FCFF에서 제외합니다. 비현금 순이익은 기타자산(음수면 기타부채)으로 누적합니다.</p>
                   <div className="bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded-sm inline-block mb-3">영업외수익 (단위: 백만원)</div>
                   <DynamicListYearly listName="nonOpIncCashList" items={inputs.nonOpIncCashList} title="현금성 수익" namePlaceholder="수익 항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
                   <DynamicListYearly listName="nonOpIncNonCashList" items={inputs.nonOpIncNonCashList} title="비현금성 수익" namePlaceholder="수익 항목명" onAdd={addListItem} onRemove={removeListItem} onFieldChange={handleListField} onAmountChange={handleListAmt} />
@@ -2066,6 +2147,7 @@
                 { id: 'is_mgr', label: '📈 관리회계 손익계산서' },
                 { id: 'bs', label: '🏦 재무상태표 (B/S)' },
                 { id: 'cf', label: '💵 현금흐름표 (C/F)' },
+{ id: 'checks', label: '정합성 대사' },{ id: 'inventory', label: '적정재고 월별보고서' },
                 { id: 'monthly_sales', label: '📅 월별영업현황표', url: 'https://joey1891.github.io/Sales-Forecast/' },
                 { id: 'price_list', label: '💰 상품가격표', url: 'https://price-list-three-woad.vercel.app/' },
               ].map(tab => (
@@ -2084,11 +2166,15 @@
               ))}
             </div>
 
-            <div className="flex-1 overflow-auto p-8 custom-scrollbar relative">
-              <div className="max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden">
+            <div className="correct-report-scroll flex-1 overflow-auto p-8 custom-scrollbar relative">
+<CorrectPrintTools preview={correctPreview} setPreview={setCorrectPreview} />
+{model.correctWarnings?.length>0&&<div className="correct-note correct-warning">{model.correctWarnings.map((m,i)=><p key={i}>{m}</p>)}</div>}
+              <div className={`correct-paper max-w-[1200px] mx-auto bg-white border border-slate-200 shadow-lg rounded-sm mb-12 overflow-hidden ${correctPreview?'correct-preview':''}`}>
                 
-                {/* 0. IR 자료 탭 (Updated for Supabase URL) */}
-                <div style={{ display: activeTab === 'ir_data' ? 'block' : 'none' }}>
+                <div data-report="checks" style={{display:activeTab==='checks'?'block':'none'}}><CorrectChecks model={model}/></div>
+<div data-report="inventory" style={{display:activeTab==='inventory'?'block':'none'}}><CorrectInventoryReport model={model}/></div>
+{/* 0. IR 자료 탭 (Updated for Supabase URL) */}
+                <div data-report="ir_data" style={{ display: activeTab === 'ir_data' ? 'block' : 'none' }}>
                   <div className="px-10 py-10 border-b-4 border-slate-900 bg-white">
                       <div className="flex justify-between items-end mb-6">
                           <h2 className="text-3xl font-black text-slate-900 tracking-tight">IR 자료 (Investor Relations)</h2>
@@ -2117,7 +2203,7 @@
                 </div>
 
                 {/* 1. 기업 미션 및 비전 탭 */}
-                <div style={{ display: activeTab === 'mission_vision' ? 'block' : 'none' }}>
+                <div data-report="mission_vision" style={{ display: activeTab === 'mission_vision' ? 'block' : 'none' }}>
                   <div className="px-10 py-10 border-b-4 border-slate-900 bg-white">
                       <div className="flex justify-between items-end mb-6">
                           <h2 className="text-3xl font-black text-slate-900 tracking-tight">기업 미션 및 비전</h2>
@@ -2223,7 +2309,7 @@
                 </div>
 
                 {/* 2. NPV 사업타당성 종합 분석 보고서 탭 */}
-                <div style={{ display: activeTab === 'npv' ? 'block' : 'none' }}>
+                <div data-report="npv" style={{ display: activeTab === 'npv' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50">
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight">사업타당성 종합 분석 보고서</h2>
                     <p className="text-xs text-slate-500 mt-2 font-semibold">Feasibility Analysis Summary</p>
@@ -2233,7 +2319,7 @@
                     <div className="mb-10 bg-slate-50 border border-slate-200 rounded p-5 shadow-sm">
                       <h3 className="text-sm font-black text-slate-900 tracking-wide mb-4">📌 주요 모델 가정 요약 (Key Assumptions)</h3>
                       <div className="grid grid-cols-3 gap-x-8 gap-y-3">
-                        <div className="flex justify-between border-b border-slate-200 pb-1"><span className="text-[11px] text-slate-500 font-bold">인플레이션율 (Y1~Y5)</span><span className="text-[12px] font-black text-slate-800">{pad6(inputs.inflationRate).slice(1).map(v=>v+'%').join(' / ')}</span></div>
+                        <div className="flex justify-between border-b border-slate-200 pb-1"><span className="text-[11px] text-slate-500 font-bold">인플레이션율 (Y1~선택기말)</span><span className="text-[12px] font-black text-slate-800">{pad6(inputs.inflationRate).slice(1).map(v=>v+'%').join(' / ')}</span></div>
                         <div className="flex justify-between border-b border-slate-200 pb-1"><span className="text-[11px] text-slate-500 font-bold">타인자본조달 금리 (Y0)</span><span className="text-[12px] font-black text-slate-800">{formatPercent((inputs.interestRate||[])[0]/100)}</span></div>
                         <div className="flex justify-between border-b border-slate-200 pb-1"><span className="text-[11px] text-slate-500 font-bold">법인세율 (Y0)</span><span className="text-[12px] font-black text-slate-800">{formatPercent((inputs.taxRate||[])[0]/100)}</span></div>
                         <div className="flex justify-between border-b border-slate-200 pb-1"><span className="text-[11px] text-slate-500 font-bold">WACC (가중평균자본비용)</span><span className="text-[12px] font-black text-red-600">{formatPercent(model.wacc)}</span></div>
@@ -2250,7 +2336,7 @@
                         <thead className="bg-slate-50 border-b border-slate-200">
                            <tr>
                              <th className="py-2.5 px-4 text-left text-[11px] font-bold text-slate-600">검증 항목</th>
-                             {[0,1,2,3,4,5].map(y => <th key={y} className="py-2.5 px-2 text-[11px] font-bold text-slate-600">Y{y}</th>)}
+                             {CorrectCore.indices().map(y => <th key={y} className="py-2.5 px-2 text-[11px] font-bold text-slate-600">Y{y}</th>)}
                            </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -2263,7 +2349,7 @@
                            ].map((item, idx) => (
                               <tr key={idx} className="hover:bg-slate-50">
                                  <td className="py-2 px-4 text-left text-[11px] text-slate-700 font-semibold">{item.label}</td>
-                                 {[0,1,2,3,4,5].map(y => {
+                                 {CorrectCore.indices().map(y => {
                                     const isPass = item.checkFn(y);
                                     return <td key={y} className={`py-2 px-2 text-[11px] font-bold ${isPass ? 'text-green-600' : 'text-red-600'}`}>{isPass ? 'Pass' : 'Fail'}</td>
                                  })}
@@ -2314,7 +2400,7 @@
                         <div className="absolute top-0 left-0 w-1 h-full bg-slate-800"></div>
                         <div>
                             <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">투자회수기간 (Payback)</p>
-                            <p className="text-3xl font-black text-slate-900 tracking-tighter">{model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> 5'} <span className="text-sm font-bold text-slate-500">년</span></p>
+                            <p className="text-3xl font-black text-slate-900 tracking-tighter">{model.paybackPeriod !== null ? model.paybackPeriod.toFixed(1) : '> '+inputs.horizon} <span className="text-sm font-bold text-slate-500">년</span></p>
                         </div>
                         <p className="text-[10px] text-slate-400 mt-4 font-semibold">투자금 전액 회수 소요 기간</p>
                       </div>
@@ -2324,7 +2410,7 @@
                         <div>
                             <p className="text-slate-500 text-[11px] font-bold mb-2 uppercase tracking-widest">목표 손익분기 (BEP)</p>
                             <div className="space-y-1.5 mt-2">
-                                {[0,1,2,3,4,5].map(y => (
+                                {CorrectCore.indices().map(y => (
                                    <div key={y} className="flex justify-between items-center text-[11px]">
                                      <span className="text-slate-400 font-bold">Y{y}</span>
                                      <span className="font-bold text-slate-800">{formatCurrency(model.is_managerial[y]?.bepRevenue / 1000000)} 백만</span>
@@ -2422,7 +2508,7 @@
                             )}
                             {(!inputs.terminalValueMethod || inputs.terminalValueMethod === 'nav') && (
                                 <React.Fragment>
-                                    ▶ <b>순자산가치(청산가치) 방식:</b> Y5 시점의 잔여 순자산을 기반으로 산출<br/>
+                                    ▶ <b>순자산가치(청산가치) 방식:</b> 선택 기말 시점의 잔여 순자산을 기반으로 산출<br/>
                                     <span className="text-[10px] text-slate-400 pl-3 block mt-0.5">
                                         = (유동자산 - 현금) - (유동부채 - 차입금) + 비유동자산<br/>
                                         = (매출채권 + 재고자산 + 선급금 + 미수금) - (매입채무 + 선수금 + 미지급금) + (유형자산 + 무형자산 + 기타비유동자산)
@@ -2431,9 +2517,9 @@
                             )}
                             {inputs.terminalValueMethod === 'pgm' && (
                                 <React.Fragment>
-                                    ▶ <b>영구성장모형(Going Concern) 방식:</b> 추정기간(Y5) 이후에도 잉여현금흐름(FCFF)이 일정 비율(g)로 영구히 성장한다고 가정<br/>
+                                    ▶ <b>영구성장모형(Going Concern) 방식:</b> 선택 추정기간 이후에도 잉여현금흐름(FCFF)이 일정 비율(g)로 영구히 성장한다고 가정<br/>
                                     <span className="text-[10px] text-slate-400 pl-3 block mt-0.5">
-                                        = (Y5 잉여현금흐름 × (1 + 영구성장률)) ÷ (WACC - 영구성장률)
+                                        = (기말 잉여현금흐름 × (1 + 영구성장률)) ÷ (WACC - 영구성장률)
                                     </span>
                                 </React.Fragment>
                             )}
@@ -2443,7 +2529,7 @@
                 </div>
 
                 {/* 3. 재무회계 손익계산서 탭 */}
-                <div style={{ display: activeTab === 'is_fin' ? 'block' : 'none' }}>
+                <div data-report="is_fin" style={{ display: activeTab === 'is_fin' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">재무회계 추정손익계산서</h2>
@@ -2465,9 +2551,9 @@
                         ]} />
                         <ExpandableRow label="III. 매출총이익" values={getF('grossProfit')} ratios={calcRatio(getF('grossProfit'))} isTotal details={model.gpAnalysisTree} />
                         <ExpandableRow label="IV. 판매비와관리비" values={getF('totalSga')} ratios={calcRatio(getF('totalSga'))} details={[
-                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), ratios: calcRatio(getF('sgaDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
-                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), isGroup: true, level: 1, sub: inputs.sgaSemiList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
-                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), isGroup: true, level: 1, sub: inputs.sgaFixList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
+                            { label: '직접변동 판관비', values: getF('sgaDetails', 'totalSgaVar'), ratios: calcRatio(getF('sgaDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: (model.inventoryLinked?[]:inputs.sgaVarList).map(it => { const vals = pad6(CorrectCore.indices()).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
+                            { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), isGroup: true, level: 1, sub: (model.inventoryLinked?[]:inputs.sgaSemiList).map(it => { const vals = pad6(CorrectCore.indices()).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
+                            { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), isGroup: true, level: 1, sub: (model.inventoryLinked?[]:inputs.sgaFixList).map(it => { const vals = pad6(CorrectCore.indices()).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) },
                             { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), ratios: calcRatio(getF('sgaDetails', 'amortization')), isGroup: true, level: 1 },
                           ]} />
                         <ExpandableRow label="V. 영업이익" values={getF('operatingProfit')} ratios={calcRatio(getF('operatingProfit'))} isHeader />
@@ -2489,7 +2575,7 @@
                 </div>
 
                 {/* 4. 관리회계 손익계산서 탭 */}
-                <div style={{ display: activeTab === 'is_mgr' ? 'block' : 'none' }}>
+                <div data-report="is_mgr" style={{ display: activeTab === 'is_mgr' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">관리회계 추정손익계산서</h2>
@@ -2505,19 +2591,19 @@
                         <ExpandableRow label="II. 변동비" values={getM('variableCosts')} ratios={calcRatio(getM('variableCosts'))} details={[
                             { label: '자체생산 변동 원가', values: model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs), ratios: calcRatio(model.is_managerial.map((d,i) => d.variableCosts - d.varCostDetails.totalSgaVar - model.is_financial[i].externalCogs)), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>!f.label.includes('감가상각')).map(f => ({...f, ratios: calcRatio(f.values)})) },
                             { label: '외부조달 상품 원가', values: getF('externalCogs'), ratios: calcRatio(getF('externalCogs')), isGroup: true, level: 1, sub: model.externalCogsDetails },
-                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), ratios: calcRatio(getM('varCostDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: inputs.sgaVarList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) }
+                            { label: '판매 변동비', values: getM('varCostDetails', 'totalSgaVar'), ratios: calcRatio(getM('varCostDetails', 'totalSgaVar')), isGroup: true, level: 1, sub: (model.inventoryLinked?[]:inputs.sgaVarList).map(it => { const vals = pad6(CorrectCore.indices()).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 2 }; }) }
                           ]} />
                         <ExpandableRow label="III. 공헌이익" values={getM('contributionMargin')} ratios={calcRatio(getM('contributionMargin'))} isTotal />
                         <ExpandableRow label="IV. 고정비" values={getM('fixedCosts')} ratios={calcRatio(getM('fixedCosts'))} details={[
                             { label: '제조 고정비', values: model.is_financial.map((d,i) => model.is_managerial[i].fixedCosts - d.sgaDetails.totalSgaSemi - d.sgaDetails.totalSgaFixOnly - d.sgaDetails.amortization), ratios: calcRatio(model.is_financial.map((d,i) => model.is_managerial[i].fixedCosts - d.sgaDetails.totalSgaSemi - d.sgaDetails.totalSgaFixOnly - d.sgaDetails.amortization)), isGroup: true, level: 1, sub: model.internalCogsFactorTree.filter(f=>f.label.includes('감가상각')).map(f => ({...f, ratios: calcRatio(f.values)})) },
                             { label: '준변동/고정 판관비', values: model.is_financial.map(d => d.sgaDetails.totalSgaSemi + d.sgaDetails.totalSgaFixOnly + d.sgaDetails.amortization), ratios: calcRatio(model.is_financial.map(d => d.sgaDetails.totalSgaSemi + d.sgaDetails.totalSgaFixOnly + d.sgaDetails.amortization)), isGroup: true, level: 1, sub: [
-                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), level: 2, sub: inputs.sgaSemiList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
-                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), level: 2, sub: inputs.sgaFixList.map(it => { const vals = pad6([0,1,2,3,4,5]).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
+                                { label: '준변동 판관비', values: getF('sgaDetails', 'totalSgaSemi'), ratios: calcRatio(getF('sgaDetails', 'totalSgaSemi')), level: 2, sub: (model.inventoryLinked?[]:inputs.sgaSemiList).map(it => { const vals = pad6(CorrectCore.indices()).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
+                                { label: '고정 판관비', values: getF('sgaDetails', 'totalSgaFixOnly'), ratios: calcRatio(getF('sgaDetails', 'totalSgaFixOnly')), level: 2, sub: (model.inventoryLinked?[]:inputs.sgaFixList).map(it => { const vals = pad6(CorrectCore.indices()).map((_, i) => { const type = it.calcType||(it.isRate?'rate':'amount'); const r = pad6(it.rates)[i]||0; const a = pad6(it.amounts)[i]||0; if(type==='rate') return getF('revenue')[i]*(r/100); if(type==='labor_rate') return model.totalLaborArr[i]*(r/100); return toMil(a)*model.infMultArr[i]; }); return { label: it.name, values: vals, ratios: calcRatio(vals), level: 3 }; }) },
                                 { label: '무형자산상각비', values: getF('sgaDetails', 'amortization'), ratios: calcRatio(getF('sgaDetails', 'amortization')), level: 2 }
                             ]}
                           ]} />
                         <ExpandableRow label="V. 영업이익" values={getM('operatingProfit')} ratios={calcRatio(getM('operatingProfit'))} isHeader />
-                        <tr><td colSpan="7" className="h-4 bg-slate-50 border-t border-slate-300"></td></tr>
+                        <tr><td colSpan={CorrectCore.count()+1} className="h-4 bg-slate-50 border-t border-slate-300"></td></tr>
                         <ExpandableRow label="[참고] 목표 손익분기 매출액 (BEP)" values={getM('bepRevenue')} isTotal />
                       </tbody>
                     </table>
@@ -2543,7 +2629,7 @@
                 </div>
 
                 {/* 5. 재무상태표 탭 */}
-                <div style={{ display: activeTab === 'bs' ? 'block' : 'none' }}>
+                <div data-report="bs" style={{ display: activeTab === 'bs' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">추정 재무상태표</h2>
@@ -2583,7 +2669,7 @@
                               { label: '선수금/선수수익', values: getB('bsDetails', 'advancesNet'), level: 1 },
                               { label: '미지급금/예수금', values: getB('bsDetails', 'accruedNet'), level: 1 }
                             ]} />
-                          <ExpandableRow label="II. 비유동부채" values={getB('nonCurrentLiabilities')} isBold details={[{ label: '장기차입금', values: getB('bsDetails', 'debt'), level: 1 }]} />
+                          <ExpandableRow label="II. 비유동부채" values={getB('nonCurrentLiabilities')} isBold details={[{ label: '장기차입금', values: getB('bsDetails', 'debt'), level: 1 },{label:'비현금손실 누적 기타부채',values:model.bs.map(b=>b.bsDetails.otherNonCashLiability||0),level:1}]} />
                           <ExpandableRow label="부채 총계" values={getB('totalLiabilities')} isTotal />
                           <ExpandableRow label="III. 자본금" values={getB('bsDetails', 'capital')} isBold />
                           <ExpandableRow label="IV. 이익잉여금" values={getB('bsDetails', 'retainedEarnings')} isBold />
@@ -2596,7 +2682,7 @@
                 </div>
 
                 {/* 6. 현금흐름표 탭 */}
-                <div style={{ display: activeTab === 'cf' ? 'block' : 'none' }}>
+                <div data-report="cf" style={{ display: activeTab === 'cf' ? 'block' : 'none' }}>
                   <div className="px-10 py-8 border-b border-slate-200 bg-slate-50 flex justify-between items-end">
                     <div>
                       <h2 className="text-2xl font-black text-slate-900 tracking-tight">추정 현금흐름표</h2>
@@ -2737,3 +2823,10 @@
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
