@@ -71,7 +71,7 @@ nav{display:flex;flex-direction:column;gap:2px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 
 /* ---------- layout ---------- */
-.view{display:none;animation:fade .18s ease}
+.view{display:none}
 .view.on{display:block}
 @keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .cols{display:grid;grid-template-columns:minmax(0,1.62fr) minmax(300px,1fr);gap:16px;align-items:start}
@@ -125,6 +125,10 @@ select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;max-width:100%}
 table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;font-variant-numeric:tabular-nums}
 .tbl th{background:#f3f6f9;color:#54677c;font-size:10.6px;font-weight:800;letter-spacing:.03em;padding:8px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;position:sticky;top:0;z-index:2}
+#sgaFixed,#sgaSemi,#sgaVar{min-width:650px}
+#rankSettings .extended-result th{min-width:112px}
+#rankSettings .extended-result th:first-child{min-width:160px}
+#rankSettings .extended-result{min-width:650px}
 .tbl thead th.l{text-align:left}
 table.tbl.plain thead th{position:static}
 .tbl th .u{font-weight:600;color:var(--mut2);font-size:9.6px;display:block;margin-top:1px;letter-spacing:0}
@@ -357,6 +361,7 @@ table.tbl.plain thead th{position:static}
 .detail-toggle{border:0;background:transparent;text-align:left;cursor:pointer;font-size:inherit;font-weight:inherit;line-height:1.5;padding:3px 2px;color:inherit;white-space:normal}.detail-toggle span[aria-hidden]{color:var(--teal);display:inline-block;width:13px}.detail-toggle:hover{color:var(--teal)}.tree-depth{display:inline-block;min-width:17px;border:1px solid var(--line);border-radius:3px;text-align:center;color:var(--teal);font-size:10px}.detail-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--tealSoft);font-size:11.5px}.detail-tools label{display:flex;align-items:center;gap:7px;font-weight:700}.detail-tools select{width:auto;max-width:270px;padding:6px}.detail-tools input{width:80px;padding:6px}.detail-tools span{color:var(--mut);font-size:11px}.linked-analysis{margin-top:16px}.detail-analysis{min-width:1000px}.detail-analysis td:first-child{max-width:340px;white-space:normal}.account-node td:first-child{min-width:310px;white-space:normal}.account-node td:not(:first-child){min-width:95px}.account-node td{font-size:11.5px}.formula-note{margin:12px 0 0;font-size:11.5px;line-height:1.85;overflow-wrap:anywhere}.wc-card{margin-top:16px}.wc-card input{min-width:100px}#fcfTable{min-width:960px}#fcfTable td:first-child,#stmtTable td:first-child{min-width:290px;max-width:430px;white-space:normal}#fcfTable td:not(:first-child){min-width:95px}#view-value>.cols{grid-template-columns:minmax(0,1fr)}#view-value>.cols>.rail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:static;gap:16px}#view-value>.cols>.rail .note{margin:0}.tablewrap{overscroll-behavior-x:contain}@media(max-width:700px){#view-value>.cols>.rail{grid-template-columns:1fr}.detail-tools label{flex-wrap:wrap}}@media print{.detail-tools{display:none}.detail-toggle{color:inherit}}
 .formula-note{font-size:12.5px;padding:16px;line-height:1.9}.detail-tools:focus-within{box-shadow:inset 0 0 0 1px var(--teal)}
 .auth-gate{min-height:100vh;display:grid;place-items:center;padding:28px;background:var(--navy)}.gate-card{width:min(100%,470px);padding:36px;background:var(--card);border-radius:10px;border-top:5px solid var(--teal);box-shadow:var(--shadow)}.gate-mark{font-weight:800;color:var(--teal);font-size:13px}.gate-card h1{font-size:26px;margin:14px 0 8px}.gate-card p{font-size:13px;color:var(--mut)}.gate-status{margin:20px 0;padding:12px;background:var(--tealSoft);border-radius:5px;overflow-wrap:anywhere}.gate-card form{display:grid;gap:14px;margin-bottom:12px}.gate-card label{font-size:12px;font-weight:700;display:grid;gap:6px}.gate-card input{width:100%;padding:10px;border:1px solid var(--line);border-radius:4px}.gate-security{margin-top:24px;font-size:11px!important;line-height:1.8}[hidden]{display:none!important}
+.extended-card{margin:18px 0}.extended-card h3{font-size:13px;margin:16px 0 8px}.extended-result{min-width:880px}.extended-result th,.extended-result td{padding:8px 10px}.extended-result td:first-child{min-width:240px;max-width:420px;white-space:normal;overflow-wrap:anywhere}.extended-result input{min-width:90px;max-width:145px;width:100%;padding:6px;border:1px solid var(--line);border-radius:4px}.extended-result select{min-width:105px;width:auto;padding:6px}#rankSettings .extended-result{min-width:1640px}#rankSettings .extended-result td:first-child{min-width:190px}#vatSettings .extended-result{min-width:1050px}#demandTree .treecell{min-width:380px}#demandTree input.txt{min-width:180px}#demandTree{min-width:1640px}#periodResults .extended-result{min-width:1050px}.yearbar label{display:flex;gap:6px;align-items:center}.extended-card details summary{cursor:pointer;font-weight:700;padding:10px;background:var(--tealSoft)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -419,7 +424,7 @@ table.tbl.plain thead th{position:static}
               <label class="field"><span class="lb">사업명</span><span class="inp"><input type="text" data-bind="meta.name" placeholder="예: 2027 프리미엄 리빙 사업"></span></label>
               <label class="field"><span class="lb">기준연도 (Y1)</span><span class="inp"><input type="number" data-bind="meta.startYear" min="2020" max="2100" step="1"><i>년</i></span></label>
               <label class="field"><span class="lb">분석 기간</span><select data-bind="meta.years" data-num="1"><option value="3">3년</option><option value="4">4년</option><option value="5">5년</option><option value="6">6년</option><option value="7">7년</option></select></label>
-              <label class="field"><span class="lb">금액 표시 단위</span><select disabled><option>만원 (고정)</option></select><span class="help">원 단위 입력, 표는 만원 표시</span></label>
+              <label class="field"><span class="lb">금액 표시 단위</span><select disabled><option>상단 결과 단위 선택</option></select><span class="help">입력은 원, 결과는 상단에서 원·백만원·억원 선택</span></label>
             </div>
             <div class="divider"></div>
             <div class="fgrid">
@@ -637,7 +642,7 @@ table.tbl.plain thead th{position:static}
         </div>
         <div style="padding:16px 18px 6px" class="stmt-head">
           <div><h3 id="stmtTitle">손익계산서</h3><p id="stmtDesc">발생주의 기준.</p></div>
-          <div class="badge neutral" id="stmtUnit">단위: 만원</div>
+          <div class="badge neutral" id="stmtUnit">상단 선택 단위</div>
         </div>
         <div class="tablewrap" style="border:none;border-radius:0;border-top:1px solid var(--line2)">
           <table class="tbl" id="stmtTable"></table>
@@ -724,7 +729,7 @@ const fmt={
   pct:v=>(+v||0).toFixed(1)+'%',
   eok:v=>{const n=+v||0,a=Math.abs(n);if(a>=1e8)return (n/1e8).toFixed(a>=1e10?1:2).replace(/\.0+$/,'')+'억';if(a>=1e4)return Math.round(n/1e4).toLocaleString('ko-KR')+'만';return Math.round(n).toLocaleString('ko-KR');}
 };
-function shortWon(v){ const n=+v||0,a=Math.abs(n);
+function shortWon(v){if(typeof formatMoney==='function')return formatMoney(v)+' '+unitLabel(); const n=+v||0,a=Math.abs(n);
   if(a>=1e8) return (n/1e8).toFixed(a>=1e10?1:2).replace(/\.0+$/,'')+'억';
   if(a>=1e4) return Math.round(n/1e4).toLocaleString('ko-KR')+'만';
   return Math.round(n).toLocaleString('ko-KR');
@@ -829,6 +834,7 @@ function defaultState(){
 function normNode(n,level){
   const out={id:n.id||uid(level===9?'p':'g'),name:String(n.name||(level===9?'제품':'그룹'))};
   if(level>=9){
+    if(n.vat)out.vat=clone(n.vat);
     out.years=clone(n.years||{});
     out.price=Math.max(0,num(n.price,0));
     out.cost=Math.max(0,num(n.cost,0));
@@ -945,7 +951,7 @@ function simulateProduct(p,cfg,months,H){
   }
   let stock=Math.max(0,num(cfg.stock,0));
   let value=stock*(cfg.openingUnitCost??cost);
-  const rows=[],orders=[],arrivals=new Array(NM+24).fill(0),arrivalValues=new Array(NM+24).fill(0);
+  const rows=[],orders=[],arrivals=new Array(NM+24).fill(0),arrivalValues=new Array(NM+24).fill(0),arrivalTax=new Array(NM+24).fill(0),arrivalDeduct=new Array(NM+24).fill(0);
   let onOrder=0;
   const yearDemand=[];
   for(let y=0;y<H;y++) yearDemand.push(dem.slice(y*12,y*12+12).reduce((a,b)=>a+b,0));
@@ -954,7 +960,7 @@ function simulateProduct(p,cfg,months,H){
     const lead=Math.max(0,num(cy.lead)),L=lead>0?Math.max(1,Math.ceil(lead/30)):0;
     const safetyDays=Math.max(0,num(cy.safety)),moq=Math.max(0,num(cy.moq)),lot=Math.max(1,num(cy.lot,1));
     const openingQty=stock,openingValue=value;
-    let arr=arrivals[i]||0,purchaseCost=arrivalValues[i]||0; stock+=arr;value+=purchaseCost;onOrder-=arr;
+    let arr=arrivals[i]||0,purchaseCost=arrivalValues[i]||0,purchaseVAT=arrivalTax[i]||0,purchaseDeduct=arrivalDeduct[i]||0; stock+=arr;value+=purchaseCost;onOrder-=arr;
     const d=dem[i],daily=d/months[i].days,yearDaily=(yearDemand[months[i].yi]||0)/365;
     const ss=yearDaily*safetyDays, rop=daily*(lead+30)+ss, target=daily*(lead+60)+ss;
     const avail=stock+onOrder;
@@ -962,12 +968,13 @@ function simulateProduct(p,cfg,months,H){
     if(d>0&&(avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
       let q=Math.max(moq,target-avail); q=Math.ceil(q/lot)*lot;
       if(Number.isFinite(q)&&q>0){ ordered=q; onOrder+=q; arrivals[i+L]=(arrivals[i+L]||0)+q;arrivalValues[i+L]=(arrivalValues[i+L]||0)+q*py.cost;
-        if(L===0){stock+=q;value+=q*py.cost;purchaseCost+=q*py.cost;arr+=q;onOrder-=q;}
-        orders.push({month:i,qty:q,arrMonth:i+L,amount:q*py.cost});
+        arrivalTax[i+L]+=q*(py._purchaseTax||0);arrivalDeduct[i+L]+=q*(py._purchaseDeduct||0);
+        if(L===0){stock+=q;value+=q*py.cost;purchaseCost+=q*py.cost;arr+=q;onOrder-=q;purchaseVAT+=q*(py._purchaseTax||0);purchaseDeduct+=q*(py._purchaseDeduct||0);}
+        orders.push({month:i,qty:q,arrMonth:i+L,amount:q*py.cost,supply:q*(py._purchaseSupply??py.cost),vat:q*(py._purchaseTax||0),gross:q*(py._purchaseSupply??py.cost)+q*(py._purchaseTax||0)});
       }
     }
     const avg=stock>0?value/stock:0,sold=Math.min(stock,d),cogs=sold*avg; stock-=sold;value=Math.max(0,value-cogs);
-    rows.push({dem:d,sold,lost:d-sold,stock,stockVal:value,openingQty,openingValue,cogs,price:py.price,unitCost:py.cost,avgCost:avg,revenue:sold*py.price,purchaseCost,ordered,orderAmt:ordered*py.cost,arrival:arr,ss,rop,target,avail});
+    rows.push({dem:d,sold,lost:d-sold,stock,stockVal:value,openingQty,openingValue,cogs,price:py.price,unitCost:py.cost,avgCost:avg,revenue:sold*py.price,salesVAT:sold*py.price*(py._vat?.salesRate||0)/100,purchaseVAT,purchaseDeduct,purchaseCost,ordered,orderAmt:ordered*py.cost,arrival:arr,ss,rop,target,avail});
   }
   return {rows,orders,dem,cost,L:Math.ceil(cfg.lead/30)};
 }
@@ -983,6 +990,7 @@ function irr(flows){
 
 /* ---------- 비용 계산 ---------- */
 function payrollYear(s,y){
+  if(s.payroll.ranks?.length)return rankPayroll(s,y);
   const pr=annual(s.payroll,y);
   if(!pr.enabled) return {total:0,mfg:0,sga:0,heads:0,byDept:[]};
   let total=0,mfg=0,sga=0,heads=0;const byDept=[];
@@ -1021,7 +1029,7 @@ function nonopYear(s,y,rev){
 
 /* ---------- 메인 ---------- */
 function compute(s0){
-  const s=ensureState(clone(s0));
+  const s=prepareExtended(ensureState(clone(s0)));
   const H=s.meta.years,NM=H*12,
         months=buildMonths(s.meta.startYear,NM),
         products=flattenProducts(s);
@@ -1031,6 +1039,7 @@ function compute(s0){
   const revM=new Array(NM).fill(0),cogsM=new Array(NM).fill(0),purchM=new Array(NM).fill(0),invM=new Array(NM).fill(0);
   products.forEach(p=>{ for(let i=0;i<NM;i++){ const r=p.rows[i];
     revM[i]+=r.revenue; cogsM[i]+=r.cogs; purchM[i]+=r.purchaseCost; invM[i]+=r.stockVal; } });
+  const vat=buildVatLedger(s,products,months,revM);
 
   const openingStock=products.reduce((a,p)=>a+Math.max(0,num(p.cfg.stock,0))*(p.cfg.openingUnitCost??productYear(p,0).cost),0);
   const depPPE=s.invest.capex/Math.max(1,s.invest.capexLife);
@@ -1077,14 +1086,14 @@ function compute(s0){
   const arM=new Array(NM).fill(0),apM=new Array(NM).fill(0),niM=new Array(NM).fill(0),cfoM=new Array(NM).fill(0),cashM=new Array(NM).fill(0);
   for(let i=0;i<NM;i++){
     const yi=months[i].yi,yd=months[i].days,y=years[yi];
-    arM[i]=(revM[i]/months[i].days)*assumeYear(s,yi).arDays;
-    apM[i]=(purchM[i]/months[i].days)*assumeYear(s,yi).apDays;
+    arM[i]=(vat.rows[i].salesGross/months[i].days)*assumeYear(s,yi).arDays;
+    apM[i]=(vat.rows[i].purchaseGross/months[i].days)*assumeYear(s,yi).apDays;
     const sgaMonthly=(y.sga.fixed.amt+y.sga.semi.amt+y.sga.variable.amt)/12;
     const nonOpMonthly=(y.nonOpInc-y.nonOpExp)/12;
     niM[i]=revM[i]-cogsM[i]-y.pay.mfg/12-y.pay.sga/12-sgaMonthly-y.dep/12-y.intr/12+nonOpMonthly-y.tax/12;
   }
 
-  const cash0=s.invest.equity+s.invest.debt+s.assume.openingCash-s.invest.capex-s.invest.intangible-openingStock;
+  const cash0=s.invest.equity+s.invest.debt+s.assume.openingCash-s.invest.capex-s.invest.intangible-openingStock-vat.opening;
   let cash=cash0;
   const dInvArr=[];
   for(let i=0;i<NM;i++){
@@ -1094,7 +1103,7 @@ function compute(s0){
     const nonCashAdj=(y.nonop.expNonCash.amt-y.nonop.incNonCash.amt)/12;
     const wc=wcYear(s,yi),prevWC=i?wcMonth(s,i-1):{prepaid:0,receivable:0,advance:0,accrued:0},nowWC=wcMonth(s,i);
     const wcCash=-(nowWC.prepaid-prevWC.prepaid)-(nowWC.receivable-prevWC.receivable)+(nowWC.advance-prevWC.advance)+(nowWC.accrued-prevWC.accrued);
-    cfoM[i]=niM[i]+y.dep/12+nonCashAdj-dAR-dInv+dAP+wcCash;
+    cfoM[i]=niM[i]+y.dep/12+nonCashAdj-dAR-dInv+dAP+wcCash+vat.rows[i].cashAdjustment;
     cash+=cfoM[i]-repayM[i];
     cashM[i]=cash; dInvArr.push(dInv);
   }
@@ -1113,24 +1122,25 @@ function compute(s0){
     const wc=wcYear(s,y),pwc=y?wcYear(s,y-1):{prepaid:0,receivable:0,advance:0,accrued:0};
     cf.push({y,ni:r.ni,dep:r.dep,depPPE:r.depPPE,depInt:r.depInt,nonCashExp:r.nonop.expNonCash.amt,nonCashInc:r.nonop.incNonCash.amt,
       dPrepaid:wc.prepaid-pwc.prepaid,dReceivable:wc.receivable-pwc.receivable,dAdvance:wc.advance-pwc.advance,dAccrued:wc.accrued-pwc.accrued,
-      dAR,dInv,dAP,cfo,cfi:0,cff:-repay,net:cfo-repay,begin:y?cashM[a-1]:cash0,end:cashM[last],interest:r.intr,tax:r.tax});
+      dAR,dInv,dAP,vatCash:vat.rows.slice(a,b).reduce((v,m)=>v+m.cashAdjustment,0),dVatCredit:vat.rows[last].credit-(y?vat.rows[a-1].credit:vat.opening),dVatDue:vat.rows[last].due-(y?vat.rows[a-1].due:0),cfo,cfi:0,cff:-repay,net:cfo-repay,begin:y?cashM[a-1]:cash0,end:cashM[last],interest:r.intr,tax:r.tax});
     const ppe=Math.max(0,s.invest.capex-depPPE*Math.min(y+1,s.invest.capexLife));
     const intang=Math.max(0,s.invest.intangible-depInt*Math.min(y+1,s.invest.intangibleLife));
     const retained=pl.slice(0,y+1).reduce((x,v)=>x+v.ni,0);
     const capital=s.invest.equity+s.assume.openingCash;
     const otherAsset=pl.slice(0,y+1).reduce((v,p)=>v+p.nonop.incNonCash.amt,0),otherLiab=pl.slice(0,y+1).reduce((v,p)=>v+p.nonop.expNonCash.amt,0);
-    bs.push({y,cash:cashM[last],ar:arM[last],inv:invM[last],ppe,intang,...wc,
-      otherAsset,otherLiab,assets:cashM[last]+arM[last]+invM[last]+ppe+intang+otherAsset+wc.prepaid+wc.receivable,
-      ap:apM[last],debt:debtM[last],liab:apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued,capital,retained,equity:capital+retained,
-      check:(cashM[last]+arM[last]+invM[last]+ppe+intang+otherAsset+wc.prepaid+wc.receivable)-(apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued+capital+retained)});
+    const vatCredit=vat.rows[last].credit,vatDue=vat.rows[last].due;
+    bs.push({y,cash:cashM[last],ar:arM[last],inv:invM[last],ppe,intang,...wc,vatCredit,vatDue,
+      otherAsset,otherLiab,assets:cashM[last]+arM[last]+invM[last]+ppe+intang+otherAsset+wc.prepaid+wc.receivable+vatCredit,
+      ap:apM[last],debt:debtM[last],liab:apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued+vatDue,capital,retained,equity:capital+retained,
+      check:(cashM[last]+arM[last]+invM[last]+ppe+intang+otherAsset+wc.prepaid+wc.receivable+vatCredit)-(apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued+vatDue+capital+retained)});
   }
 
   /* 사업성 */
-  const I0=s.invest.capex+s.invest.intangible+openingStock;
+  const I0=s.invest.capex+s.invest.intangible+openingStock+vat.opening;
   const fcf=[];
   for(let y=0;y<H;y++){
     const nwc=operatingNWC(bs[y]);
-    const nwcPrevN=y?operatingNWC(bs[y-1]):openingStock;
+    const nwcPrevN=y?operatingNWC(bs[y-1]):openingStock+vat.opening;
     const dnwc=nwc-nwcPrevN;
     const nopat=pl[y].ebit-Math.max(0,pl[y].ebit)*assumeYear(s,y).taxRate/100;
     fcf.push({y,nopat,dep:pl[y].dep,dnwc,fcff:nopat+pl[y].dep-dnwc});
@@ -1219,17 +1229,17 @@ function compute(s0){
   if(products.some(p=>p.rows[0]&&p.rows[0].lost>0)) diag.push({level:'amber',t:'Y1 초기재고 부족',text:'현재재고가 첫 달 수요보다 적습니다.'});
 
   return enrichDetail({s,H,NM,months,products,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,
-    tv,tvMode,tvValid,navTV,I0,cash0,openingStock,totals,minCash,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,niM,repayM,debtM,interestM,
+    tv,tvMode,tvValid,navTV,I0,cash0,openingStock,vat,totals,minCash,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,niM,cfoM,repayM,debtM,interestM,
     diag,funding,equityIrr:eqIrr,moic,exitEquity,eqCF:eqCF,flows,pvCum,
-    bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,
-      assets:cash0+openingStock+s.invest.capex+s.invest.intangible,ap:0,debt:s.invest.debt,
+    bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,vatCredit:vat.opening,vatDue:0,
+      assets:cash0+openingStock+s.invest.capex+s.invest.intangible+vat.opening,ap:0,debt:s.invest.debt,
       liab:s.invest.debt,capital:s.invest.equity+s.assume.openingCash,retained:0,
       equity:s.invest.equity+s.assume.openingCash,
-       check:(cash0+openingStock+s.invest.capex+s.invest.intangible)-(s.invest.debt+s.invest.equity+s.assume.openingCash)}});
+       check:(cash0+openingStock+s.invest.capex+s.invest.intangible+vat.opening)-(s.invest.debt+s.invest.equity+s.assume.openingCash)}});
 }
 function wcYear(s,y){const w=s.wc?.years?.[y]||{};return Object.fromEntries(['prepaid','receivable','advance','accrued'].map(k=>[k,Math.max(0,num(w[k]))]));}
 function wcMonth(s,i){const y=Math.floor(i/12),f=(i%12+1)/12,a=y?wcYear(s,y-1):{prepaid:0,receivable:0,advance:0,accrued:0},b=wcYear(s,y);return Object.fromEntries(Object.keys(b).map(k=>[k,a[k]+(b[k]-a[k])*f]));}
-function operatingNWC(b){return b.ar+b.inv+(b.prepaid||0)+(b.receivable||0)-b.ap-(b.advance||0)-(b.accrued||0);}
+function operatingNWC(b){return b.ar+b.inv+(b.prepaid||0)+(b.receivable||0)+(b.vatCredit||0)-b.ap-(b.advance||0)-(b.accrued||0)-(b.vatDue||0);}
 function enrichDetail(r){
   const keys=['rev','productCost','mfgAlloc','cogs','gp','sellingAlloc','varCost','cm','qty'];
   const zero=()=>Object.fromEntries(keys.map(k=>[k,0]));
@@ -1252,17 +1262,105 @@ function enrichDetail(r){
   const totals=Array.from({length:r.H},(_,y)=>Object.fromEntries(keys.map(k=>[k,tree.reduce((v,n)=>v+n.years[y][k],0)])));
   r.accountTree={tree,totals,keys,unallocated:fallback};
   r.segment=lvl=>{const nodes=[];function find(a,names=[]){a.forEach(n=>{const path=names.concat(n.name);if(n.depth===lvl)nodes.push({n,path});else find(n.children,path);});}find(tree);const total=r.totals.rev||1;return nodes.map(({n,path})=>{const a=Object.fromEntries(keys.map(k=>[k,n.years.reduce((v,y)=>v+y[k],0)])),gp=a.gp;return {...a,id:n.key,name:path.join(' › '),gm:a.rev?gp/a.rev:0,share:a.rev/total};}).sort((a,b)=>b.rev-a.rev);};
-  const wcFields=[['ar','매출채권','dAR',-1],['inv','재고자산','dInv',-1],['ap','매입채무','dAP',1],['advance','선수금 등','dAdvance',1],['accrued','미지급금 등','dAccrued',1],['prepaid','선급금 등','dPrepaid',-1],['receivable','미수금 등','dReceivable',-1]];
-  r.wcLines=wcFields.map(([key,label,d,sign])=>({key,label,values:[key==='inv'?-r.openingStock:0,...r.cf.map(c=>sign*(c[d]||0))]}));
-  r.cf0={cfo:-r.openingStock,cfi:-r.s.invest.capex-r.s.invest.intangible,cff:r.s.invest.equity+r.s.invest.debt,begin:r.s.assume.openingCash,end:r.cash0,net:r.cash0-r.s.assume.openingCash};
+  const wcFields=[['ar','매출채권','dAR',-1],['inv','재고자산','dInv',-1],['ap','매입채무','dAP',1],['advance','선수금 등','dAdvance',1],['accrued','미지급금 등','dAccrued',1],['prepaid','선급금 등','dPrepaid',-1],['receivable','미수금 등','dReceivable',-1],['vatCredit','부가세대급금','dVatCredit',-1],['vatDue','부가세예수금','dVatDue',1]];
+  r.wcLines=wcFields.map(([key,label,d,sign])=>({key,label,values:[key==='inv'?-r.openingStock:key==='vatCredit'?-r.vat.opening:0,...r.cf.map(c=>sign*(c[d]||0))]}));
+  r.cf0={cfo:-r.openingStock-r.vat.assetVat.stock,cfi:-r.s.invest.capex-r.s.invest.intangible-r.vat.assetVat.capex-r.vat.assetVat.intangible,cff:r.s.invest.equity+r.s.invest.debt,begin:r.s.assume.openingCash,end:r.cash0,net:r.cash0-r.s.assume.openingCash};
   r.fcffDetails={inflows:[],outflows:[],pv:r.flows.map((f,i)=>f===null?null:f/(i?r.discounts[i-1]:1))};
   r.fcffDetails.inflows=Array.from({length:r.H+1},(_,i)=>i===0?0:r.fcf[i-1].nopat+r.fcf[i-1].dep+r.wcLines.reduce((v,l)=>v+Math.max(0,l.values[i]),0)+(i===r.H?r.tv||0:0));
   r.fcffDetails.outflows=Array.from({length:r.H+1},(_,i)=>i===0?r.I0:r.wcLines.reduce((v,l)=>v+Math.max(0,-l.values[i]),0));
   r.fcffDetails.cumulative=[];let c=0;r.flows.forEach(f=>{c=c===null||f===null?null:c+f;r.fcffDetails.cumulative.push(c);});
-  return r;
+  return extendMonthly(r);
 }
 function levelIdxToField(l){ return l; }
 if(typeof module!=='undefined') module.exports={compute,defaultState,ensureState,flattenProducts,irr,fmt,shortWon,num,clone,LEVELS,payrollYear,annual,assumeYear,productYear,invYear,deptYear,expenseYear};
+
+'use strict';
+// All monetary state remains KRW. VAT is an opt-in planning model, never a filing engine.
+function vatConfig(s){return {enabled:false,cycle:3,refundMode:'carry',refundDelay:2,assets:{},...s.vat};}
+function taxSplit(amount,rate,included){rate=Math.max(0,num(rate))/100;const supply=included?amount/(1+rate):amount;return {supply,tax:supply*rate,gross:supply*(1+rate)};}
+function productTax(n,y,v){const c={mode:'taxable',salesRate:10,purchaseRate:10,salesIncluded:false,purchaseIncluded:false,deductible:100,...n.vat,...n.vat?.years?.[y]};if(!v.enabled)return {...c,salesRate:0,purchaseRate:0,deductible:0};if(c.mode!=='taxable')c.salesRate=0;if(c.mode==='exempt')c.deductible=0;return c;}
+function prepareExtended(s){
+  const v=vatConfig(s);s._vat=v;s._vatOpening=0;s._assetVat={capex:0,intangible:0,stock:0};
+  const original=flattenProducts(s);
+  original.forEach(p=>{
+    const n=p.node,cfg=invCfg(s,p.id),baseYears={};
+    for(let y=0;y<s.meta.years;y++){
+      const py=productYear(n,y),tax=productTax(n,y,v),price=taxSplit(py.price,tax.salesRate,tax.salesIncluded),cost=taxSplit(py.cost,tax.purchaseRate,tax.purchaseIncluded),deduct=cost.tax*Math.max(0,Math.min(100,num(tax.deductible)))/100;
+      baseYears[y]={...py,price:price.supply,cost:cost.gross-deduct,_vat:tax,_purchaseSupply:cost.supply,_purchaseTax:cost.tax,_purchaseDeduct:deduct};
+    }
+    const t0=productTax(n,0,v),opening=taxSplit(cfg.openingUnitCost??productYear(n,0).cost,t0.purchaseRate,t0.purchaseIncluded),credit=opening.tax*Math.max(0,Math.min(100,num(t0.deductible)))/100;
+    cfg.openingUnitCost=opening.gross-credit;s._assetVat.stock+=cfg.stock*credit;
+    n.years=baseYears;
+  });
+  ['capex','intangible'].forEach(k=>{const a={enabled:false,rate:10,included:false,deductible:100,...v.assets?.[k]},t=taxSplit(s.invest[k],v.enabled&&a.enabled?a.rate:0,a.included),credit=t.tax*Math.max(0,Math.min(100,num(a.deductible)))/100;s.invest[k]=t.gross-credit;s._assetVat[k]=credit;});
+  s._vatOpening=Object.values(s._assetVat).reduce((a,b)=>a+b,0);
+  s._expenseVat=Array.from({length:s.meta.years},()=>0);
+  // VAT on explicitly configured operating expense items only. Wages never get VAT.
+  s._expenseTaxItems=[];
+  Object.values(s.sga).flat().forEach(it=>{
+    const settings={enabled:false,rate:10,included:false,deductible:100,...it.vat};
+    if(!v.enabled||!settings.enabled)return;
+    const years={};for(let y=0;y<s.meta.years;y++){
+      const iy=expenseYear(it,y),t=taxSplit(iy.value,settings.rate,settings.included),credit=t.tax*Math.max(0,Math.min(100,num(settings.deductible)))/100;
+      years[y]={...iy,value:t.gross-credit};s._expenseTaxItems.push({y,type:iy.type,credit});
+    }it.years=years;
+  });
+  return s;
+}
+function buildVatLedger(s,products,months,revs){
+  const v=s._vat,output=months.map(()=>0),input=months.map(()=>0),purchaseVAT=months.map(()=>0),salesGross=months.map(()=>0),purchaseGross=months.map(()=>0);
+  products.forEach(p=>p.rows.forEach((r,i)=>{output[i]+=r.salesVAT||0;input[i]+=r.purchaseDeduct||0;purchaseVAT[i]+=r.purchaseVAT||0;salesGross[i]+=r.revenue+(r.salesVAT||0);purchaseGross[i]+=r.purchaseCost+(r.purchaseDeduct||0);}));
+  s._expenseTaxItems.forEach(it=>{input.forEach((_,i)=>{if(Math.floor(i/12)===it.y)input[i]+=it.type==='rate'?revs.slice(it.y*12,it.y*12+12).reduce((a,b)=>a+b,0)*it.credit/100/12:it.credit/12;});});
+  let due=0,credit=s._vatOpening,periodOut=0,periodIn=s._vatOpening;const schedule=[],rows=[];const cycle=[1,3,6].includes(+v.cycle)?+v.cycle:3;
+  for(let i=0;i<months.length;i++){
+    const openingDue=due,openingCredit=credit;let paid=0,refunded=0,offset=0;
+    schedule.filter(q=>q.month===i).forEach(q=>{if(q.type==='pay'){const amount=Math.min(due,q.amount);due-=amount;paid+=amount;}else{const amount=Math.min(credit,q.amount);credit-=amount;refunded+=amount;}});
+    due+=output[i];credit+=input[i];periodOut+=output[i];periodIn+=input[i];
+    if((i+1)%cycle===0){offset=Math.min(due,credit);due-=offset;credit-=offset;
+      if(due>0)schedule.push({month:i+1,type:'pay',amount:due});
+      let remainingOffset=offset;for(const q of schedule.filter(q=>q.type==='refund'&&q.month>i)){const reduce=Math.min(q.amount,remainingOffset);q.amount-=reduce;remainingOffset-=reduce;}
+      const reserved=schedule.filter(q=>q.type==='refund'&&q.month>i).reduce((a,q)=>a+q.amount,0);
+      if(credit>reserved&&v.refundMode==='delay')schedule.push({month:i+Math.max(1,Math.floor(num(v.refundDelay,2))),type:'refund',amount:credit-reserved});
+      periodOut=0;periodIn=0;
+    }
+    rows.push({output:output[i],input:input[i],purchaseVAT:purchaseVAT[i],salesGross:salesGross[i],purchaseGross:purchaseGross[i],due,credit,openingDue,openingCredit,offset,paid,refunded,cashAdjustment:output[i]-input[i]-paid+refunded});
+  }
+  return {enabled:!!v.enabled,rows,opening:s._vatOpening,assetVat:s._assetVat,schedule,cycle,refundMode:v.refundMode};
+}
+const PAY_COMPONENTS=[['salary','급여'],['pension','국민연금'],['health','건강보험'],['care','장기요양'],['employment','고용보험'],['accident','산재보험'],['retirement','퇴직급여'],['welfare','복리후생비'],['card','법인카드 예상사용'],['travel','여비교통비']];
+function rankPayroll(s,y){
+  const pr=annual(s.payroll,y),ranks=pr.ranks||[],components=()=>Object.fromEntries(PAY_COMPONENTS.map(([k])=>[k,0]));let total=0,mfg=0,sga=0,heads=0;const byDept=[],sgaComponents=components(),mfgComponents=components();
+  if(!pr.enabled)return {total,mfg,sga,heads,byDept,sgaComponents,mfgComponents};
+  pr.departments.forEach(d=>{
+    const dy=deptYear(s,d,y),rank=ranks.find(r=>r.id===dy.rankId),parts=components();let h=Math.max(0,num(dy.heads));
+    if(rank){const ry=annual(rank,y),salary=Math.max(0,num(ry.salary));parts.salary=salary*h*12;
+      ['pension','health','employment','accident','retirement'].forEach(k=>parts[k]=parts.salary*Math.max(0,num(ry[k]))/100);
+      parts.care=parts.health*Math.max(0,num(ry.care))/100;
+      parts.welfare=Math.max(0,num(ry.welfare))*h*12;parts.card=Math.max(0,num(ry.cardLimit))*Math.max(0,Math.min(100,num(ry.cardUse)))/100*h*12;parts.travel=Math.max(0,num(ry.travel))*h*12;
+    }else{parts.salary=dy.salary*h*12;parts.pension=parts.salary*num(dy.insurance,pr.insurance)/100;parts.retirement=parts.salary*num(dy.retirement,pr.retirement)/100;}
+    const amount=Object.values(parts).reduce((a,b)=>a+b,0),manufacturing=dy.role==='manufacturing'||(dy.role===undefined&&d.mfg);
+    total+=amount;heads+=h;if(manufacturing)mfg+=amount;else sga+=amount;
+    const bucket=manufacturing?mfgComponents:sgaComponents;Object.keys(parts).forEach(k=>bucket[k]+=parts[k]);
+    byDept.push({id:d.id,name:d.name,heads:h,base:parts.salary,amount,parts,role:manufacturing?'manufacturing':dy.role||'admin',rankId:rank?.id||null});
+  });return {total,mfg,sga,heads,byDept,sgaComponents,mfgComponents};
+}
+function extendMonthly(r){
+  const s=r.s;let retained=0;const monthly=[];
+  r.months.forEach((month,i)=>{
+    const y=month.yi,p=r.pl[y],c=r.cf[y],tax=r.vat.rows[i],wc=wcMonth(s,i),prev=i?monthly[i-1]:{ar:0,ap:0,inv:r.openingStock,...wcYear(s,-1),vatCredit:r.vat.opening,vatDue:0},qty=r.products.reduce((v,p)=>v+p.rows[i].sold,0);
+    const cogs=r.cogsM[i]+p.pay.mfg/12,rev=r.revM[i],sga=(p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt)/12,gp=rev-cogs,dep=p.dep/12,ebit=gp-sga-p.pay.sga/12-dep,ni=r.niM[i];retained+=ni;
+    const ppe=Math.max(0,s.invest.capex-s.invest.capex/Math.max(1,s.invest.capexLife)*Math.min((i+1)/12,s.invest.capexLife)),intang=Math.max(0,s.invest.intangible-s.invest.intangible/Math.max(1,s.invest.intangibleLife)*Math.min((i+1)/12,s.invest.intangibleLife));
+    const otherAsset=r.pl.slice(0,y).reduce((a,p)=>a+p.nonop.incNonCash.amt,0)+p.nonop.incNonCash.amt*(i%12+1)/12,otherLiab=r.pl.slice(0,y).reduce((a,p)=>a+p.nonop.expNonCash.amt,0)+p.nonop.expNonCash.amt*(i%12+1)/12;
+    const assets=r.cashM[i]+r.arM[i]+r.invM[i]+ppe+intang+otherAsset+wc.prepaid+wc.receivable+tax.credit,liab=r.apM[i]+r.debtM[i]+otherLiab+wc.advance+wc.accrued+tax.due,equity=s.invest.equity+s.assume.openingCash+retained;
+    const b={ar:r.arM[i],ap:r.apM[i],inv:r.invM[i],...wc,vatCredit:tax.credit,vatDue:tax.due},dnwc=operatingNWC(b)-operatingNWC(prev),nopat=ebit-Math.max(0,p.ebit)*assumeYear(s,y).taxRate/100/12,fcff=nopat+dep-dnwc;
+    const tv=i===r.NM-1?r.tv:0,flow=tv===null?null:fcff+tv;
+    const parts=p.pay.sgaComponents?Object.fromEntries(PAY_COMPONENTS.map(([k])=>['pay_'+k,(num(p.pay.sgaComponents[k])+num(p.pay.mfgComponents[k]))/12])):{pay_salary:p.pay.total/12};
+    monthly.push({label:'Y'+(y+1)+' '+month.mm,y,i,qty,rev,cogs,gp,sga,dep,ebit,tax:p.tax/12,ni,cfo:r.cfoM[i],cfi:0,cff:-r.repayM[i],net:r.cfoM[i]-r.repayM[i],begin:i?r.cashM[i-1]:r.cash0,cash:r.cashM[i],...b,assets,liab,equity,check:assets-liab-equity,variable:cogs+p.sga.variable.amt/12,cm:rev-cogs-p.sga.variable.amt/12,fixed:(p.pay.sga+p.sga.fixed.amt+p.sga.semi.amt+p.dep)/12,nopat,fcff,tv,flow,pv:flow===null?null:flow/r.discounts[y],salesVAT:tax.output,grossBill:rev+tax.output,inputVAT:tax.input,vatPaid:tax.paid,vatRefund:tax.refunded,vatOffset:tax.offset,payTotal:p.pay.total/12,...parts,ordered:r.products.reduce((v,p)=>v+p.rows[i].ordered,0),arrived:r.products.reduce((v,p)=>v+p.rows[i].arrival,0),stockQty:r.products.reduce((v,p)=>v+p.rows[i].stock,0)});
+  });
+  const balanceKeys=['cash','ar','ap','inv','prepaid','receivable','advance','accrued','vatCredit','vatDue','assets','liab','equity','check','stockQty'];
+   const annual=Array.from({length:r.H},(_,y)=>{const ms=monthly.slice(y*12,y*12+12),last=ms.at(-1),row={label:'Y'+(y+1)+' · '+(num(s.meta.startYear)+y),y};Object.keys(last).forEach(k=>{if(['label','y','i'].includes(k))return;row[k]=balanceKeys.includes(k)?last[k]:k==='begin'?ms[0].begin:ms.some(m=>m[k]===null)?null:ms.reduce((v,m)=>v+num(m[k]),0);});return row;});
+  r.monthly=monthly;r.annualDetail=annual;return r;
+}
 
 'use strict';
 /* Original input schema: Y0 is opening, Y1.. are operating. All original fields remain in the audit source. */
@@ -1340,7 +1438,7 @@ const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const won=v=>Math.round(+v||0).toLocaleString('ko-KR');
-const man=v=>Math.round((+v||0)/10000).toLocaleString('ko-KR');
+const man=v=>formatMoney(v);
 const pct=v=>(+v||0).toFixed(1)+'%';
 const pct2=v=>(+v||0).toFixed(2)+'%';
 
@@ -1468,19 +1566,19 @@ function renderAssume(){
   $('#assumeSummary').innerHTML=`
     <div class="card-h"><div><h2>이 계획의 요약</h2><p>입력을 바꾸면 즉시 다시 계산됩니다.</p></div></div>
      <div class="kv big"><span class="k">Y${editYear+1} 할인율 (WACC)</span><span class="v">${waccPct}%</span></div>
-     <div class="kv"><span class="k">Y${editYear+1} 매출</span><span class="v">${shortWon(y1.rev)}원</span></div>
-     <div class="kv"><span class="k">Y${editYear+1} 인건비</span><span class="v">${man(pay)}만원</span></div>
-     <div class="kv"><span class="k">Y${editYear+1} 판관비(인건비 제외)</span><span class="v">${man(sga)}만원</span></div>
-     <div class="kv"><span class="k">최소 운영현금</span><span class="v">${man(R.minCashYears[editYear])}만원</span></div>
-    <div class="kv"><span class="k">초기 투자액 (t=0)</span><span class="v">${shortWon(R.I0)}원</span></div>
-    <div class="kv"><span class="k">개시 현금</span><span class="v">${shortWon(R.cash0)}원</span></div>
+     <div class="kv"><span class="k">Y${editYear+1} 매출</span><span class="v">${shortWon(y1.rev)}</span></div>
+     <div class="kv"><span class="k">Y${editYear+1} 인건비</span><span class="v">${shortWon(pay)}</span></div>
+     <div class="kv"><span class="k">Y${editYear+1} 판관비(인건비 제외)</span><span class="v">${shortWon(sga)}</span></div>
+     <div class="kv"><span class="k">최소 운영현금</span><span class="v">${shortWon(R.minCashYears[editYear])}</span></div>
+    <div class="kv"><span class="k">초기 투자액 (t=0)</span><span class="v">${shortWon(R.I0)}</span></div>
+    <div class="kv"><span class="k">개시 현금</span><span class="v">${shortWon(R.cash0)}</span></div>
     <div class="divider"></div>
     <div class="sub-h">데이터 흐름</div>
     <div class="flow">
       <div class="flowrow"><b>03</b><span>판매 수요 (9단계)</span><em>${R.totals.demand?won(R.totals.demand)+'개':'—'}</em></div>
-      <div class="flowrow"><b>04</b><span>재고·발주</span><em>${R.totals.orders}회 / ${shortWon(R.totals.orderAmt)}원</em></div>
-      <div class="flowrow"><b>05</b><span>인건비·판관비</span><em>${shortWon(pay+sga)}원</em></div>
-      <div class="flowrow"><b>06</b><span>영업이익</span><em>${shortWon(R.totals.ebit)}원</em></div>
+      <div class="flowrow"><b>04</b><span>재고·발주</span><em>${R.totals.orders}회 / ${shortWon(R.totals.orderAmt)}</em></div>
+      <div class="flowrow"><b>05</b><span>인건비·판관비</span><em>${shortWon(pay+sga)}</em></div>
+      <div class="flowrow"><b>06</b><span>영업이익</span><em>${shortWon(R.totals.ebit)}</em></div>
       <div class="flowrow"><b>07</b><span>NPV</span><em class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':shortWon(R.npv)+'원'}</em></div>
     </div>`;
 }
@@ -1494,7 +1592,7 @@ function renderInvest(){
   $('#investKpis').innerHTML=
     kpi('t=0 투자액',shortWon(need),'원','CAPEX + 무형 + 초기재고')+
     kpi('조달총액',shortWon(fund),'원',`자본금 ${shortWon(inv.equity)} · 차입 ${shortWon(inv.debt)}`)+
-    kpi('개시 현금',shortWon(R.cash0),'원',`최소 운영현금 ${shortWon(R.minCash)}원`,R.cash0<R.minCash?'red':'green')+
+    kpi('개시 현금',shortWon(R.cash0),'원',`최소 운영현금 ${shortWon(R.minCash)}`,R.cash0<R.minCash?'red':'green')+
     kpi(gap<0?'자금 부족':'조달 잉여',shortWon(Math.abs(gap)),'원',gap<0?'자본금 또는 차입을 늘리세요':'여유자금',gap<0?'red':'green');
 
   const uses=[['유형자산 (CAPEX)',inv.capex],['무형자산',inv.intangible],['초기 재고 매입',R.openingStock]];
@@ -1593,8 +1691,8 @@ function renderTree(){
   const totalQ=R.products.reduce((a,p)=>a+prodQty(p),0);
    const totalR=R.products.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px">${Array.from({length:12},()=>'<col style="width:46px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
-    <thead><tr><th class="l sticky">분류 / 제품</th><th>Y${editYear+1} 수량<span class="u">개</span></th><th>Y${editYear+1} 매출<span class="u">만원</span></th><th>단가<span class="u">원</span></th><th>원가<span class="u">원</span></th><th>미입력 성장<span class="u">%</span></th>
-    ${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">만원</span></th><th></th></tr></thead>
+    <thead><tr><th class="l sticky">분류 / 제품</th><th>Y${editYear+1} 수량<span class="u">개</span></th><th>Y${editYear+1} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원</span></th><th>원가 입력<span class="u">원</span></th><th>미입력 성장<span class="u">%</span></th>
+    ${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="3"></td>
      ${Array.from({length:12},(_,i)=>`<td>${won(R.products.reduce((a,p)=>a+(productYear(p,editYear).months[i]||0),0))}</td>`).join('')}
@@ -1611,12 +1709,12 @@ function renderDemand(){
   $('#demandKpis').innerHTML=
     kpi('Y1 판매수량',won(qty),'개','재고 부족분 제외 전 수요')+
     kpi('Y1 매출',shortWon(y1.rev),'원',`${S.clients?S.clients.length:''}${R.products.length}개 제품 · 9단계 트리`)+
-    kpi('Y1 매출총이익률',pct(margin*100),'',`매출총이익 ${shortWon(y1.rev-y1.cogs)}원`,margin<0?'red':'green')+
+    kpi('Y1 매출총이익률',pct(margin*100),'',`매출총이익 ${shortWon(y1.rev-y1.cogs)}`,margin<0?'red':'green')+
     kpi('제품 수',R.products.length,'개',`${countGroups()}개 그룹 노드`);
   $('#demandFootNote').textContent=`${R.products.length}개 제품 · 수익모델 ${S.sales.tree.length}개`;
 
   const yt=$('#demandYears');
-  yt.innerHTML=`<thead><tr><th class="l">연도</th><th>수요<span class="u">개</span></th><th>판매<span class="u">개</span></th><th>매출<span class="u">만원</span></th><th>성장률</th></tr></thead><tbody>`+
+   yt.innerHTML=`<thead><tr><th class="l">연도</th><th>수요<span class="u">개</span></th><th>판매<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th>성장률</th></tr></thead><tbody>`+
     R.pl.map((p,y)=>{
       const dem=R.products.reduce((a,pr)=>a+pr.dem.slice(y*12,y*12+12).reduce((x,v)=>x+v,0),0);
       const sold=R.products.reduce((a,pr)=>a+pr.rows.slice(y*12,y*12+12).reduce((x,r)=>x+r.sold,0),0);
@@ -1691,7 +1789,7 @@ function renderInvSettings(){
       <td>${won(py.cost)}</td><td>${won(py.price)}</td><td>${man(p.rows[editYear*12].openingValue)}</td>
     </tr>`;
   }).join('');
-  t.innerHTML=`<thead><tr><th class="l">제품 · 경로</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>원가<span class="u">원</span></th><th>판가<span class="u">원</span></th><th>초기재고액<span class="u">만원</span></th></tr></thead>
+  t.innerHTML=`<thead><tr><th class="l">제품 · 경로</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>원가<span class="u">원</span></th><th>판가<span class="u">원</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
     <tbody>${rows||'<tr><td colspan="9" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
 }
 
@@ -1701,11 +1799,11 @@ function renderInventory(){
   const k=document.getElementById('invKpis');
   if(k) k.innerHTML=
     kpi('계획 매출',shortWon(t.rev),'원',`${R.tbl?'':''}${S.meta.years}년 · 판매 ${won(t.sold)}개`)+
-    kpi('발주',t.orders+'회','',`${shortWon(t.orderAmt)}원`)+
+    kpi('발주',t.orders+'회','',`${shortWon(t.orderAmt)}`)+
     kpi('평균 재고',shortWon(t.avgInv),'원',`재고자산회전 ${t.cogs?(t.cogs/Math.max(1,t.avgInv)/R.H).toFixed(1):'—'}회/년`)+
-    kpi('판매 손실',won(t.lost),'개',t.lost?`약 ${shortWon(t.lostValue)}원`:'품절 없음',t.lost?'amber':'green')+
-    kpi('최악 현금',shortWon(R.worst.cash),'원',`${R.months[R.worst.m].label} · 최소선 ${shortWon(R.minCash)}원`,R.worst.cash<R.minCash?'red':'green')+
-    kpi('최소선 미달',R.belowMin+'개월','',`최소 운영현금 ${man(R.minCash)}만원`,R.belowMin?'amber':'green');
+    kpi('판매 손실',won(t.lost),'개',t.lost?`약 ${shortWon(t.lostValue)}`:'품절 없음',t.lost?'amber':'green')+
+    kpi('최악 현금',shortWon(R.worst.cash),'원',`${R.months[R.worst.m].label} · 최소선 ${shortWon(R.minCash)}`,R.worst.cash<R.minCash?'red':'green')+
+    kpi('최소선 미달',R.belowMin+'개월','',`최소 운영현금 ${man(R.minCash)} ${unitLabel()}`,R.belowMin?'amber':'green');
 
   const bench=document.getElementById('invBench');
   if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>일평균<span class="u">개</span></th><th>안전재고<span class="u">개</span></th><th>발주점<span class="u">개</span></th><th>목표재고<span class="u">개</span></th><th>권장 1회<span class="u">개</span></th></tr></thead><tbody>`+
@@ -1729,7 +1827,7 @@ function renderInventory(){
   orders.sort((a,b)=>a.month-b.month||a.p.name.localeCompare(b.p.name));
   const filtered=orders.filter(o=>R.months[o.month].yi===orderYear);
   const ot=document.getElementById('orderTable');
-  if(ot) ot.innerHTML=`<thead><tr><th class="l">발주월</th><th class="l">제품</th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">만원</span></th><th>입고월</th><th>대금 지급<span class="u">예정</span></th></tr></thead><tbody>`+
+   if(ot) ot.innerHTML=`<thead><tr><th class="l">발주월</th><th class="l">제품</th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>입고월</th><th>대금 지급<span class="u">예정</span></th></tr></thead><tbody>`+
     (filtered.length?filtered.map(o=>{
       const pay=Math.min(o.arrMonth+Math.max(0,Math.ceil(assumeYear(S,Math.floor(o.arrMonth/12)).apDays/30)),R.NM-1);
       return `<tr><td class="l">${R.months[o.month].label}</td><td class="l">${esc(o.p.name)}</td><td>${won(o.qty)}</td><td>${man(o.amount)}</td><td>${R.months[o.arrMonth]?R.months[o.arrMonth].label:'기간 밖'}</td><td>${R.months[pay].label}</td></tr>`;
@@ -1754,7 +1852,7 @@ function renderInventory(){
 /* ---------- charts ---------- */
 function svgWrap(inner,w,h){ return `<svg viewBox="0 0 ${w} ${h}" role="img" style="width:100%;height:auto">${inner}</svg>`; }
 function niceMax(v){ const a=Math.abs(v)||1,p=Math.pow(10,Math.floor(Math.log10(a))),n=a/p; return (n<=1?1:n<=2?2:n<=5?5:10)*p; }
-function axW(v){ return Math.round((+v||0)/10000).toLocaleString('ko-KR'); }
+function axW(v){ return formatMoney(v); }
 
 function drawInvChart(name){
   const box=document.getElementById('invChart'); if(!box) return;
@@ -1791,7 +1889,7 @@ function drawCashChart(){
   s+=`<polyline points="${R.cashM.map((v,i)=>(L+iw*(i+0.5)/NM)+','+Y(R.minCashYears[Math.floor(i/12)])).join(' ')}" fill="none" stroke="#a9781f" stroke-dasharray="5 4" stroke-width="1.2"/>`;
   R.cashM.forEach((v,i)=>{
     const x=L+iw*(i+0.5)/NM-bw/2,y=Y(v),y0=Y(0);
-    s+=`<rect x="${x.toFixed(1)}" y="${Math.min(y,y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y0-y)).toFixed(1)}" fill="${v<R.minCashYears[Math.floor(i/12)]?'#a33a2b':'#12283f'}" opacity=".88"><title>${R.months[i].label} ${won(v)}원</title></rect>`;
+    s+=`<rect x="${x.toFixed(1)}" y="${Math.min(y,y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y0-y)).toFixed(1)}" fill="${v<R.minCashYears[Math.floor(i/12)]?'#a33a2b':'#12283f'}" opacity=".88"><title>${R.months[i].label} ${shortWon(v)}</title></rect>`;
   });
   box.innerHTML=svgWrap(s,W,H);
 }
@@ -1876,7 +1974,7 @@ const m=v=>`<span class="${(+v||0)<0?'neg':''}">${man(v)}</span>`;
 const pcv=v=>v==null?'—':`<span class="${v<0?'neg':''}">${(v*100).toFixed(1)}%</span>`;
 
 function buildStmt(rows,head){
-  return `<thead><tr><th class="l sticky" style="width:240px">계정 <span class="u">만원</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+  return `<thead><tr><th class="l sticky" style="width:240px">계정 <span class="u">${unitLabel()}</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
     <tbody>${rows.map(r=>r.metric?accountRows(r):`<tr class="${r.cls||''}"><td class="l ${r.sub?'ind':''}">${r.l}</td>${r.v.map(c=>`<td>${typeof c==='number'?m(c):c}</td>`).join('')}</tr>`).join('')}</tbody>`;
 }
 function periods(){
@@ -2073,39 +2171,39 @@ function drawNpvChart(){
   s+=`<line class="axisline" x1="${L}" x2="${W-Rr}" y1="${Y(0)}" y2="${Y(0)}"/>`;
   R.flows.forEach((v,i)=>{
     const x=X(i)-bw/2,y=Y(v),y0=Y(0);
-    s+=`<rect x="${x}" y="${Math.min(y,y0)}" width="${bw}" height="${Math.max(1,Math.abs(y0-y))}" rx="2" fill="${i===0?'#a9781f':'#12283f'}" opacity=".9"><title>${i===0?'t=0 초기투자':'Y'+i} ${won(v)}원</title></rect>`;
+    s+=`<rect x="${x}" y="${Math.min(y,y0)}" width="${bw}" height="${Math.max(1,Math.abs(y0-y))}" rx="2" fill="${i===0?'#a9781f':'#12283f'}" opacity=".9"><title>${i===0?'t=0 초기투자':'Y'+i} ${shortWon(v)}</title></rect>`;
     s+=`<text class="axis" x="${X(i)}" y="${H-8}" text-anchor="middle">${i===0?'t0':'Y'+i}</text>`;
   });
   s+=`<polyline points="${R.pvCum.map((v,i)=>X(i).toFixed(1)+','+Y(v).toFixed(1)).join(' ')}" fill="none" stroke="#0e6e63" stroke-width="2"/>`;
-  R.pvCum.forEach((v,i)=>{ s+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.8" fill="#0e6e63"><title>누적 PV ${won(v)}원</title></circle>`; });
+  R.pvCum.forEach((v,i)=>{ s+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.8" fill="#0e6e63"><title>누적 PV ${shortWon(v)}</title></circle>`; });
   box.innerHTML=svgWrap(s,W,H);
 }
 function renderValue(){
   if(!document.getElementById('npvBig')) return;
   const good=R.npv>0&&(R.irr==null||R.irr>R.wacc);
   document.getElementById('valVerdict').innerHTML=good
-    ?`<div class="note green"><span class="t">투자 타당성 있음 — NPV ${shortWon(R.npv)}원, IRR ${R.irr!=null?(R.irr*100).toFixed(1)+'%':'—'} (할인율 ${(R.wacc*100).toFixed(1)}%)</span>초기투자 ${shortWon(R.I0)}원을 회수하고도 현재가치 기준 <b>${shortWon(R.npv)}원</b>이 남습니다. 회수기간 ${R.payback!=null?R.payback.toFixed(1)+'년':'> '+R.H+'년'}.</div>`
-    :R.npv===null?`<div class="note red"><span class="t">계산불가 · 최종 WACC ≤ g</span>영구성장모형의 할인율은 성장률보다 커야 합니다. TV·NPV·IRR·PI는 계산하지 않았습니다.</div>`:`<div class="note red"><span class="t">타당성 미달 — NPV ${shortWon(R.npv)}원</span>초기투자 규모·판매단가·수량을 조정하거나 아래 민감도를 확인하세요.</div>`;
+    ?`<div class="note green"><span class="t">투자 타당성 있음 — NPV ${shortWon(R.npv)}, IRR ${R.irr!=null?(R.irr*100).toFixed(1)+'%':'—'} (할인율 ${(R.wacc*100).toFixed(1)}%)</span>초기투자 ${shortWon(R.I0)}을 회수하고도 현재가치 기준 <b>${shortWon(R.npv)}</b>이 남습니다. 회수기간 ${R.payback!=null?R.payback.toFixed(1)+'년':'> '+R.H+'년'}.</div>`
+    :R.npv===null?`<div class="note red"><span class="t">계산불가 · 최종 WACC ≤ g</span>영구성장모형의 할인율은 성장률보다 커야 합니다. TV·NPV·IRR·PI는 계산하지 않았습니다.</div>`:`<div class="note red"><span class="t">타당성 미달 — NPV ${shortWon(R.npv)}</span>초기투자 규모·판매단가·수량을 조정하거나 아래 민감도를 확인하세요.</div>`;
   const big=document.getElementById('npvBig');
-  big.innerHTML=R.npv===null?'계산불가':`${shortWon(R.npv)}<small>원</small>`;
+  big.innerHTML=R.npv===null?'계산불가':`${formatMoney(R.npv)}<small>${unitLabel()}</small>`;
   big.className='big '+(R.npv<0?'neg':'pos');
-  document.getElementById('npvCap').textContent=`t=0 초기투자 ${shortWon(R.I0)}원 반영 · 할인율 ${(R.wacc*100).toFixed(2)}% · ${R.H}년`;
+  document.getElementById('npvCap').textContent=`t=0 초기투자 ${shortWon(R.I0)} 반영 · 할인율 ${(R.wacc*100).toFixed(2)}% · ${R.H}년`;
   document.getElementById('npvBadges').innerHTML=`<span class="badge ${R.npv>0?'ok':'bad'}">NPV ${R.npv===null?'계산불가':R.npv>0?'양수':'음수'}</span>
     <span class="badge ${R.irr!=null&&R.irr>R.wacc?'teal':'neutral'}">IRR ${R.irr!=null?(R.irr*100).toFixed(1)+'%':'—'}</span>
     <span class="badge neutral">PI ${R.pi===null?'계산불가':R.pi.toFixed(2)}</span>`;
   const pvTV=R.tv===null?null:R.tv/R.discounts[R.H-1], pvOps=R.fcf.reduce((v,f,y)=>v+f.fcff/R.discounts[y],0);
   document.getElementById('npvBreak').innerHTML=`
-    <div class="npvrow"><span>영업가치 현재가치</span><b>${won(pvOps)}원</b></div>
-    <div class="npvrow"><span>잔존가치 현재가치</span><b>${R.tv===null?'계산불가':won(pvTV)+'원'}</b></div>
-    <div class="npvrow minus"><span>초기투자 (t=0)</span><b>−${won(R.I0)}원</b></div>
-    <div class="npvrow total"><span>순현재가치 (NPV)</span><b class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':won(R.npv)+'원'}</b></div>
+    <div class="npvrow"><span>영업가치 현재가치</span><b>${formatMoney(pvOps)} ${unitLabel()}</b></div>
+    <div class="npvrow"><span>잔존가치 현재가치</span><b>${R.tv===null?'계산불가':formatMoney(pvTV)+' '+unitLabel()}</b></div>
+    <div class="npvrow minus"><span>초기투자 (t=0)</span><b>−${formatMoney(R.I0)} ${unitLabel()}</b></div>
+    <div class="npvrow total"><span>순현재가치 (NPV)</span><b class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':formatMoney(R.npv)+' '+unitLabel()}</b></div>
     <div class="cap">등가 연율 ${(R.wacc*100).toFixed(2)}% · 연도별 누적할인 · 잔존가치 ${R.tvMode==='gordon'?'영구성장모형':R.tvMode==='none'?'미포함':'순자산가치'}</div>`;
   document.getElementById('valCells').innerHTML=[
     ['IRR',R.irr!=null?(R.irr*100).toFixed(1):'—','%',`할인율 ${(R.wacc*100).toFixed(1)}% 대비`],
     ['회수기간',!R.tvValid?'계산불가':R.payback!=null?R.payback.toFixed(1):'> '+R.H,R.tvValid?'년':'','누적 FCFF 기준'],
     ['수익성지수',R.pi===null?'계산불가':R.pi.toFixed(2),'','PV / 초기투자'],
-    ['초기투자',shortWon(R.I0),'원','t=0 유출'],
-    ['주주 IRR',R.equityIrr!=null?(R.equityIrr*100).toFixed(1):'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)}원`],
+    ['초기투자',formatMoney(R.I0),unitLabel(),'t=0 유출'],
+    ['주주 IRR',R.equityIrr!=null?(R.equityIrr*100).toFixed(1):'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)}`],
     ['MOIC',R.moic.toFixed(2),'배','Exit 가치 / 자본금']
   ].map(([k,val,u,s])=>`<div class="hero-cell"><div class="k">${k}</div><div class="v">${val}<small>${u}</small></div><div class="s">${s}</div></div>`).join('');
 
@@ -2116,7 +2214,7 @@ function renderValue(){
     const pv=(i===R.H-1?f.fcff+R.tv:f.fcff)/R.discounts[i];
     return `<tr><td class="l">Y${i+1} · ${S.meta.startYear+i}</td><td>${m(f.fcff+(i===R.H-1?R.tv:0))}</td><td>${m(pv)}</td><td>${m(R.pvCum[i+1])}</td></tr>`;
   }).join('');
-  document.getElementById('fcfTable').innerHTML=`<thead><tr><th class="l">기간</th><th>FCFF<span class="u">만원</span></th><th>현재가치<span class="u">만원</span></th><th>누적 PV<span class="u">만원</span></th></tr></thead><tbody>${rows}</tbody>`;
+  document.getElementById('fcfTable').innerHTML=`<thead><tr><th class="l">기간</th><th>FCFF<span class="u">${unitLabel()}</span></th><th>현재가치<span class="u">${unitLabel()}</span></th><th>누적 PV<span class="u">${unitLabel()}</span></th></tr></thead><tbody>${rows}</tbody>`;
 
   const list=[
     {label:'기준',npv:R.npv,irr:R.irr,pb:R.payback},
@@ -2128,7 +2226,7 @@ function renderValue(){
     scenario('판매수량 +10%',s=>shiftProduct(s,'months',1.1)),
     scenario('원가 +10%',s=>shiftProduct(s,'cost',1.1))
   ];
-  document.getElementById('sensTable').innerHTML=`<thead><tr><th class="l">시나리오</th><th>NPV<span class="u">만원</span></th><th>IRR</th></tr></thead><tbody>`+
+  document.getElementById('sensTable').innerHTML=`<thead><tr><th class="l">시나리오</th><th>NPV<span class="u">${unitLabel()}</span></th><th>IRR</th></tr></thead><tbody>`+
      list.map(x=>`<tr class="${x.label==='기준'?'hl':''}"><td class="l">${x.label}</td><td class="${x.npv<0?'neg':''}">${x.npv===null?'계산불가':man(x.npv)}</td><td>${x.irr!=null?(x.irr*100).toFixed(1)+'%':'—'}</td></tr>`).join('')+`</tbody>`;
 
   const sel=document.getElementById('segSelect');
@@ -2136,24 +2234,24 @@ function renderValue(){
      sel.innerHTML=[1,2,3,4,5,6,7,8,9].map(l=>`<option value="${l}"${l===segLevel?' selected':''}>${l}단계 · ${LEVELS[l-1]}</option>`).join('');
   }
   const seg=R.segment(segLevel);
-  document.getElementById('segTable').innerHTML=`<thead><tr><th class="l">${LEVELS[segLevel-1]}</th><th>매출<span class="u">만원</span></th><th>매출총이익<span class="u">만원</span></th><th>이익률</th><th>비중</th></tr></thead><tbody>`+
+  document.getElementById('segTable').innerHTML=`<thead><tr><th class="l">${LEVELS[segLevel-1]}</th><th>매출<span class="u">${unitLabel()}</span></th><th>매출총이익<span class="u">${unitLabel()}</span></th><th>이익률</th><th>비중</th></tr></thead><tbody>`+
     (seg.length?seg.map(x=>`<tr><td class="l">${esc(x.name)}</td><td>${man(x.rev)}</td><td>${man(x.gp)}</td><td>${pcv(x.gm)}</td><td>${(x.share*100).toFixed(1)}%</td></tr>`).join(''):`<tr><td colspan="5" class="l">해당 단계에 데이터가 없습니다.</td></tr>`)+`</tbody>`;
 
   const g1=R.mgmt[0]||{bep:0,margin:0,cm:0,fixed:0};
   document.getElementById('bepBox').innerHTML=`<div class="card-h"><div><h2>BEP · 영업레버리지</h2><p>Y1 관리회계 기준.</p></div></div>
-    <div class="kv"><span class="k">공헌이익</span><span class="v">${man(g1.cm)}만원</span></div>
-    <div class="kv"><span class="k">고정비</span><span class="v">${man(g1.fixed)}만원</span></div>
-    <div class="kv big"><span class="k">BEP 매출</span><span class="v">${man(g1.bep)}만원</span></div>
+    <div class="kv"><span class="k">공헌이익</span><span class="v">${shortWon(g1.cm)}</span></div>
+    <div class="kv"><span class="k">고정비</span><span class="v">${shortWon(g1.fixed)}</span></div>
+    <div class="kv big"><span class="k">BEP 매출</span><span class="v">${shortWon(g1.bep)}</span></div>
     <div class="kv"><span class="k">안전율</span><span class="v">${g1.margin==null?'—':pct(g1.margin*100)}</span></div>
     <div class="kv"><span class="k">DOL</span><span class="v">${R.mgmt[0].dol==null?'—':R.mgmt[0].dol.toFixed(2)+'배'}</span></div>
     <div class="cap">BEP = 고정비 ÷ 공헌이익률. 안전율이 낮으면 매출 변동에 취약합니다.</div>`;
 
   document.getElementById('valDiag').innerHTML=`<div class="card-h"><div><h2>판정 근거</h2><p>숫자 뒤의 가정.</p></div></div>
-    <div class="kv"><span class="k">t=0 투자액</span><span class="v">${man(R.I0)}만원</span></div>
-    <div class="kv"><span class="k">잔존가치</span><span class="v">${R.tv===null?'계산불가':man(R.tv)+'만원'}</span></div>
-    <div class="kv"><span class="k">계획기간 FCFF 합</span><span class="v">${man(R.totals.fcff)}만원</span></div>
-    <div class="kv"><span class="k">누적 순이익</span><span class="v">${man(R.totals.ni)}만원</span></div>
-    <div class="kv"><span class="k">기말 현금</span><span class="v">${man(R.bs[R.H-1].cash)}만원</span></div>
+    <div class="kv"><span class="k">t=0 투자액</span><span class="v">${shortWon(R.I0)}</span></div>
+    <div class="kv"><span class="k">잔존가치</span><span class="v">${R.tv===null?'계산불가':shortWon(R.tv)}</span></div>
+    <div class="kv"><span class="k">계획기간 FCFF 합</span><span class="v">${shortWon(R.totals.fcff)}</span></div>
+    <div class="kv"><span class="k">누적 순이익</span><span class="v">${shortWon(R.totals.ni)}</span></div>
+    <div class="kv"><span class="k">기말 현금</span><span class="v">${shortWon(R.bs[R.H-1].cash)}</span></div>
      ${R.diag.length?R.diag.map(d=>`<div class="diagrow ${d.level}"><b>${d.t}</b><span>${d.text}</span></div>`).join(''):''}`;
   renderDetailedFCFF();
 }
@@ -2332,9 +2430,9 @@ function refreshAnnualUI(){
     $$('#view-demand .kpi .k').forEach(el=>{el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1));});
     const badge=$('#view-demand h2 .badge');if(badge)badge.textContent=`Y${editYear+1} 월별 직접입력`;
   }
-  if(currentView==='inventory'){renderInvSettings();const headers=$$('#invSettings th');if(headers[1])headers[1].innerHTML=editYear?'이월재고<span class="u">개 · 읽기 전용</span>':'초기재고 t0<span class="u">개</span>';if(headers[8])headers[8].innerHTML='연초 재고가치<span class="u">만원</span>';$$('#invSettings .sub').forEach(el=>el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1)));}
+  if(currentView==='inventory'){renderInvSettings();const headers=$$('#invSettings th');if(headers[1])headers[1].innerHTML=editYear?'이월재고<span class="u">개 · 읽기 전용</span>':'초기재고 t0<span class="u">개</span>';if(headers[8])headers[8].innerHTML='연초 재고가치<span class="u">'+unitLabel()+'</span>';$$('#invSettings .sub').forEach(el=>el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1)));}
   if(currentView==='cost')decorateCost();
-  if(currentView==='value'&&$('#npvCap'))$('#npvCap').textContent=`t0 투자 ${shortWon(R.I0)}원 · 연도별 누적할인 · 등가 연율 ${(R.wacc*100).toFixed(2)}% · ${R.H}년`;
+  if(currentView==='value'&&$('#npvCap'))$('#npvCap').textContent=`t0 투자 ${shortWon(R.I0)} · 연도별 누적할인 · 등가 연율 ${(R.wacc*100).toFixed(2)}% · ${R.H}년`;
   $$('[data-nid],[data-pid],[data-did],[data-sid],[data-oid]').forEach(el=>{el.dataset.k=[el.dataset.nid,el.dataset.nf,el.dataset.nm,el.dataset.pid,el.dataset.pf,el.dataset.did,el.dataset.df,el.dataset.sid,el.dataset.sf,el.dataset.oid,el.dataset.of].filter(v=>v!==undefined).join('_');});
   updateStatuses();enforceReadonly();
 }
@@ -2539,21 +2637,21 @@ function renderLinkedAnalysis(){
   let box=$('#linkedAnalysis');if(!box){box=document.createElement('div');box.id='linkedAnalysis';box.className='card linked-analysis';$('#view-finance').append(box);}
   const level=+DetailState['level:'+finTab]||1,nodes=[];function walk(a,path=[]){a.forEach(n=>{const names=path.concat(n.name);if(n.depth===level)nodes.push({n,names});else walk(n.children,names);});}walk(R.accountTree.tree);
   const year=editYear,columns=[['rev','매출'],['productCost','실제 제품원가'],['mfgAlloc','제조급여 배부'],['cogs','매출원가 합계'],['gp','매출총이익'],['sellingAlloc','변동판매비 배부'],['cm','공헌이익']];
-  box.innerHTML=`<div class="card-h"><div><h2>Y${year+1} · ${LEVELS[level-1]}별 GP / CM 연계 분석</h2><p>원 단위 배부 후 표시만 만원 반올림 · 고정비 미배부</p></div></div><div class="tablewrap"><table class="tbl detail-analysis"><thead><tr><th class="l">전체 경로</th>${columns.map(c=>`<th>${c[1]}<span class="u">만원</span></th>`).join('')}</tr></thead><tbody>${nodes.map(({n,names})=>`<tr><td class="l">${esc(names.join(' › '))}</td>${columns.map(([k])=>`<td>${m(n.years[year][k])}</td>`).join('')}</tr>`).join('')}<tr class="total"><td class="l">전체 합계 · 연간 재무 대사</td>${columns.map(([k])=>`<td>${m(R.accountTree.totals[year][k])}</td>`).join('')}</tr></tbody></table></div><p class="cap">${allocationNote}</p>`;
+  box.innerHTML=`<div class="card-h"><div><h2>Y${year+1} · ${LEVELS[level-1]}별 GP / CM 연계 분석</h2><p>원 단위 배부 후 ${unitLabel()} 표시 · 고정비 미배부</p></div></div><div class="tablewrap"><table class="tbl detail-analysis"><thead><tr><th class="l">전체 경로</th>${columns.map(c=>`<th>${c[1]}<span class="u">${unitLabel()}</span></th>`).join('')}</tr></thead><tbody>${nodes.map(({n,names})=>`<tr><td class="l">${esc(names.join(' › '))}</td>${columns.map(([k])=>`<td>${m(n.years[year][k])}</td>`).join('')}</tr>`).join('')}<tr class="total"><td class="l">전체 합계 · 연간 재무 대사</td>${columns.map(([k])=>`<td>${m(R.accountTree.totals[year][k])}</td>`).join('')}</tr></tbody></table></div><p class="cap">${allocationNote}</p>`;
 }
 function nestedTable(nodes,scope,head){
   let rows='';function walk(items,depth=0){items.forEach(n=>{const key=scope+':'+n.id,has=!!n.children?.length,open=detailOpen(key,n.open!==false);rows+=`<tr class="${n.cls||''}" data-detail-row="${esc(n.id)}"><td class="l" style="padding-left:${10+depth*17}px">${has?toggleButton(key,esc(n.label),open):esc(n.label)}</td>${n.values.map(v=>`<td>${detailMoney(v)}</td>`).join('')}</tr>`;if(has&&open)walk(n.children,depth+1);});}walk(nodes);
-  return `<thead><tr><th class="l">계정 <span class="u">만원</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
+  return `<thead><tr><th class="l">계정 <span class="u">${unitLabel()}</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
 }
 function cashflowNodes(){
-  const v=(field,initial=0)=>[initial,...R.cf.map(c=>c[field]||0)],zero=Array(R.H+1).fill(0),wc=R.wcLines.map(l=>({id:'wc-'+l.key,label:l.label+(['ap','advance','accrued'].includes(l.key)?' 증가(+) / 감소(−)':' 감소(+) / 증가(−)'),values:l.values}));
+  const v=(field,initial=0)=>[initial,...R.cf.map(c=>c[field]||0)],zero=Array(R.H+1).fill(0),wc=R.wcLines.map(l=>({id:'wc-'+l.key,label:l.label+(['ap','advance','accrued','vatDue'].includes(l.key)?' 증가(+) / 감소(−)':' 감소(+) / 증가(−)'),values:l.values.map((value,i)=>i===0&&l.key==='vatCredit'?-R.vat.assetVat.stock:value)}));
   return [
     {id:'cfo',label:'Ⅰ. 영업활동 현금흐름',cls:'subtotal',values:v('cfo',R.cf0.cfo),children:[
       {id:'ni',label:'당기순이익',values:v('ni')},
       {id:'noncash-exp',label:'현금유출 없는 비용 가산(+)',values:R.cf.map(c=>c.dep+c.nonCashExp).reduce((a,v)=>a.concat(v),[0]),children:[{id:'dep',label:'감가상각비',values:v('depPPE')},{id:'amort',label:'무형자산상각비',values:v('depInt')},{id:'baddebt',label:'대손상각비 · 별도 미설정 (기타와 중복 가산하지 않음)',values:zero},{id:'other-exp',label:'기타비현금비용 · 기존 영업외 비현금비용 전체',values:v('nonCashExp')}]},
       {id:'noncash-inc',label:'현금유입 없는 수익 차감(−)',values:v('nonCashInc').map(x=>-x),children:[{id:'other-inc',label:'기타비현금수익',values:v('nonCashInc').map(x=>-x)}]},
-      {id:'wc',label:'영업자산부채 변동 증감(ΔWC)',values:Array.from({length:R.H+1},(_,i)=>R.wcLines.reduce((v,l)=>v+l.values[i],0)),children:wc}]},
-    {id:'cfi',label:'Ⅱ. 투자활동 현금흐름',cls:'subtotal',values:v('cfi',R.cf0.cfi),children:[{id:'capex',label:'CAPEX · 연중 신규투자 미지원=0',values:[-S.invest.capex,...R.cf.map(()=>0)]},{id:'intangible',label:'무형자산투자 · 연중 신규투자 미지원=0',values:[-S.invest.intangible,...R.cf.map(()=>0)]}]},
+      {id:'wc',label:'영업자산부채 변동 증감(ΔWC)',values:Array.from({length:R.H+1},(_,i)=>wc.reduce((v,l)=>v+l.values[i],0)),children:wc}]},
+    {id:'cfi',label:'Ⅱ. 투자활동 현금흐름',cls:'subtotal',values:v('cfi',R.cf0.cfi),children:[{id:'capex',label:'CAPEX · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.capex-R.vat.assetVat.capex,...R.cf.map(()=>0)]},{id:'intangible',label:'무형자산투자 · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.intangible-R.vat.assetVat.intangible,...R.cf.map(()=>0)]}]},
     {id:'cff',label:'Ⅲ. 재무활동 현금흐름',cls:'subtotal',values:v('cff',R.cf0.cff),children:[{id:'equity',label:'자본유입',values:[S.invest.equity,...R.cf.map(()=>0)]},{id:'debt',label:'차입유입',values:[S.invest.debt,...R.cf.map(()=>0)]},{id:'repay',label:'차입상환',values:v('cff')}]},
     {id:'net',label:'현금증감',cls:'total',values:v('net',R.cf0.net)},{id:'begin',label:'기초현금 · t0는 기존 보유현금',values:v('begin',R.cf0.begin)},{id:'end',label:'기말현금',cls:'subtotal',values:v('end',R.cf0.end)}
   ];
@@ -2574,7 +2672,7 @@ function fcffNodes(){
       {id:'noncash',label:'비현금유출비용(가산)',values:v(p=>p.dep),children:[{id:'dep',label:'감가상각비',values:[0,...R.cf.map(c=>c.depPPE)]},{id:'amort',label:'무형자산상각비',values:[0,...R.cf.map(c=>c.depInt)]},{id:'other',label:'기타 영업 비현금 조정 · 미설정=0 (금융·영업외 제외)',values:z}]},
       {id:'wc-in',label:'영업자산부채 변동(유입)',values:wcSum(inflow),children:inflow},
       {id:'tv',label:'잔존가치(Terminal Value) · 최종연도만',values:[0,...R.pl.map((p,y)=>y===R.H-1?R.tv:0)]}]},
-    {id:'out',label:'2. 현금의 유출(-)',cls:'subtotal',values:R.fcffDetails.outflows,children:[{id:'capex',label:'CAPEX · 운영연도 신규투자 미지원=0',values:[S.invest.capex,...R.pl.map(()=>0)]},{id:'intangible',label:'무형자산투자액 · 운영연도 신규투자 미지원=0',values:[S.invest.intangible,...R.pl.map(()=>0)]},{id:'wc-out',label:'영업자산부채 변동(유출)',values:wcSum(outflow),children:outflow}]},
+    {id:'out',label:'2. 현금의 유출(-)',cls:'subtotal',values:R.fcffDetails.outflows,children:[{id:'capex',label:'CAPEX · 취득원가 / 공제 VAT는 대급금에 표시',values:[R.s.invest.capex,...R.pl.map(()=>0)]},{id:'intangible',label:'무형자산투자액 · 운영연도 신규투자 미지원=0',values:[R.s.invest.intangible,...R.pl.map(()=>0)]},{id:'wc-out',label:'영업자산부채 변동(유출)',values:wcSum(outflow),children:outflow}]},
     {id:'fcff',label:'잉여현금흐름 FCFF (TV 포함)',cls:'total',values:R.flows},{id:'cum',label:'누적 FCFF',cls:'subtotal',values:R.fcffDetails.cumulative},{id:'pv',label:'할인된 FCFF(PV) · 연도별 누적할인',values:R.fcffDetails.pv},{id:'cum-pv',label:'누적 PV',cls:'subtotal',values:R.pvCum}
   ];
 }
@@ -2618,6 +2716,7 @@ function gateLock(reason='로그인이 필요합니다.'){
   clearTimeout(Gate.watchdog);
   Workspace.user=null;Workspace.admin=false;Workspace.checking=false;Workspace.projects=[];Workspace.docs=[];Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.notice='';Workspace.isPublic=false;Workspace.busy=false;Workspace.localStatus='미저장';Workspace.dbStatus='로그인 전 · 접근 차단';
   S=null;R=null;window.__S=null;window.__R=null;DetailState={};COLLAPSED=new Set();
+  if(typeof periodMode!=='undefined'){periodMode='annual';inputDirty=false;composing=false;}
   const host=document.getElementById('appHost');if(host){host.replaceChildren();host.hidden=true;}
   document.getElementById('authGate').hidden=false;
   const password=document.getElementById('gatePassword');if(password)password.value='';
@@ -2748,13 +2847,137 @@ bindStatic=function(){if(!staticBound){bindStaticOriginal();staticBound=true;ret
   const file=$('#fileImport');if(file)file.onchange=e=>{const f=e.target.files?.[0];if(!f||!canEdit())return;const epoch=Gate.epoch,reader=new FileReader();reader.onload=()=>{if(!Gate.approved||epoch!==Gate.epoch)return;try{const imported=convertProject(JSON.parse(String(reader.result)));S=imported.state;Workspace.localId=null;Workspace.dbId=null;Workspace.legacy=imported.legacy;Workspace.notice=imported.warnings.join('\n');saveState();resetView();}catch(err){toast('JSON 가져오기 실패: '+safeMessage(err));}};reader.readAsText(f);};
 };
 
+'use strict';
+const MoneyUnits={won:{label:'원',factor:1},million:{label:'백만원',factor:1e6},eok:{label:'억원',factor:1e8}};
+function unitKey(){return S?.meta?.displayUnit&&MoneyUnits[S.meta.displayUnit]?S.meta.displayUnit:'won';}
+function unitLabel(){return MoneyUnits[unitKey()].label;}
+function formatMoney(v){if(v===null)return '계산불가';const value=num(v)/MoneyUnits[unitKey()].factor;return value.toLocaleString('ko-KR',{maximumFractionDigits:unitKey()==='won'?2:8});}
+let periodMode='annual',inputDirty=false,composing=false;
+function extendToolbar(){
+  if(!Gate.approved)return;
+  if(!$('#displayUnit')){const bar=$('.yearbar');bar.insertAdjacentHTML('beforeend','<label>결과 단위 <select id="displayUnit" data-readonly-skip="1"><option value="won">원</option><option value="million">백만원</option><option value="eok">억원</option></select></label><label>공통 보기 <select id="periodMode" data-readonly-skip="1"><option value="annual">전체기간 연도별</option><option value="monthly">선택연도 월별</option></select></label>');}
+  $('#displayUnit').value=unitKey();$('#periodMode').value=periodMode;
+  $('#planYear').dataset.readonlySkip='1';
+  const fixed=$('[data-bind="meta.years"]')?.closest('.fgrid')?.querySelector('select[disabled]');if(fixed){fixed.innerHTML='<option>결과: '+unitLabel()+' / 입력: 원</option>';}
+}
+// The original handlers rerendered the complete table on every keystroke. Commit state in place;
+// rerender only once at blur/change/composition end, never while an IME is composing.
+function stableInput(e){
+  const el=e.target;if(!Gate.approved||!el.closest('#appHost'))return;
+  if(!el.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]'))return;
+  e.stopImmediatePropagation();if(!canEdit()||Workspace.busy)return;
+  if(e.isComposing||composing){inputDirty=true;return;}
+  writeStable(el);inputDirty=true;
+}
+function writeStable(el){
+  const value=el.type==='checkbox'?el.checked:num(el.value);
+  if(el.dataset.nid){const n=findNode(el.dataset.nid)?.node;if(!n)return;if(el.dataset.nf==='name')n.name=el.value;else if(el.dataset.nm!==undefined){const py=productYear(n,editYear);py.months[+el.dataset.nm]=Math.max(0,value);putAnnual(n,editYear,'months',py.months);}else if(['price','cost'].includes(el.dataset.nf))putAnnual(n,editYear,el.dataset.nf,value);else n[el.dataset.nf]=value;}
+  if(el.dataset.pid){const c=invCfg(S,el.dataset.pid);if(el.dataset.pf==='stock')c.stock=value;else putAnnual(c,editYear,el.dataset.pf,value);}
+  if(el.dataset.did){const d=S.payroll.departments.find(d=>d.id===el.dataset.did),f=el.dataset.df;if(f==='name')d.name=el.value;else if(['heads','salary','insurance','retirement','rankId','role'].includes(f))putAnnual(d,editYear,f,['rankId','role'].includes(f)?el.value:value);else d[f]=value;}
+  if(el.dataset.sid){const it=S.sga[el.dataset.list].find(it=>it.id===el.dataset.sid);if(el.dataset.sf==='name')it.name=el.value;else if(el.dataset.sf==='value')putAnnual(it,editYear,'value',value);else it[el.dataset.sf]=value;}
+  if(el.dataset.oid){const it=S.nonop[el.dataset.nlist].find(it=>it.id===el.dataset.oid);if(el.dataset.of==='name')it.name=el.value;else putAnnual(it,editYear,el.dataset.of,value);}
+  saveState();
+}
+// Capture listener registered on window precedes legacy document capture listeners.
+window.addEventListener('input',stableInput,true);
+window.addEventListener('compositionstart',e=>{if(e.target.matches('input[data-nid],input[data-did],input[data-sid],input[data-oid]'))composing=true;},true);
+window.addEventListener('compositionend',e=>{if(!composing)return;composing=false;writeStable(e.target);inputDirty=true;},true);
+function commitStable(){if(!inputDirty||composing||!Gate.approved)return;inputDirty=false;R=compute(S);window.__R=R;saveState();renderPeriodResults();renderCurrencyPanels();}
+window.addEventListener('change',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]')){e.stopImmediatePropagation();writeStable(e.target);commitStable();}},true);
+window.addEventListener('focusout',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]'))commitStable();},true);
+window.addEventListener('beforeunload',commitStable);
+const switchExtendedBase=switchView;switchView=function(...args){if(!Gate.approved)return;commitStable();switchExtendedBase(...args);renderExtensions();};
+const paintExtendedBase=paint;paint=function(){if(!Gate.approved)return;commitStable();paintExtendedBase();renderExtensions();};
+const refreshExtendedBase=refreshAnnualUI;refreshAnnualUI=function(){if(!Gate.approved)return;refreshExtendedBase();extendToolbar();};
+function resultTable(head,rows){return '<div class="tablewrap"><table class="tbl extended-result"><thead><tr>'+head.map((x,i)=>'<th class="'+(i?'':'l')+'">'+x+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map((x,i)=>'<td class="'+(i?'':'l')+'">'+x+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';}
+function renderExtensions(){
+  if(!Gate.approved||!R)return;extendToolbar();
+  if(currentView==='assume')renderVatSettings();if(currentView==='cost')renderRankSettings();
+  renderPeriodResults();if(currentView==='inventory')renderOrderSummary();renderCurrencyPanels();enforceReadonly();
+}
+function renderVatSettings(){
+  let box=$('#vatSettings');if(!box){box=document.createElement('div');box.id='vatSettings';box.className='card extended-card';$('#view-assume').append(box);}
+  const v=vatConfig(S),products=flattenProducts(S),expense=Object.entries(S.sga).flatMap(([list,items])=>items.map(it=>({list,it})));
+  box.innerHTML=`<div class="card-h"><div><h2>부가세 계획모형 · 입력금액은 원</h2><p>기존 단가는 공급가액으로 유지합니다. 국가명으로 과세를 판정하지 않습니다. 법정 신고·예정고지·조기환급 앱이 아닙니다.</p></div></div><div class="detail-tools"><label><input id="vatEnabled" type="checkbox" ${v.enabled?'checked':''}>부가세 계획 반영</label><label>정산주기<select id="vatCycle"><option value="3" ${+v.cycle===3?'selected':''}>분기 · 다음달 납부</option><option value="6" ${+v.cycle===6?'selected':''}>반기 · 다음달 납부</option><option value="1" ${+v.cycle===1?'selected':''}>월별 · 단순가정</option></select></label><label>매입초과<select id="vatRefund"><option value="carry" ${v.refundMode==='carry'?'selected':''}>이월</option><option value="delay" ${v.refundMode==='delay'?'selected':''}>설정개월 후 환급</option></select></label><label>환급 지연<input id="vatDelay" type="number" min="1" value="${v.refundDelay}">개월</label></div><p class="help">세율 기본 10%는 한국 국내 일반과세 시나리오의 변경 가능한 계획값입니다. 면세는 매출세액 0·매입공제 0, 영세율은 매출세액 0·매입공제 설정 유지. 공제불가 매입세액은 취득원가/비용에 포함합니다.</p>
+  ${resultTable(['제품 전체 경로','과세구분','매출세율 %','매입세율 %','매출단가','매입단가','매입공제 %'],products.map(p=>{const c=productTax(p.node,editYear,{enabled:true});return [esc(p.path.join(' › ')),`<select data-tax-id="${p.id}" data-tax-field="mode">${[['taxable','과세'],['zero','영세율'],['exempt','면세']].map(([k,n])=>`<option value="${k}" ${c.mode===k?'selected':''}>${n}</option>`).join('')}</select>`,...['salesRate','purchaseRate'].map(k=>`<input type="number" data-tax-id="${p.id}" data-tax-field="${k}" value="${c[k]}">`),...['salesIncluded','purchaseIncluded'].map(k=>`<select data-tax-id="${p.id}" data-tax-field="${k}"><option value="false" ${!c[k]?'selected':''}>별도</option><option value="true" ${c[k]?'selected':''}>포함</option></select>`),`<input type="number" min="0" max="100" data-tax-id="${p.id}" data-tax-field="deductible" value="${c.deductible}">`];}))}
+  <h3>초기 투자 부가세 · 미설정은 과세하지 않음</h3>${resultTable(['구분','과세 반영','세율 %','포함','공제 %'],['capex','intangible'].map(k=>{const a={enabled:false,rate:10,included:false,deductible:100,...v.assets?.[k]};return [k==='capex'?'CAPEX':'무형투자',`<input type="checkbox" data-asset-tax="${k}" data-tax-field="enabled" ${a.enabled?'checked':''}>`,`<input type="number" data-asset-tax="${k}" data-tax-field="rate" value="${a.rate}">`,`<input type="checkbox" data-asset-tax="${k}" data-tax-field="included" ${a.included?'checked':''}>`,`<input type="number" data-asset-tax="${k}" data-tax-field="deductible" value="${a.deductible}">`];}))}
+  <details><summary>판관비 개별 과세·공제 설정 (급여는 제외)</summary>${resultTable(['항목','과세','세율 %','포함','공제 %'],expense.map(({list,it})=>{const a={enabled:false,rate:10,included:false,deductible:100,...it.vat};return [esc(it.name),`<input type="checkbox" data-exp-tax="${list}:${it.id}" data-tax-field="enabled" ${a.enabled?'checked':''}>`,`<input type="number" data-exp-tax="${list}:${it.id}" data-tax-field="rate" value="${a.rate}">`,`<input type="checkbox" data-exp-tax="${list}:${it.id}" data-tax-field="included" ${a.included?'checked':''}>`,`<input type="number" data-exp-tax="${list}:${it.id}" data-tax-field="deductible" value="${a.deductible}">`];}))}</details><p class="help">순자산 TV는 미결 부가세대급금−예수금을 포함합니다. 기간 밖 실제 납부·환급은 실행하지 않고 미결잔액으로 표시합니다. TV 미포함/Gordon은 선택한 TV 정책을 따릅니다. <a href="https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2401&cntntsId=7761" target="_blank" rel="noopener">국세청 부가세 개요</a> · <a href="https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694" target="_blank" rel="noopener">국세청 신고납부 안내·예외</a></p>`;
+}
+function renderRankSettings(){
+  let box=$('#rankSettings');if(!box){box=document.createElement('div');box.id='rankSettings';box.className='card extended-card';$('#view-cost').prepend(box);}
+  const ranks=S.payroll.ranks||[];
+  const fields=[['salary','기본월급 · 원'],['pension','국민연금 %'],['health','건강보험 %'],['care','요양/건강보험료 %'],['employment','고용 %'],['accident','산재 %'],['retirement','퇴직 %'],['welfare','복리/월 · 원'],['cardLimit','카드월한도 · 원'],['cardUse','예상사용률 %'],['travel','여비/월 · 원']];
+  box.innerHTML=`<div class="card-h"><div><h2>직급별 연도 임금테이블 · Y${editYear+1}</h2><p>모든 요율은 사용자 입력 계획값이며 법정 자동요율이 아닙니다. 요양 = 건강보험료 × 요양률. 부서가 직급에 연결되면 기존 부서급여를 대체합니다.</p></div><button class="btn" id="addRank">직급 추가</button></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<h3>부서·직급 연결 · 선택연도 인원은 기존 부서표에서 입력</h3>${resultTable(['부서','직급 · 미연결=기존 급여','제조/판매/관리'],S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear);return [esc(d.name),`<select data-link-dept="${d.id}" data-link-field="rankId"><option value="">기존 부서급여</option>${ranks.map(r=>`<option value="${r.id}" ${dy.rankId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`,`<select data-link-dept="${d.id}" data-link-field="role">${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([k,n])=>`<option value="${k}" ${(dy.role||(d.mfg?'manufacturing':'admin'))===k?'selected':''}>${n}</option>`).join('')}</select>`];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
+}
+function selectedMonthly(){return R.monthly?.slice(editYear*12,editYear*12+12)||[];}
+function renderPeriodResults(){
+  const view=$('#view-'+currentView);if(!view)return;let box=$('#periodResults');if(box)box.remove();
+  if(!['demand','inventory','cost','finance','value'].includes(currentView))return;
+  box=document.createElement('div');box.id='periodResults';box.className='card extended-card';
+  const rows=periodMode==='monthly'?selectedMonthly():R.annualDetail,fields=currentView==='demand'?[['qty','실제판매 · 개',false],['rev','매출 공급가액',true],['salesVAT','매출 부가세',true],['grossBill','총청구액',true]]:currentView==='inventory'?[['ordered','발주 · 개',false],['arrived','입고 · 개',false],['stockQty','기말재고 · 개',false],['inv','기말재고금액',true],['vatDue','부가세예수금 잔액',true],['vatCredit','부가세대급금 잔액',true]]:currentView==='cost'?[...PAY_COMPONENTS.map(([k,n])=>['pay_'+k,n,true]),['payTotal','인건비 합계',true],['sga','판관비·급여제외',true]]:currentView==='finance'?finTab==='cf'?[['ni','당기순이익',true],['dep','상각',true],['cfo','영업현금',true],['cfi','투자현금',true],['cff','재무현금',true],['net','현금증감',true],['begin','기초현금',true],['cash','기말현금',true],['vatPaid','VAT 납부',true],['vatRefund','VAT 환급',true]]:finTab==='bs'?[['cash','현금',true],['ar','AR 세금포함',true],['inv','재고',true],['vatCredit','대급금',true],['ap','AP 세금포함',true],['vatDue','예수금',true],['assets','자산',true],['liab','부채',true],['equity','자본',true],['check','BS검증',true]]:finTab==='mgmt'?[['rev','매출 공급가액',true],['variable','변동비',true],['cm','공헌이익',true],['fixed','고정비',true],['ebit','영업이익',true]]:[['rev','매출 공급가액',true],['salesVAT','매출부가세 (수익아님)',true],['grossBill','총청구액',true],['cogs','매출원가',true],['gp','매출총이익',true],['sga','판관비·급여제외',true],['ebit','영업이익',true],['tax','손익 법인세',true],['ni','당기순이익',true]]:[['nopat','NOPAT',true],['fcff','영업FCFF (TV 제외)',true],['tv','TV 최종기간',true],['flow','FCFF+TV',true],['pv','PV 연말기준 할인',true]];
+  box.innerHTML=`<div class="card-h"><div><h2>${periodMode==='monthly'?'Y'+(editYear+1)+' 선택연도 월별':'전체 사업기간 연도별'} · 공통 원장 보기</h2><p>흐름은 합계, 잔액은 마지막 잔액. 단가 집계는 판매수량 가중평균. 금액: ${unitLabel()} / 입력 원 유지. 월별 FCFF는 연말 할인계수를 동일 적용하므로 월 PV 합계=연간 PV. 월 IRR은 표시하지 않습니다.</p></div><button class="btn sm" id="exportPeriod">현재표 CSV</button></div>`+resultTable(['계정',...rows.map(r=>r.label)],fields.map(([k,n,money])=>[n,...rows.map(r=>money?(r[k]===null?'계산불가':formatMoney(r[k])):won(r[k]))]));
+  view.prepend(box);
+  box._export={head:['계정',...rows.map(r=>r.label)],rows:fields.map(([k,n,money])=>[n+(money?' ('+unitLabel()+')':''),...rows.map(r=>r[k]===null?'계산불가':money?num(r[k])/MoneyUnits[unitKey()].factor:r[k])])};
+  if(currentView==='demand'&&periodMode==='annual')renderDemandAnnual(box);
+}
+function renderDemandAnnual(box){const rows=R.products.map(p=>[esc(p.path.join(' › ')),...R.pl.flatMap((pl,y)=>{const ms=p.rows.slice(y*12,y*12+12),q=ms.reduce((a,m)=>a+m.sold,0),rev=ms.reduce((a,m)=>a+m.revenue,0);return [won(q),formatMoney(q?rev/q:0),formatMoney(rev)];})]);box.insertAdjacentHTML('beforeend','<h3>제품 경로별 연간 실제판매·가중단가·매출</h3>'+resultTable(['제품 전체경로',...R.pl.flatMap((p,y)=>['Y'+(y+1)+' 수량','Y'+(y+1)+' 공급가 단가 · '+unitLabel(),'Y'+(y+1)+' 매출 · '+unitLabel()])],rows));}
+function renderOrderSummary(){
+  let box=$('#orderAnnualSummary');if(!box){box=document.createElement('div');box.id='orderAnnualSummary';box.className='card extended-card';$('#view-inventory').append(box);}
+  const rows=[];R.products.forEach(p=>{for(let y=0;y<R.H;y++){const orders=p.orders.filter(o=>Math.floor(o.month/12)===y),arrival=p.rows.slice(y*12,y*12+12).reduce((v,m)=>v+m.arrival,0);if(orders.length||arrival)rows.push(['Y'+(y+1),esc(p.path.join(' › ')),orders.length,won(orders.reduce((v,o)=>v+o.qty,0)),formatMoney(orders.reduce((v,o)=>v+o.supply,0)),formatMoney(orders.reduce((v,o)=>v+o.vat,0)),formatMoney(orders.reduce((v,o)=>v+o.gross,0)),won(arrival)]);}});
+  box.innerHTML='<div class="card-h"><div><h2>확정 발주 일정 · 전체연도 요약</h2><p>발주 소속연도와 입고 소속연도를 각각 집계합니다. 자동 계산 계획이며 실제 발주 API 전송이 아닙니다. 월별 상세는 기존 확정 발주 일정 표에서 연도를 선택하세요.</p></div></div>'+resultTable(['발주연도','제품 전체경로','발주건수','발주수량','공급가액 · '+unitLabel(),'부가세 · '+unitLabel(),'합계 · '+unitLabel(),'해당연도 입고수량'],rows);
+}
+document.addEventListener('change',e=>{
+  const el=e.target;if(!Gate.approved)return;
+  if(el.id==='periodMode'){commitStable();periodMode=el.value;renderPeriodResults();return;}
+  if(el.id==='displayUnit'){S.meta.displayUnit=el.value;saveState();paint();return;}
+  if(!canEdit())return;let changed=false;
+  if(['vatEnabled','vatCycle','vatRefund','vatDelay'].includes(el.id)){S.vat=S.vat||{};const key={vatEnabled:'enabled',vatCycle:'cycle',vatRefund:'refundMode',vatDelay:'refundDelay'}[el.id];S.vat[key]=el.type==='checkbox'?el.checked:el.id==='vatRefund'?el.value:num(el.value);changed=true;}
+  if(el.dataset.taxField){const f=el.dataset.taxField,v=el.type==='checkbox'?el.checked:['salesIncluded','purchaseIncluded'].includes(f)?el.value==='true':f==='mode'?el.value:num(el.value);let owner;if(el.dataset.taxId){owner=findNode(el.dataset.taxId).node;owner.vat=owner.vat||{};owner.vat.years=owner.vat.years||{};owner.vat.years[editYear]={...owner.vat.years[editYear],[f]:v};}else if(el.dataset.assetTax){S.vat=S.vat||{};S.vat.assets=S.vat.assets||{};owner=S.vat.assets;owner[el.dataset.assetTax]={...owner[el.dataset.assetTax],[f]:v};}else if(el.dataset.expTax){const [list,id]=el.dataset.expTax.split(':');owner=S.sga[list].find(it=>it.id===id);owner.vat={...owner.vat,[f]:v};}changed=true;}
+  if(el.dataset.rankId){const rank=S.payroll.ranks.find(r=>r.id===el.dataset.rankId);if(el.dataset.rankField==='name')rank.name=el.value;else putAnnual(rank,editYear,el.dataset.rankField,Math.max(0,num(el.value)));changed=true;}
+  if(el.dataset.linkDept){const d=S.payroll.departments.find(d=>d.id===el.dataset.linkDept);putAnnual(d,editYear,el.dataset.linkField,el.value);changed=true;}
+  if(changed){saveState();paint();}
+});
+document.addEventListener('click',e=>{const id=e.target.closest('button')?.id;if(id==='addRank'&&canEdit()){S.payroll.ranks=S.payroll.ranks||[];S.payroll.ranks.push({id:uid('rank'),name:'새 직급',salary:0,pension:0,health:0,care:0,employment:0,accident:0,retirement:0,welfare:0,cardLimit:0,cardUse:0,travel:0,years:{}});paint();}if(id==='exportPeriod'&&Gate.approved){const d=$('#periodResults')._export;download('기간별_원장.csv','\ufeff'+[d.head,...d.rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));}});
+const financeExtendedBase=renderFinance;renderFinance=function(){if(!Gate.approved)return;financeExtendedBase();appendFinanceDetails();renderPeriodResults();};
+const valueExtendedBase=renderValue;renderValue=function(){if(!Gate.approved)return;valueExtendedBase();renderCurrencyPanels();};
+function appendFinanceDetails(){
+  const table=$('#stmtTable');if(!table)return;
+  if(['pl','mgmt'].includes(finTab)&&R.pl[0].pay.sgaComponents){const rows=PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l ind">판관 인건비 · ${n}</td>${R.pl.map(p=>'<td>'+m(-num(p.pay.sgaComponents?.[k]))+'</td>').join('')}</tr>`).join('');table.tBodies[0].insertAdjacentHTML('beforeend',rows);}
+  if(finTab==='bs'){table.tBodies[0].insertAdjacentHTML('beforeend',`<tr><td class="l">부가세대급금 (자산합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatCredit)+'</td>').join('')}</tr><tr><td class="l">부가세예수금 (부채합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatDue)+'</td>').join('')}</tr>`);}
+}
+const extendedMountBase=mountApproved;mountApproved=function(...args){extendedMountBase(...args);if(Gate.approved)renderExtensions();};
+function renderCurrencyPanels(){
+  if(!Gate.approved||!R)return;
+  if($('#stmtUnit'))$('#stmtUnit').textContent='결과 단위: '+unitLabel();
+  if(currentView==='assume'){
+    const p=R.pl[editYear];$('#assumeSummary').innerHTML='<div class="card-h"><div><h2>선택연도 요약</h2><p>결과 '+unitLabel()+' / 입력은 원</p></div></div>'+[['매출 공급가액',p.rev],['인건비',p.pay.total],['판관비·급여제외',p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt],['초기투자 · 공제 VAT 포함',R.I0],['개시현금',R.cash0],['NPV',R.npv]].map(([n,v])=>'<div class="kv"><span>'+n+'</span><b>'+formatMoney(v)+' '+unitLabel()+'</b></div>').join('');
+  }
+  if(currentView==='invest'){
+    const b=R.bs0;$('#openingBS').innerHTML='<thead><tr><th class="l">개시 재무상태</th><th>'+unitLabel()+'</th></tr></thead><tbody>'+[['현금',b.cash],['초기재고',b.inv],['유형자산',b.ppe],['무형자산',b.intang],['부가세대급금',b.vatCredit],['자산합계',b.assets],['차입금',b.debt],['자본',b.equity],['균형검증',b.check]].map(([n,v])=>'<tr><td class="l">'+n+'</td><td>'+formatMoney(v)+'</td></tr>').join('')+'</tbody>';
+    $('#fundingBox').innerHTML='<h2>개시 자금 대사 · '+unitLabel()+'</h2>'+[['자본·차입·기존현금',R.funding],['투자·재고·공제VAT',R.I0],['개시현금',R.cash0],['필요 최소현금',R.minCash]].map(([n,v])=>'<div class="kv"><span>'+n+'</span><b>'+formatMoney(v)+'</b></div>').join('');
+    $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.minCash);
+  }
+  if(currentView==='demand'){
+    const seg=R.segment(9);$('#demandMix').innerHTML='<h2>제품별 기간누적 매출 · '+unitLabel()+'</h2>'+seg.map(x=>'<div class="kv"><span>'+esc(x.name)+'</span><b>'+formatMoney(x.rev)+'</b></div>').join('');
+  }
+  if(currentView==='cost'){
+    const p=R.pl[editYear],pr=p.pay;$('#costRail').innerHTML='<h2>Y'+(editYear+1)+' 비용 구조 · '+unitLabel()+'</h2>'+[['급여·보험·부대비 합계',pr.total],['제조인건비 배부',pr.mfg],['판관 인건비',pr.sga],['고정 판관비',p.sga.fixed.amt],['준변동 판관비',p.sga.semi.amt],['변동 판관비',p.sga.variable.amt],['영업이익',p.ebit]].map(([n,v])=>'<div class="kv"><span>'+n+'</span><b>'+formatMoney(v)+'</b></div>').join('');
+    const payroll=$('#payrollTable');if(payroll?.tHead)payroll.tHead.rows[0].cells[7].textContent='Y'+(editYear+1)+' · '+unitLabel();
+    ['sgaFixed','sgaSemi','sgaVar'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[4].innerHTML='Y'+(editYear+1)+'<span class="u">'+unitLabel()+'</span>';});
+    ['nonopInc','nonopExp','nonopIncNC','nonopExpNC'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[3].textContent='금액 · '+unitLabel();});
+  }
+  if(currentView==='inventory'){
+    const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=R.products[i];if(!p)return;const py=productYear(p,editYear);tr.cells[6].textContent=formatMoney(py.cost);tr.cells[7].textContent=formatMoney(py.price);});[6,7,8].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=['원가','판가','연초재고가치'][i-6]+'<span class="u">'+unitLabel()+'</span>';});
+  }
+  if(currentView==='value'&&$('#tvFormula')){
+    const b=R.bs.at(-1),a=assumeYear(S,R.H-1),f=v=>formatMoney(v)+' '+unitLabel();
+    $('#tvFormula').innerHTML='<b>TV 산출 · 결과 '+unitLabel()+'</b><br>'+(R.tvMode==='none'?'TV=0 · 미포함':R.tvMode==='nav'?'TV = AR '+f(b.ar)+' + 재고 '+f(b.inv)+' + 선급 '+f(b.prepaid)+' + 미수 '+f(b.receivable)+' + VAT대급금 '+f(b.vatCredit)+' − AP '+f(b.ap)+' − 선수 '+f(b.advance)+' − 미지급 '+f(b.accrued)+' − VAT예수금 '+f(b.vatDue)+' + 유형 '+f(b.ppe)+' + 무형 '+f(b.intang)+' = '+f(R.tv):'TV = 최종 영업FCFF '+f(R.fcf.at(-1).fcff)+' × (1 + '+a.g+'%) / (최종 WACC '+(R.waccYears.at(-1)*100).toFixed(4)+'% − '+a.g+'%) = '+(R.tv===null?'계산불가':f(R.tv)))+'<br>t0 = 취득원가 CAPEX '+f(R.s.invest.capex)+' + 무형 '+f(R.s.invest.intangible)+' + 초기재고 '+f(R.openingStock)+' + 공제 VAT 선지출 '+f(R.vat.opening)+' = I0 '+f(R.I0)+'. 부가세는 수익이 아니며 미결대급금·예수금은 순자산 TV에 반영, 현금·차입은 제외합니다. 기간밖 정산은 실제 현금화하지 않습니다.';
+  }
+}
+const resultKpiBase=kpi;kpi=function(label,value,unit,sub,cls){if(unit==='원'&&typeof value==='string'&&value.endsWith(' '+unitLabel())){value=value.slice(0,-unitLabel().length-1);unit=unitLabel();}return resultKpiBase(label,value,unit,sub,cls);};
+orderCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()].factor,rows=[['발주월','제품 전체경로','발주수량','공급가액 ('+unitLabel()+')','부가세 ('+unitLabel()+')','합계 ('+unitLabel()+')','입고월']];R.products.forEach(p=>p.orders.forEach(o=>rows.push([R.months[o.month].label,p.path.join(' › '),o.qty,o.supply/factor,o.vat/factor,o.gross/factor,R.months[o.arrMonth]?.label||'기간 밖'])));download('발주계획.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));};
+demandCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()].factor,rows=[['제품 전체경로','연도','수량','공급가액 ('+unitLabel()+')','부가세 ('+unitLabel()+')','총청구액 ('+unitLabel()+')']];R.products.forEach(p=>{for(let y=0;y<R.H;y++){const ms=p.rows.slice(y*12,y*12+12),sum=k=>ms.reduce((a,m)=>a+num(m[k]),0),rev=sum('revenue'),vat=sum('salesVAT');rows.push([p.path.join(' › '),'Y'+(y+1),sum('sold'),rev/factor,vat/factor,(rev+vat)/factor]);}});download('판매수요.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));};
+
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
