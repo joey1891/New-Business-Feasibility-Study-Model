@@ -900,6 +900,8 @@ function ensureState(s0){
     if(!x.id) x.id=uid('d');
     x.heads=Math.max(0,num(x.heads,0)); x.salary=Math.max(0,num(x.salary,0));
     x.headAdd=num(x.headAdd,0); x.mfg=!!x.mfg;
+    if(Array.isArray(x.mix)) x.mix=x.mix.filter(m=>m&&m.rankId).map(m=>({rankId:m.rankId,heads:Math.max(0,num(m.heads))}));
+    if(x.hirePlan&&typeof x.hirePlan==='object'){const hp={};Object.keys(x.hirePlan).forEach(yy=>{const p=x.hirePlan[yy];if(!p||typeof p!=='object')return;const o={};Object.keys(p).forEach(rk=>{const v=Math.max(0,num(p[rk]));if(v)o[rk]=v;});if(Object.keys(o).length)hp[yy]=p&&Object.keys(p).length?hp[yy]||{}:{};Object.keys(p).forEach(rk=>{const v=Math.max(0,num(p[rk]));if(v){hp[yy]=hp[yy]||{};hp[yy][rk]=v;}});});x.hirePlan=hp;}else delete x.hirePlan;
   });
   ['fixed','semi','variable'].forEach(k=>{
     if(!Array.isArray(s.sga[k])) s.sga[k]=[];
@@ -922,6 +924,16 @@ function assumeYear(s,y){return annual(s.assume,y);}
 function productYear(p,y){const n=p.node||p;return annual(n,y,{price:n.price,cost:n.cost,growth:n.growth,months:(n.months||Array(12).fill(0)).map(v=>Math.max(0,Math.round(v*Math.pow(1+num(n.growth)/100,y))))});}
 function invYear(s,id,y){return annual(invCfg(s,id),y);}
 function deptYear(s,d,y){return annual(d,y,{...d,heads:Math.max(0,d.heads+d.headAdd*y),salary:d.salary*Math.pow(1+s.payroll.raise/100,y)});}
+function hasRankPlan(d){return !!(d&&((Array.isArray(d.mix)&&d.mix.some(m=>m&&m.rankId))||(d.hirePlan&&Object.keys(d.hirePlan).length)));}
+function deptRankHeads(d,y){
+  const out={};
+  const base=(Array.isArray(d.mix)&&d.mix.length)?d.mix:[{rankId:d.rankId,heads:Math.max(0,num(d.heads))}];
+  base.forEach(m=>{ if(!m||!m.rankId) return; out[m.rankId]=(out[m.rankId]||0)+Math.max(0,num(m.heads)); });
+  const plan=d.hirePlan||{};
+  for(let yy=1;yy<=y;yy++){ const p=plan[yy]; if(!p) continue; Object.keys(p).forEach(rk=>{ if(!rk) return; out[rk]=(out[rk]||0)+Math.max(0,num(p[rk])); }); }
+  return out;
+}
+function deptPlanHeads(d,y){const h=deptRankHeads(d,y);return Object.values(h).reduce((a,b)=>a+b,0);}
 function expenseYear(it,y){return annual(it,y,{...it,value:it.type==='rate'?it.value:it.value*Math.pow(1+it.grow/100,y)});}
 function invCfg(s,id){
   if(!s.inv.byProduct[id]) s.inv.byProduct[id]={stock:0,lead:30,safety:15,moq:100,lot:10};
@@ -1370,12 +1382,29 @@ function buildVatLedger(s,products,months,revs){
   return {enabled:!!v.enabled,rows,opening:s._vatOpening,assetVat:s._assetVat,schedule,cycle,refundMode:v.refundMode};
 }
 const PAY_COMPONENTS=[['salary','급여'],['pension','국민연금'],['health','건강보험'],['care','장기요양'],['employment','고용보험'],['accident','산재보험'],['retirement','퇴직급여'],['welfare','복리후생비'],['card','법인카드 예상사용'],['travel','여비교통비']];
+function rk2(r,y){const a=annual(r,y);const g=k=>Math.max(0,num(a[k]));return {salary:g('salary'),pension:g('pension'),health:g('health'),employment:g('employment'),accident:g('accident'),retirement:g('retirement'),care:g('care'),welfare:g('welfare'),cardLimit:g('cardLimit'),cardUse:g('cardUse'),travel:g('travel')};}
 function rankPayroll(s,y){
   const pr=annual(s.payroll,y),ranks=pr.ranks||[],components=()=>Object.fromEntries(PAY_COMPONENTS.map(([k])=>[k,0]));let total=0,mfg=0,sga=0,heads=0;const byDept=[],sgaComponents=components(),mfgComponents=components();
   if(!pr.enabled)return {total,mfg,sga,heads,byDept,sgaComponents,mfgComponents};
   pr.departments.forEach(d=>{
     const dy=deptYear(s,d,y),rank=ranks.find(r=>r.id===dy.rankId),parts=components();let h=Math.max(0,num(dy.heads));
-    if(rank){const ry=annual(rank,y),salary=Math.max(0,num(ry.salary));parts.salary=salary*h;
+    if(hasRankPlan(d)){
+      const hb=deptRankHeads(d,y);
+      Object.keys(hb).forEach(rk=>{
+        const r2=ranks.find(r=>r.id===rk), hs=Math.max(0,num(hb[rk])); if(!r2||!hs) return;
+        const cnt=Math.max(0,num(hb[rk]));
+        const rkCur=rk2(r2,y),sal=rkCur.salary*cnt;
+        parts.salary+=sal;
+        parts.pension+=sal*rkCur.pension/100; parts.health+=sal*rkCur.health/100;
+        parts.employment+=sal*rkCur.employment/100; parts.accident+=sal*rkCur.accident/100;
+        parts.retirement+=sal*rkCur.retirement/100;
+        parts.care+=(sal*rkCur.health/100)*rkCur.care/100;
+        parts.welfare+=rkCur.welfare*cnt*12;
+        parts.card+=rkCur.cardLimit*(Math.min(100,Math.max(0,rkCur.cardUse))/100)*cnt*12;
+        parts.travel+=rkCur.travel*cnt*12;
+      });
+      h=deptPlanHeads(d,y);
+    }else if(rank){const ry=annual(rank,y),salary=Math.max(0,num(ry.salary));parts.salary=salary*h;
       ['pension','health','employment','accident','retirement'].forEach(k=>parts[k]=parts.salary*Math.max(0,num(ry[k]))/100);
       parts.care=parts.health*Math.max(0,num(ry.care))/100;
       parts.welfare=Math.max(0,num(ry.welfare))*h*12;parts.card=Math.max(0,num(ry.cardLimit))*Math.max(0,Math.min(100,num(ry.cardUse)))/100*h*12;parts.travel=Math.max(0,num(ry.travel))*h*12;
@@ -2929,7 +2958,7 @@ function extendToolbar(){
 // rerender only once at blur/change/composition end, never while an IME is composing.
 function stableInput(e){
   const el=e.target;if(!Gate.approved||!el.closest('#appHost'))return;
-  if(!el.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]'))return;
+  if(!el.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept]'))return;
   e.stopImmediatePropagation();if(!canEdit()||Workspace.busy)return;
   if(e.isComposing||composing){inputDirty=true;return;}
   writeStable(el);inputDirty=true;
@@ -2939,6 +2968,20 @@ function writeStable(el){
   if(el.dataset.nid){const n=findNode(el.dataset.nid)?.node;if(!n)return;if(el.dataset.nf==='name')n.name=el.value;else if(el.dataset.nmall!==undefined){const arr=Array(12).fill(Math.max(0,value));putAnnual(n,editYear,'months',arr);bulkDirty=true;}
     else if(el.dataset.gbulk!==undefined){const arr=Array(12).fill(Math.max(0,value));subtreeProducts(n).forEach(leaf=>putAnnual(leaf,editYear,'months',arr.slice()));bulkDirty=true;}else if(el.dataset.nm!==undefined){const py=productYear(n,editYear);py.months[+el.dataset.nm]=Math.max(0,value);putAnnual(n,editYear,'months',py.months);}else if(['price','cost'].includes(el.dataset.nf))putAnnual(n,editYear,el.dataset.nf,value);else n[el.dataset.nf]=value;}
   if(el.dataset.pid){const c=invCfg(S,el.dataset.pid);if(el.dataset.pf==='stock')c.stock=value;else putAnnual(c,editYear,el.dataset.pf,value);}
+  if(el.dataset.rpdept){
+    const d=S.payroll.departments.find(x=>x.id===el.dataset.rpdept);if(!d)return;
+    const rk=el.dataset.rprank,y=+el.dataset.rpyear,v=Math.max(0,num(el.value));
+    if(y===0){
+      d.mix=Array.isArray(d.mix)&&d.mix.length?d.mix:(d.rankId?[{rankId:d.rankId,heads:Math.max(0,num(d.heads))}]:[]);
+      let m=d.mix.find(x=>x.rankId===rk);if(!m){m={rankId:rk,heads:0};d.mix.push(m);}m.heads=v;
+      d.heads=d.mix.reduce((a,x)=>a+Math.max(0,num(x.heads)),0);
+    }else{
+      d.hirePlan=d.hirePlan||{};d.hirePlan[y]=d.hirePlan[y]||{};
+      if(v)d.hirePlan[y][rk]=v;else delete d.hirePlan[y][rk];
+      if(!Object.keys(d.hirePlan[y]).length)delete d.hirePlan[y];
+    }
+    saveState();rpDirty=true;return;
+  }
   if(el.dataset.did){const d=S.payroll.departments.find(d=>d.id===el.dataset.did),f=el.dataset.df;if(f==='name')d.name=el.value;else if(['heads','salary','insurance','retirement','rankId','role'].includes(f))putAnnual(d,editYear,f,['rankId','role'].includes(f)?el.value:value);else d[f]=value;}
   if(el.dataset.sid){const it=S.sga[el.dataset.list].find(it=>it.id===el.dataset.sid);if(el.dataset.sf==='name')it.name=el.value;else if(el.dataset.sf==='value')putAnnual(it,editYear,'value',value);else it[el.dataset.sf]=value;}
   if(el.dataset.oid){const it=S.nonop[el.dataset.nlist].find(it=>it.id===el.dataset.oid);if(el.dataset.of==='name')it.name=el.value;else putAnnual(it,editYear,el.dataset.of,value);}
@@ -2948,9 +2991,9 @@ function writeStable(el){
 window.addEventListener('input',stableInput,true);
 window.addEventListener('compositionstart',e=>{if(e.target.matches('input[data-nid],input[data-did],input[data-sid],input[data-oid]'))composing=true;},true);
 window.addEventListener('compositionend',e=>{if(!composing)return;composing=false;writeStable(e.target);inputDirty=true;},true);
-function commitStable(){if(composing||!Gate.approved)return;if(!inputDirty&&!bulkDirty)return;inputDirty=false;R=compute(S);window.__R=R;saveState();if(bulkDirty){bulkDirty=false;renderTree();}renderPeriodResults();renderCurrencyPanels();}
-window.addEventListener('change',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]')){e.stopImmediatePropagation();writeStable(e.target);commitStable();}},true);
-window.addEventListener('focusout',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]'))commitStable();},true);
+function commitStable(){if(composing||!Gate.approved)return;if(!inputDirty&&!bulkDirty)return;inputDirty=false;R=compute(S);window.__R=R;saveState();if(bulkDirty){bulkDirty=false;renderTree();}if(rpDirty){rpDirty=false;renderRankMatrix();}renderPeriodResults();renderCurrencyPanels();}
+window.addEventListener('change',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept]')){e.stopImmediatePropagation();writeStable(e.target);commitStable();}},true);
+window.addEventListener('focusout',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept]'))commitStable();},true);
 window.addEventListener('beforeunload',commitStable);
 const switchExtendedBase=switchView;switchView=function(...args){if(!Gate.approved)return;commitStable();switchExtendedBase(...args);renderExtensions();};
 const paintExtendedBase=paint;paint=function(){if(!Gate.approved)return;commitStable();paintExtendedBase();renderExtensions();};
@@ -3055,9 +3098,81 @@ const resultKpiBase=kpi;kpi=function(label,value,unit,sub,cls){if(unit==='원'&&
 orderCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()].factor,rows=[['발주월','제품 전체경로','발주수량','공급가액 ('+unitLabel()+')','부가세 ('+unitLabel()+')','합계 ('+unitLabel()+')','입고월']];R.products.forEach(p=>p.orders.forEach(o=>rows.push([R.months[o.month].label,p.path.join(' › '),o.qty,o.supply/factor,o.vat/factor,o.gross/factor,R.months[o.arrMonth]?.label||'기간 밖'])));download('발주계획.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));};
 demandCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()].factor,rows=[['제품 전체경로','연도','수량','공급가액 ('+unitLabel()+')','부가세 ('+unitLabel()+')','총청구액 ('+unitLabel()+')']];R.products.forEach(p=>{for(let y=0;y<R.H;y++){const ms=p.rows.slice(y*12,y*12+12),sum=k=>ms.reduce((a,m)=>a+num(m[k]),0),rev=sum('revenue'),vat=sum('salesVAT');rows.push([p.path.join(' › '),'Y'+(y+1),sum('sold'),rev/factor,vat/factor,(rev+vat)/factor]);}});download('판매수요.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));};
 
+/* ===== 부서 × 직급 × 연도 인원 계획 ===== */
+let rpDirty=false;
+function rpMix(d){return (Array.isArray(d.mix)&&d.mix.length)?d.mix:(d.rankId?[{rankId:d.rankId,heads:Math.max(0,num(d.heads))}]:[]);}
+function rpRankList(d){const s=new Set(rpMix(d).map(m=>m.rankId).filter(Boolean));Object.keys(d.hirePlan||{}).forEach(y=>Object.keys(d.hirePlan[y]||{}).forEach(r=>s.add(r)));return Array.from(s);}
+function renderRankMatrix(){
+  if(!Gate.approved||currentView!=='cost'||!R)return;
+  const host=$('#view-cost');if(!host)return;
+  let box=$('#rankMatrix');
+  if(!box){box=document.createElement('div');box.id='rankMatrix';box.className='card extended-card';
+    const rs=$('#rankSettings');if(rs&&rs.parentNode)rs.parentNode.insertBefore(box,rs.nextSibling);else host.appendChild(box);}
+  const ranks=S.payroll.ranks||[],H=S.meta.years,rows=[];
+  S.payroll.departments.forEach(d=>{
+    const list=rpRankList(d);if(!list.length)list.push('');
+    const roleLbl={manufacturing:'제조',sales:'판매',admin:'관리'}[(deptYear(S,d,editYear).role)||(d.mfg?'manufacturing':'admin')]||'관리';
+    list.forEach((rk,i)=>{
+      const cells=[];
+      for(let y=0;y<H;y++){
+        const mix=rpMix(d).find(m=>m.rankId===rk);
+        const v=y===0?(mix?Math.max(0,num(mix.heads)):0):Math.max(0,num((d.hirePlan?.[y]||{})[rk]));
+        cells.push(`<input class="cell" type="number" min="0" step="1" data-rpdept="${d.id}" data-rprank="${rk}" data-rpyear="${y}" value="${v}" ${rk?'':'disabled placeholder="직급"'} aria-label="${esc(d.name)} ${y+1}년 인원">`);
+      }
+      const hb=rk?deptRankHeads(d,editYear):{},cnt=rk?Math.max(0,num(hb[rk])):0;
+      const rkObj=rk?ranks.find(r=>r.id===rk):null;
+      const cost=rkObj?rk2(rkObj,editYear).salary*cnt:0;
+      rows.push([
+        i===0?`${esc(d.name)}<div class="sub">${roleLbl}</div>`:'',
+        `<select data-rpdept-sel="${d.id}" data-rkfrom="${rk}"><option value="">-</option>${S.payroll.ranks.map(r=>`<option value="${r.id}"${r.id===rk?' selected':''}>${r.name}</option>`).join('')}</select>`,
+        ...cells,
+        `<b>${won(cnt)}</b>`,
+        formatMoney(cost)
+      ]);
+    });
+    const tot=deptPlanHeads(d,editYear)||Math.max(0,num(deptYear(S,d,editYear).heads));
+    const amt=(R.pl[editYear]?.pay?.byDept||[]).find(b=>b.id===d.id)?.amount||0;
+    rows.push([`<b>${esc(d.name)} 합계</b>`,'',...Array(H).fill(''),`<b>${won(tot)}</b>`,`<b>${formatMoney(amt)}</b>`]);
+  });
+  box.innerHTML=`<div class="card-h"><div><h2>부서 × 직급 × 연도 인원 계획</h2><p>Y1은 기초 인원, Y2 이후는 <b>그 해 추가 채용 인원</b>. 임금테이블의 해당 연도 연봉·보험·복리후생으로 자동 계산되고 이후 연도에 누적됩니다. 금액: ${unitLabel()}</p></div><button class="btn sm" id="rpAddRank">직급 행 추가</button></div>
+  ${resultTable(['부서','직급',...Array.from({length:H},(_,y)=>'Y'+(y+1)),'Y'+(editYear+1)+' 인원','Y'+(editYear+1)+' 인건비 · '+unitLabel()],rows)}
+  <p class="help">직급을 고르면 행이 생깁니다. 인원을 0으로 비우면 그 해 채용이 취소됩니다. 이 표를 쓰기 시작한 부서는 기존 부서표의 인원·급여 대신 이 표를 기준으로 계산합니다.</p>`;
+}
+const renderExtBase=renderExtensions;
+renderExtensions=function(){renderExtBase();try{renderRankMatrix();}catch(e){console.error(e);}};
+document.addEventListener('change',e=>{
+  const el=e.target;if(!Gate.approved||!canEdit())return;
+  if(el.dataset&&el.dataset.rpsel){
+    const d=S.payroll.departments.find(x=>x.id===el.dataset.rpsel);if(!d)return;
+    const oldRk=el.dataset.rpselold,nv=el.value;
+    d.mix=Array.isArray(d.mix)&&d.mix.length?d.mix:(d.rankId?[{rankId:d.rankId,heads:Math.max(0,num(d.heads))}]:[]);
+    if(oldRk){const m=d.mix.find(x=>x.rankId===oldRk);if(m){if(nv)m.rankId=nv;else d.mix=d.mix.filter(x=>x!==m);}}
+    else if(nv&&!d.mix.some(x=>x.rankId===nv))d.mix.push({rankId:nv,heads:0});
+    d.heads=d.mix.reduce((a,x)=>a+Math.max(0,num(x.heads)),0);
+    saveState();R=compute(S);renderRankMatrix();return;
+  }
+  if(e.target&&e.target.id==='rpAddRank'&&canEdit()){
+    const d=S.payroll.departments[0];if(!d)return;
+    d.mix=Array.isArray(d.mix)?d.mix:[];const used=new Set(d.mix.map(m=>m.rankId));
+    const nk=(S.payroll.ranks||[]).find(r=>!used.has(r.id));
+    if(nk){d.mix.push({rankId:nk.id,heads:0});saveState();R=compute(S);renderRankMatrix();}
+    return;
+  }
+},true);
+document.addEventListener('click',e=>{
+  const b=e.target.closest('#rpAddRank');if(!b||!Gate.approved||!canEdit())return;
+  const d=S.payroll.departments[0];if(!d)return;
+  d.mix=Array.isArray(d.mix)&&d.mix.length?d.mix:[];
+  const used=new Set(d.mix.map(m=>m.rankId));
+  const nk=(S.payroll.ranks||[]).find(r=>!used.has(r.id));
+  if(!nk){toast('모든 직급이 이미 추가되었습니다');return;}
+  d.mix.push({rankId:nk.id,heads:0});saveState();R=compute(S);renderRankMatrix();
+},true);
+
 </script>
 </body>
 </html>
+
 
 
 
