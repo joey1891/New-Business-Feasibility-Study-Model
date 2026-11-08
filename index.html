@@ -337,6 +337,7 @@ table.tbl.plain thead th{position:static}
 .tbl.tree .custbox{flex:none;display:inline-flex;align-items:center;gap:2px;font-size:9.5px;font-weight:700;color:var(--teal);background:#e8f4f1;border:1px solid #c4e2da;border-radius:3px;padding:0 3px}
 .tbl.tree .molbl{font-size:9px;color:var(--teal);text-align:right;line-height:1.1;margin-top:-1px}
 .tbl.tree .bulk{background:#fff8e8;border-color:#e6d3a3}
+.tbl.tree .bulkcell{background:#fffdf7}
 .tbl.tree .custbox .cell{width:34px;padding:1px 2px;font-size:10px;text-align:center;border:none;background:transparent;color:inherit;font-weight:800}
 .tbl.tree .add{border:1px solid var(--line);background:#fff;color:var(--teal);cursor:pointer;font-size:11px;font-weight:800;line-height:1;padding:2px 5px;border-radius:4px;flex:none}
 .tbl.tree .add:hover{background:var(--tealSoft);border-color:#b9dcd7}
@@ -1717,7 +1718,8 @@ function demandRowHtml(n,depth,idx){
       <td class="l treecell sticky">${box}<button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
       <td class="num strong">${won(q)}</td>
       <td class="num strong">${man(rev)}</td>
-      <td colspan="18" class="l hint">${LEVELS[depth-1]} · 하위 ${prods.length}개 제품</td>
+      <td class="bulkcell"><input class="cell bulk" type="number" min="0" data-nid="${n.id}" data-gbulk="1" placeholder="일괄" aria-label="${LEVELS[depth-1]} 하위 ${prods.length}개 제품 월수량 일괄 입력" title="이 ${LEVELS[depth-1]} 아래 모든 제품의 1~12월 수량을 한 번에 채웁니다"></td>
+      <td colspan="18" class="l hint">${LEVELS[depth-1]} · 하위 ${prods.length}개 제품 · 일괄 입력 시 하위 전체 적용</td>
     </tr>`;
   }
   const q=prodQty(n);
@@ -2350,7 +2352,6 @@ function bindStatic(){
     if(nid){
       const info=findNode(nid); if(!info) return;
       const n=info.node;
-      if(el.dataset.nmall!=null){ const v=Math.max(0,num(el.value)); n.months=Array(12).fill(v); renderTree(); paint(); return; }
       if(el.dataset.nm!=null){ n.months=n.months||Array(12).fill(0); n.months[+el.dataset.nm]=Math.max(0,num(el.value)); }
       else if(el.dataset.nf==='name'){ n.name=el.value; }
       else if(el.dataset.nf){ n[el.dataset.nf]=Math.max(el.dataset.nf==='growth'?0:0,num(el.value)); }
@@ -2916,7 +2917,7 @@ const MoneyUnits={won:{label:'원',factor:1},million:{label:'백만원',factor:1
 function unitKey(){return S?.meta?.displayUnit&&MoneyUnits[S.meta.displayUnit]?S.meta.displayUnit:'won';}
 function unitLabel(){return MoneyUnits[unitKey()].label;}
 function formatMoney(v){if(v===null)return '계산불가';const value=num(v)/MoneyUnits[unitKey()].factor,d=moneyDigits();return value.toLocaleString('ko-KR',{minimumFractionDigits:0,maximumFractionDigits:d});}
-let periodMode='annual',inputDirty=false,composing=false;
+let periodMode='annual',inputDirty=false,composing=false,bulkDirty=false;
 function extendToolbar(){
   if(!Gate.approved)return;
   if(!$('#displayUnit')){const bar=$('.yearbar');bar.insertAdjacentHTML('beforeend','<label>결과 단위 <select id="displayUnit" data-readonly-skip="1"><option value="won">원</option><option value="million">백만원</option><option value="eok">억원</option></select></label><label>공통 보기 <select id="periodMode" data-readonly-skip="1"><option value="annual">전체기간 연도별</option><option value="monthly">선택연도 월별</option></select></label><label>소수 자릿수 <select id="displayDecimals" data-readonly-skip="1"><option value="0">0자리 정수</option><option value="1">1자리</option><option value="2">2자리</option><option value="3">3자리</option></select></label>');}
@@ -2935,7 +2936,8 @@ function stableInput(e){
 }
 function writeStable(el){
   const value=el.type==='checkbox'?el.checked:num(el.value);
-  if(el.dataset.nid){const n=findNode(el.dataset.nid)?.node;if(!n)return;if(el.dataset.nf==='name')n.name=el.value;else if(el.dataset.nmall!==undefined){const arr=Array(12).fill(Math.max(0,value));putAnnual(n,editYear,'months',arr);renderTree();}else if(el.dataset.nm!==undefined){const py=productYear(n,editYear);py.months[+el.dataset.nm]=Math.max(0,value);putAnnual(n,editYear,'months',py.months);}else if(['price','cost'].includes(el.dataset.nf))putAnnual(n,editYear,el.dataset.nf,value);else n[el.dataset.nf]=value;}
+  if(el.dataset.nid){const n=findNode(el.dataset.nid)?.node;if(!n)return;if(el.dataset.nf==='name')n.name=el.value;else if(el.dataset.nmall!==undefined){const arr=Array(12).fill(Math.max(0,value));putAnnual(n,editYear,'months',arr);bulkDirty=true;}
+    else if(el.dataset.gbulk!==undefined){const arr=Array(12).fill(Math.max(0,value));subtreeProducts(n).forEach(leaf=>putAnnual(leaf,editYear,'months',arr.slice()));bulkDirty=true;}else if(el.dataset.nm!==undefined){const py=productYear(n,editYear);py.months[+el.dataset.nm]=Math.max(0,value);putAnnual(n,editYear,'months',py.months);}else if(['price','cost'].includes(el.dataset.nf))putAnnual(n,editYear,el.dataset.nf,value);else n[el.dataset.nf]=value;}
   if(el.dataset.pid){const c=invCfg(S,el.dataset.pid);if(el.dataset.pf==='stock')c.stock=value;else putAnnual(c,editYear,el.dataset.pf,value);}
   if(el.dataset.did){const d=S.payroll.departments.find(d=>d.id===el.dataset.did),f=el.dataset.df;if(f==='name')d.name=el.value;else if(['heads','salary','insurance','retirement','rankId','role'].includes(f))putAnnual(d,editYear,f,['rankId','role'].includes(f)?el.value:value);else d[f]=value;}
   if(el.dataset.sid){const it=S.sga[el.dataset.list].find(it=>it.id===el.dataset.sid);if(el.dataset.sf==='name')it.name=el.value;else if(el.dataset.sf==='value')putAnnual(it,editYear,'value',value);else it[el.dataset.sf]=value;}
@@ -2946,7 +2948,7 @@ function writeStable(el){
 window.addEventListener('input',stableInput,true);
 window.addEventListener('compositionstart',e=>{if(e.target.matches('input[data-nid],input[data-did],input[data-sid],input[data-oid]'))composing=true;},true);
 window.addEventListener('compositionend',e=>{if(!composing)return;composing=false;writeStable(e.target);inputDirty=true;},true);
-function commitStable(){if(!inputDirty||composing||!Gate.approved)return;inputDirty=false;R=compute(S);window.__R=R;saveState();renderPeriodResults();renderCurrencyPanels();}
+function commitStable(){if(composing||!Gate.approved)return;if(!inputDirty&&!bulkDirty)return;inputDirty=false;R=compute(S);window.__R=R;saveState();if(bulkDirty){bulkDirty=false;renderTree();}renderPeriodResults();renderCurrencyPanels();}
 window.addEventListener('change',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]')){e.stopImmediatePropagation();writeStable(e.target);commitStable();}},true);
 window.addEventListener('focusout',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid]'))commitStable();},true);
 window.addEventListener('beforeunload',commitStable);
@@ -3056,6 +3058,8 @@ demandCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()]
 </script>
 </body>
 </html>
+
+
 
 
 
