@@ -753,7 +753,13 @@ const M_B2=[170,165,180,195,210,230,250,235,205,190,175,170];
 
 const RANK_SEED=['사원','대리','과장','차장','부장','이사','상무','전무','부사장'];
 const RANK_BASE=[3000000,3600000,4300000,5100000,6000000,8000000,10000000,12000000,15000000];
-const RANK_INS={pension:4.75,health:3.595,care:13.14,employment:1.15,accident:1.4,retirement:8.33,welfare:100000,cardLimit:300000,cardUse:50,travel:100000};
+const RANK_RATE_PRESETS={
+  2025:{pension:4.5,health:3.545,care:12.95,employment:1.15,accident:1.4,retirement:8.33,note:'국민연금 9%·건강 7.09%·장기요양 0.9182%의 사업주 절반, 고용 0.9+0.25%(150인 미만), 산재 업종 평균'},
+  2026:{pension:4.75,health:3.595,care:13.14,employment:1.15,accident:1.4,retirement:8.33,note:'국민연금 9.5%·건강 7.19%·장기요양 0.9448%의 사업주 절반, 고용 0.9+0.25%(150인 미만), 산재 업종 평균'}
+};
+const RANK_RATE_KEYS=['pension','health','care','employment','accident','retirement'];
+const RANK_INS={...RANK_RATE_PRESETS[2026],welfare:100000,cardLimit:300000,cardUse:50,travel:100000};
+function applyRatePreset(ranks,year){const p=RANK_RATE_PRESETS[year];if(!p)return false;ranks.forEach(r=>RANK_RATE_KEYS.forEach(k=>r[k]=p[k]));return true;}
 function rankDefaults(){ return RANK_SEED.map((n,i)=>({id:uid('rk'),name:n,salary:RANK_BASE[i],pension:RANK_INS.pension,health:RANK_INS.health,care:RANK_INS.care,employment:RANK_INS.employment,accident:RANK_INS.accident,retirement:RANK_INS.retirement,welfare:RANK_INS.welfare,cardLimit:RANK_INS.cardLimit,cardUse:RANK_INS.cardUse,travel:RANK_INS.travel,years:{}})); }
 function defaultState(){
   const tree=[
@@ -807,7 +813,7 @@ function defaultState(){
     assume:{taxRate:22,ke:12,waccMode:'auto',wacc:10,minCashMonths:4,arDays:45,apDays:30,openingCash:0,tvMode:'nav',g:1},
     invest:{capex:200000000,capexLife:5,intangible:20000000,intangibleLife:5,equity:320000000,debt:120000000,rate:6,repay:'bullet'},
     sales:{tree},
-    payroll:{enabled:true,insurance:11,retirement:8.33,raise:3,ranks:rankDefaults(),departments:[
+    payroll:{enabled:true,insurance:11,retirement:8.33,raise:3,rateYear:2026,ranks:rankDefaults(),departments:[
       {id:uid('d'),name:'영업팀',heads:2,salary:3200000,headAdd:0,mfg:false},
       {id:uid('d'),name:'물류·운영',heads:1,salary:3000000,headAdd:0,mfg:false}
     ]},
@@ -873,6 +879,7 @@ function ensureState(s0){
   s.sales.tree=s.sales.tree.map(n=>normNode(n,1));
   ['insurance','retirement','raise'].forEach(k=>s.payroll[k]=num(s.payroll[k],d.payroll[k]));
   s.meta.displayDecimals=Math.min(3,Math.max(0,Math.round(num(s.meta.displayDecimals,0))));
+  s.payroll.rateYear=[2025,2026].includes(+s.payroll.rateYear)?+s.payroll.rateYear:null;
   if(!Array.isArray(s.payroll.ranks)) s.payroll.ranks=rankDefaults();
   s.payroll.ranks.forEach(r=>{ if(!r.id) r.id=uid('rk'); r.name=String(r.name||'직급');
     ['salary','pension','health','care','employment','accident','retirement','welfare','cardLimit','cardUse','travel'].forEach(k=>r[k]=Math.max(0,num(r[k],0)));
@@ -2951,8 +2958,13 @@ function renderVatSettings(){
 function renderRankSettings(){
   let box=$('#rankSettings');if(!box){box=document.createElement('div');box.id='rankSettings';box.className='card extended-card';$('#view-cost').prepend(box);}
   const ranks=S.payroll.ranks||[];
+  const ry=box.querySelector('#rankRateYear');if(ry){ry.value=S.payroll.rateYear?String(S.payroll.rateYear):'';}
+  const note=box.querySelector('#rankRateNote');
+  if(note)note.textContent=S.payroll.rateYear?('적용 중: '+S.payroll.rateYear+'년 사업주 부담 요율 · '+RANK_RATE_PRESETS[S.payroll.rateYear].note):'요율을 직접 입력 중입니다. 연도를 고르면 9개 직급 전체에 일괄 적용됩니다.';
   const fields=[['salary','기본월급 · 원'],['pension','국민연금 %'],['health','건강보험 %'],['care','요양/건강보험료 %'],['employment','고용 %'],['accident','산재 %'],['retirement','퇴직 %'],['welfare','복리/월 · 원'],['cardLimit','카드월한도 · 원'],['cardUse','예상사용률 %'],['travel','여비/월 · 원']];
-  box.innerHTML=`<div class="card-h"><div><h2>직급별 연도 임금테이블 · Y${editYear+1}</h2><p>모든 요율은 사용자 입력 계획값이며 법정 자동요율이 아닙니다. 기본값은 2026년 사업주 부담 기준(국민연금 4.75%·건강 3.595%·요양=건강보험료×13.14%·고용 1.15%(150인 미만)·산재 1.4% 평균·퇴직 8.33%)이며 업종·규모에 따라 다르니 수정하세요. 요양 = 건강보험료 × 요양률. 부서가 직급에 연결되면 기존 부서급여를 대체합니다.</p></div><button class="btn" id="addRank">직급 추가</button><button class="btn" id="fillRanks" style="margin-left:6px">기본 9직급</button></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<h3>부서·직급 연결 · 선택연도 인원은 기존 부서표에서 입력</h3>${resultTable(['부서','직급 · 미연결=기존 급여','제조/판매/관리'],S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear);return [esc(d.name),`<select data-link-dept="${d.id}" data-link-field="rankId"><option value="">기존 부서급여</option>${ranks.map(r=>`<option value="${r.id}" ${dy.rankId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`,`<select data-link-dept="${d.id}" data-link-field="role">${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([k,n])=>`<option value="${k}" ${(dy.role||(d.mfg?'manufacturing':'admin'))===k?'selected':''}>${n}</option>`).join('')}</select>`];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
+  box.innerHTML=`<div class="card-h"><div><h2>직급별 연도 임금테이블 · Y${editYear+1}</h2><p>모든 요율은 사용자 입력 계획값이며 법정 자동요율이 아닙니다. <span id="rankRateNote">${S.payroll.rateYear?('적용 중: '+S.payroll.rateYear+'년 사업주 부담 요율 · '+RANK_RATE_PRESETS[S.payroll.rateYear].note):'요율을 직접 입력 중입니다. 연도를 고르면 9개 직급 전체에 적용됩니다.'}</span> 요양 = 건강보험료 × 요양률, 산재는 업종별로 다르므로 실제 고지서로 확인하세요. 요양 = 건강보험료 × 요양률. 부서가 직급에 연결되면 기존 부서급여를 대체합니다.</p></div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+<label class="check" style="white-space:nowrap">보험료 요율 <select id="rankRateYear" data-readonly-skip="1"><option value="">직접 입력</option><option value="2025">2025년 사업주</option><option value="2026">2026년 사업주</option></select></label>
+<button class="btn" id="addRank">직급 추가</button><button class="btn" id="fillRanks">기본 9직급</button></div></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<h3>부서·직급 연결 · 선택연도 인원은 기존 부서표에서 입력</h3>${resultTable(['부서','직급 · 미연결=기존 급여','제조/판매/관리'],S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear);return [esc(d.name),`<select data-link-dept="${d.id}" data-link-field="rankId"><option value="">기존 부서급여</option>${ranks.map(r=>`<option value="${r.id}" ${dy.rankId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`,`<select data-link-dept="${d.id}" data-link-field="role">${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([k,n])=>`<option value="${k}" ${(dy.role||(d.mfg?'manufacturing':'admin'))===k?'selected':''}>${n}</option>`).join('')}</select>`];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
 }
 function selectedMonthly(){return R.monthly?.slice(editYear*12,editYear*12+12)||[];}
 function renderPeriodResults(){
@@ -2975,6 +2987,11 @@ document.addEventListener('change',e=>{
   const el=e.target;if(!Gate.approved)return;
   if(el.id==='periodMode'){commitStable();periodMode=el.value;renderPeriodResults();return;}
   if(el.id==='displayUnit'){S.meta.displayUnit=el.value;saveState();paint();return;}
+  if(el.id==='rankRateYear'){
+    const y=el.value?+el.value:null;
+    if(y){ if(!confirm(y+'년 사업주 부담 요율을 9개 직급 전체에 적용할까요? 현재 입력한 요율은 덮어씁니다.')){el.value=S.payroll.rateYear?String(S.payroll.rateYear):'';return;} applyRatePreset(S.payroll.ranks,y); }
+    S.payroll.rateYear=y;saveState();paint();return;
+  }
   if(el.id==='displayDecimals'){S.meta.displayDecimals=Math.max(0,Math.min(3,+el.value||0));saveState();paint();return;}
   if(!canEdit())return;let changed=false;
   if(['vatEnabled','vatCycle','vatRefund','vatDelay'].includes(el.id)){S.vat=S.vat||{};const key={vatEnabled:'enabled',vatCycle:'cycle',vatRefund:'refundMode',vatDelay:'refundDelay'}[el.id];S.vat[key]=el.type==='checkbox'?el.checked:el.id==='vatRefund'?el.value:num(el.value);changed=true;}
@@ -3027,6 +3044,7 @@ demandCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()]
 </script>
 </body>
 </html>
+
 
 
 
