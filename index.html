@@ -334,6 +334,8 @@ table.tbl.plain thead th{position:static}
 .tbl.tree .lvchip{flex:none;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:3px;background:var(--navy);color:#fff;font-size:9px;font-weight:800}
 .tbl.tree .lvd{flex:none;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:3px;background:#dbe6f0;color:#4b6b8a;font-size:9px;font-weight:800}
 .tbl.tree .cnt{flex:none;font-size:9.5px;color:#93a3b5;background:#f0f4f8;border-radius:3px;padding:1px 4px}
+.tbl.tree .custbox{flex:none;display:inline-flex;align-items:center;gap:2px;font-size:9.5px;font-weight:700;color:var(--teal);background:#e8f4f1;border:1px solid #c4e2da;border-radius:3px;padding:0 3px}
+.tbl.tree .custbox .cell{width:34px;padding:1px 2px;font-size:10px;text-align:center;border:none;background:transparent;color:inherit;font-weight:800}
 .tbl.tree .add{border:1px solid var(--line);background:#fff;color:var(--teal);cursor:pointer;font-size:11px;font-weight:800;line-height:1;padding:2px 5px;border-radius:4px;flex:none}
 .tbl.tree .add:hover{background:var(--tealSoft);border-color:#b9dcd7}
 .tbl.tree tr.item td{background:#fff}
@@ -545,8 +547,9 @@ table.tbl.plain thead th{position:static}
 
       <div class="card">
         <div class="card-h"><div><h2><span class="no">01</span>제품별 발주 조건</h2><p>리드타임·안전재고·최소발주량만 정하면 발주 시점과 수량은 자동으로 확정됩니다.</p></div></div>
+        <div id="invStockOpt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 10px"></div>
         <div class="tablewrap"><table class="tbl" id="invSettings"></table></div>
-        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. <b>현재재고</b>는 t=0 매입액에 포함됩니다.</div>
+        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. <b>현재재고</b>는 t=0 매입액에 포함됩니다. 거래처 수 자동 확대를 켜면 제품별 초기재고가 해당 제품의 수익 경로에 있는 판매처 수만큼 늘어납니다.</div>
       </div>
       <div style="height:14px"></div>
 
@@ -748,6 +751,10 @@ const M_C=[130,140,150,160,150,170,180,175,160,150,140,135];
 const M_A2=[180,170,190,210,230,250,270,260,230,210,200,190];
 const M_B2=[170,165,180,195,210,230,250,235,205,190,175,170];
 
+const RANK_SEED=['사원','대리','과장','차장','부장','이사','상무','전무','부사장'];
+const RANK_BASE=[3000000,3600000,4300000,5100000,6000000,8000000,10000000,12000000,15000000];
+const RANK_INS={pension:4.75,health:3.595,care:13.14,employment:1.15,accident:1.4,retirement:8.33,welfare:100000,cardLimit:300000,cardUse:50,travel:100000};
+function rankDefaults(){ return RANK_SEED.map((n,i)=>({id:uid('rk'),name:n,salary:RANK_BASE[i],pension:RANK_INS.pension,health:RANK_INS.health,care:RANK_INS.care,employment:RANK_INS.employment,accident:RANK_INS.accident,retirement:RANK_INS.retirement,welfare:RANK_INS.welfare,cardLimit:RANK_INS.cardLimit,cardUse:RANK_INS.cardUse,travel:RANK_INS.travel,years:{}})); }
 function defaultState(){
   const tree=[
     mkGroup('B2B 도매',[
@@ -796,11 +803,11 @@ function defaultState(){
     else { const m0=(n.months||[])[0]||100;
       invMap[n.id]={stock:Math.round(m0*2.6),lead:n.name==='제품 B'?30:20,safety:15,moq:300,lot:50}; } }); })(tree);
   return {
-    meta:{name:'2027 리빙케어 사업계획',startYear:2027,years:5},
+    meta:{name:'2027 리빙케어 사업계획',startYear:2027,years:5,displayUnit:'won',displayDecimals:0},
     assume:{taxRate:22,ke:12,waccMode:'auto',wacc:10,minCashMonths:4,arDays:45,apDays:30,openingCash:0,tvMode:'nav',g:1},
     invest:{capex:200000000,capexLife:5,intangible:20000000,intangibleLife:5,equity:320000000,debt:120000000,rate:6,repay:'bullet'},
     sales:{tree},
-    payroll:{enabled:true,insurance:11,retirement:8.33,raise:3,departments:[
+    payroll:{enabled:true,insurance:11,retirement:8.33,raise:3,ranks:rankDefaults(),departments:[
       {id:uid('d'),name:'영업팀',heads:2,salary:3200000,headAdd:0,mfg:false},
       {id:uid('d'),name:'물류·운영',heads:1,salary:3000000,headAdd:0,mfg:false}
     ]},
@@ -826,7 +833,7 @@ function defaultState(){
       expCash:[{id:uid('n'),name:'기부금',type:'amount',value:600000,grow:0}],
       expNonCash:[{id:uid('n'),name:'잡손실',type:'amount',value:0,grow:0}]
     },
-    inv:{byProduct:invMap}
+    inv:{byProduct:invMap,autoScaleStock:false}
   };
 }
 
@@ -841,6 +848,7 @@ function normNode(n,level){
     out.growth=num(n.growth,0);
     out.months=Array.from({length:12},(_,i)=>Math.max(0,Math.round(num((n.months||[])[i],0))));
   }else{
+    out.count=Math.max(0,num(n.count,1));
     out.children=(Array.isArray(n.children)?n.children:[]).map(c=>normNode(c,level+1));
   }
   return out;
@@ -864,6 +872,11 @@ function ensureState(s0){
   if(!Array.isArray(s.sales&&s.sales.tree)) s.sales={tree:[]};
   s.sales.tree=s.sales.tree.map(n=>normNode(n,1));
   ['insurance','retirement','raise'].forEach(k=>s.payroll[k]=num(s.payroll[k],d.payroll[k]));
+  s.meta.displayDecimals=Math.min(3,Math.max(0,Math.round(num(s.meta.displayDecimals,0))));
+  if(!Array.isArray(s.payroll.ranks)) s.payroll.ranks=rankDefaults();
+  s.payroll.ranks.forEach(r=>{ if(!r.id) r.id=uid('rk'); r.name=String(r.name||'직급');
+    ['salary','pension','health','care','employment','accident','retirement','welfare','cardLimit','cardUse','travel'].forEach(k=>r[k]=Math.max(0,num(r[k],0)));
+    r.years=r.years&&typeof r.years==='object'?r.years:{}; });
   if(!Array.isArray(s.payroll.departments)) s.payroll.departments=[];
   s.payroll.departments.forEach(x=>{
     if(!x.id) x.id=uid('d');
@@ -879,6 +892,7 @@ function ensureState(s0){
     s.nonop[k].forEach(it=>{ if(!it.id) it.id=uid('n'); it.type=it.type==='rate'?'rate':'amount'; it.value=Math.max(0,num(it.value,0)); it.grow=num(it.grow,0); });
   });
   if(!s.inv.byProduct||typeof s.inv.byProduct!=='object') s.inv.byProduct={};
+  s.inv.autoScaleStock=!!s.inv.autoScaleStock;
   s.schemaVersion=5;
   s.company=s.company||{};
   s.wc=s.wc||{years:{}};
@@ -902,22 +916,23 @@ function invCfg(s,id){
 /* ---------- 트리 → 제품 ---------- */
 function flattenProducts(s){
   const out=[];
-  function walk(nodes,depth,path){
+  function walk(nodes,depth,path,cust){
     (nodes||[]).forEach(n=>{
       const p=path.concat([n.name]);
+      const c=depth===7?Math.max(0,num(n.count,1)):cust;
       if(depth>=9||!n.children||!n.children.length){
         if(depth>=9){
-          out.push({id:n.id,name:n.name,path:p,node:n,
+          out.push({id:n.id,name:n.name,path:p,node:n,custCount:c==null?1:c,
             groupL1:p[0]||'', groupL2:p[1]||'', groupL3:p[2]||'', groupL4:p[3]||'',
             groupL5:p[4]||'', groupL6:p[5]||'', groupL7:p[6]||'', groupL8:p[7]||'',
             price:num(n.price,0),cost:num(n.cost,0),growth:num(n.growth,0),months:n.months||Array(12).fill(0)});
         }
         return;
       }
-      walk(n.children,depth+1,p);
+      walk(n.children,depth+1,p,c);
     });
   }
-  walk(s.sales.tree,1,[]);
+  walk(s.sales.tree,1,[],1);
   return out;
 }
 function treeStats(s){
@@ -944,10 +959,12 @@ function buildMonths(startYear,n){
 /* ---------- 재고 시뮬레이션 ---------- */
 function simulateProduct(p,cfg,months,H){
   const NM=months.length,cost=Math.max(0,productYear(p,0).cost||0);
+  const mult=Math.max(0,num(p.custCount,1));
   const dem=[];
   for(let i=0;i<NM;i++){
     const yi=Math.floor(i/12);
-    dem.push(Math.max(0,num(productYear(p,yi).months[i%12])));
+    const q=num(productYear(p,yi).months[i%12])*mult;
+    dem.push(Math.max(0,Math.round(q)));
   }
   let stock=Math.max(0,num(cfg.stock,0));
   let value=stock*(cfg.openingUnitCost??cost);
@@ -1034,14 +1051,20 @@ function compute(s0){
         months=buildMonths(s.meta.startYear,NM),
         products=flattenProducts(s);
 
-  products.forEach(p=>{ p.cfg=invCfg(s,p.id); Object.assign(p,simulateProduct(p,p.cfg,months,H)); });
+  products.forEach(p=>{
+    p.cfg=invCfg(s,p.id);
+    const mult=s.inv.autoScaleStock?Math.max(0,num(p.custCount,1)):1;
+    p.baseStock=Math.max(0,num(p.cfg.stock,0)); p.stockMult=mult;
+    p.openStock=Math.round(p.baseStock*mult);
+    Object.assign(p,simulateProduct(p,Object.assign({},p.cfg,{stock:p.openStock}),months,H));
+  });
 
   const revM=new Array(NM).fill(0),cogsM=new Array(NM).fill(0),purchM=new Array(NM).fill(0),invM=new Array(NM).fill(0);
   products.forEach(p=>{ for(let i=0;i<NM;i++){ const r=p.rows[i];
     revM[i]+=r.revenue; cogsM[i]+=r.cogs; purchM[i]+=r.purchaseCost; invM[i]+=r.stockVal; } });
   const vat=buildVatLedger(s,products,months,revM);
 
-  const openingStock=products.reduce((a,p)=>a+Math.max(0,num(p.cfg.stock,0))*(p.cfg.openingUnitCost??productYear(p,0).cost),0);
+  const openingStock=products.reduce((a,p)=>a+Math.max(0,num(p.openStock!=null?p.openStock:p.cfg.stock,0))*(p.cfg.openingUnitCost??productYear(p,0).cost),0);
   const depPPE=s.invest.capex/Math.max(1,s.invest.capexLife);
   const depInt=s.invest.intangible/Math.max(1,s.invest.intangibleLife);
 
@@ -1289,7 +1312,8 @@ function prepareExtended(s){
       baseYears[y]={...py,price:price.supply,cost:cost.gross-deduct,_vat:tax,_purchaseSupply:cost.supply,_purchaseTax:cost.tax,_purchaseDeduct:deduct};
     }
     const t0=productTax(n,0,v),opening=taxSplit(cfg.openingUnitCost??productYear(n,0).cost,t0.purchaseRate,t0.purchaseIncluded),credit=opening.tax*Math.max(0,Math.min(100,num(t0.deductible)))/100;
-    cfg.openingUnitCost=opening.gross-credit;s._assetVat.stock+=cfg.stock*credit;
+    const stockMult=s.inv&&s.inv.autoScaleStock?Math.max(0,num(p.custCount,1)):1;
+    cfg.openingUnitCost=opening.gross-credit;s._assetVat.stock+=cfg.stock*stockMult*credit;
     n.years=baseYears;
   });
   ['capex','intangible'].forEach(k=>{const a={enabled:false,rate:10,included:false,deductible:100,...v.assets?.[k]},t=taxSplit(s.invest[k],v.enabled&&a.enabled?a.rate:0,a.included),credit=t.tax*Math.max(0,Math.min(100,num(a.deductible)))/100;s.invest[k]=t.gross-credit;s._assetVat[k]=credit;});
@@ -1437,7 +1461,9 @@ if(typeof module!=='undefined')module.exports.convertProject=convertProject;
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const won=v=>Math.round(+v||0).toLocaleString('ko-KR');
+function moneyDigits(){ const d=(typeof S!=='undefined'&&S&&S.meta)?num(S.meta.displayDecimals,0):0; return Math.min(3,Math.max(0,Math.round(d))); }
+function fmtDigits(n,d){ const f=Math.pow(10,d), r=Math.round((Number.isFinite(+n)?+n:0)*f)/f; return r.toLocaleString('ko-KR',{minimumFractionDigits:0,maximumFractionDigits:d}); }
+const won=v=>fmtDigits(v,moneyDigits());
 const man=v=>formatMoney(v);
 const pct=v=>(+v||0).toFixed(1)+'%';
 const pct2=v=>(+v||0).toFixed(2)+'%';
@@ -1644,7 +1670,21 @@ function subtreeProducts(node){
   })(node,nodeIndex().get(node.id)?nodeIndex().get(node.id).depth:1);
   return out;
 }
-function prodQty(p){ return (productYear(p,editYear).months||[]).reduce((a,b)=>a+(+b||0),0); }
+let _custMap=null;
+function custOf(id){
+  if(!_custMap){
+    _custMap=new Map();
+    (function walk(nodes,depth,cust){
+      (nodes||[]).forEach(n=>{
+        const c=depth===7?Math.max(0,num(n.count,1)):cust;
+        if(depth>=9){ _custMap.set(n.id,c); return; }
+        walk(n.children,depth+1,c);
+      });
+    })(S.sales.tree,1,1);
+  }
+  return _custMap.has(id)?_custMap.get(id):1;
+}
+function prodQty(p){ return (productYear(p,editYear).months||[]).reduce((a,b)=>a+(+b||0),0)*custOf(p.id); }
 
 function demandRowHtml(n,depth,idx){
   const leaf=depth>=9;
@@ -1657,7 +1697,7 @@ function demandRowHtml(n,depth,idx){
     const q=prods.reduce((a,p)=>a+prodQty(p),0);
     const rev=prods.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
     return `<tr class="trow grp" data-row="${n.id}">
-      <td class="l treecell sticky">${box}<button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명"><span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+      <td class="l treecell sticky">${box}<button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
       <td class="num strong">${won(q)}</td>
       <td class="num strong">${man(rev)}</td>
       <td colspan="18" class="l hint">${LEVELS[depth-1]} · 하위 ${prods.length}개 제품</td>
@@ -1666,7 +1706,7 @@ function demandRowHtml(n,depth,idx){
   const q=prodQty(n);
   const base=n;n={...n,...productYear(n,editYear),growth:base.growth};
   return `<tr class="trow item" data-row="${n.id}">
-    <td class="l treecell sticky">${box}<span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="제품명"><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+    <td class="l treecell sticky">${box}<span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="제품명">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}<button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
     <td>${won(q)}</td><td>${man(q*n.price)}</td><td><input class="cell" type="number" step="100" data-nid="${n.id}" data-nf="price" value="${n.price}"></td>
     <td><input class="cell" type="number" step="100" data-nid="${n.id}" data-nf="cost" value="${n.cost}"></td>
     <td><input class="cell" type="number" step="0.1" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
@@ -1680,6 +1720,7 @@ function demandRowHtml(n,depth,idx){
 function renderTree(){
   const t=$('#demandTree');
   if(!t) return;
+  _custMap=null;
   let rows='';
   (function walk(nodes,depth){
     (nodes||[]).forEach(n=>{
@@ -1763,10 +1804,11 @@ function delNode(id){
   renderDemand(); paint();
 }
 function demandCsv(){
-  const rows=[['수익모델','국가','브랜드','사업영역','판매형태','채널','거래처','품목군','제품','단가','원가','성장률',...Array.from({length:12},(_,i)=>(i+1)+'월'),'연간','매출']];
-  R.products.forEach(p=>{p={...p,...productYear(p,editYear)};
+  const rows=[['수익모델','국가','브랜드','사업영역','판매형태','채널','거래처','품목군','제품','거래처 수','단가','원가','성장률',...Array.from({length:12},(_,i)=>(i+1)+'월'),'연간','매출']];
+  R.products.forEach(p=>{
+    const cnt=custOf(p.id), yp=productYear(p,0), q=(yp.months.reduce((a,b)=>a+(+b||0),0))*cnt;
     const path=Array.from({length:8},(_,i)=>p.path[i]||'');
-    rows.push([...path,p.name,p.price,p.cost,p.growth,...p.months,p.months.reduce((a,b)=>a+b,0),p.months.reduce((a,b)=>a+b,0)*p.price]);
+    rows.push([...path,p.name,cnt,yp.price,yp.cost,yp.growth,...yp.months.map(v=>v*cnt),q,q*yp.price]);
   });
   download('판매수요_9단계.csv','\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'));
   toast('9단계 판매 수요 CSV를 내려받았습니다');
@@ -1776,12 +1818,15 @@ function demandCsv(){
 /* ================= 04 재고·발주 ================= */
 function renderInvSettings(){
   const t=$('#invSettings'); if(!t) return;
+  const opt=$('#invStockOpt');
+  if(opt) opt.innerHTML=`<label class="check" style="white-space:nowrap"><input type="checkbox" data-bind="inv.autoScaleStock" ${S.inv.autoScaleStock?'checked':''}>거래처 수만큼 초기재고 자동 확대</label>
+    <span class="sub">${S.inv.autoScaleStock?'켜짐 · 입력한 현재재고 × 거래처 수로 t=0 재고·매입액이 계산됩니다.':'꺼짐 · 입력한 현재재고를 그대로 사용합니다.'}</span>`;
   const rows=R.products.map(p=>{
     const c=invYear(S,p.id,editYear),py=productYear(p,editYear);
     const y1=p.dem.slice(editYear*12,editYear*12+12).reduce((a,b)=>a+b,0);
     return `<tr>
       <td class="l"><b>${esc(p.name)}</b><div class="sub">${esc(p.path.slice(-3).join(' › '))} · Y1 ${won(y1)}개</div></td>
-      <td>${editYear?`<b>${won(p.rows[editYear*12].openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="10" data-pid="${p.id}" data-pf="stock" value="${c.stock}">`}</td>
+      <td>${editYear?`<b>${won(p.rows[editYear*12].openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="10" data-pid="${p.id}" data-pf="stock" value="${c.stock}">${S.inv.autoScaleStock&&p.stockMult>1?`<div class="sub">×${p.stockMult} → <b>${won(p.openStock)}개</b></div>`:''}`}</td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${p.id}" data-pf="lead" value="${c.lead}"></td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${p.id}" data-pf="safety" value="${c.safety}"></td>
       <td><input class="cell" type="number" min="0" step="10" data-pid="${p.id}" data-pf="moq" value="${c.moq}"></td>
@@ -2851,12 +2896,12 @@ bindStatic=function(){if(!staticBound){bindStaticOriginal();staticBound=true;ret
 const MoneyUnits={won:{label:'원',factor:1},million:{label:'백만원',factor:1e6},eok:{label:'억원',factor:1e8}};
 function unitKey(){return S?.meta?.displayUnit&&MoneyUnits[S.meta.displayUnit]?S.meta.displayUnit:'won';}
 function unitLabel(){return MoneyUnits[unitKey()].label;}
-function formatMoney(v){if(v===null)return '계산불가';const value=num(v)/MoneyUnits[unitKey()].factor;return value.toLocaleString('ko-KR',{maximumFractionDigits:unitKey()==='won'?2:8});}
+function formatMoney(v){if(v===null)return '계산불가';const value=num(v)/MoneyUnits[unitKey()].factor,d=moneyDigits();return value.toLocaleString('ko-KR',{minimumFractionDigits:0,maximumFractionDigits:d});}
 let periodMode='annual',inputDirty=false,composing=false;
 function extendToolbar(){
   if(!Gate.approved)return;
-  if(!$('#displayUnit')){const bar=$('.yearbar');bar.insertAdjacentHTML('beforeend','<label>결과 단위 <select id="displayUnit" data-readonly-skip="1"><option value="won">원</option><option value="million">백만원</option><option value="eok">억원</option></select></label><label>공통 보기 <select id="periodMode" data-readonly-skip="1"><option value="annual">전체기간 연도별</option><option value="monthly">선택연도 월별</option></select></label>');}
-  $('#displayUnit').value=unitKey();$('#periodMode').value=periodMode;
+  if(!$('#displayUnit')){const bar=$('.yearbar');bar.insertAdjacentHTML('beforeend','<label>결과 단위 <select id="displayUnit" data-readonly-skip="1"><option value="won">원</option><option value="million">백만원</option><option value="eok">억원</option></select></label><label>공통 보기 <select id="periodMode" data-readonly-skip="1"><option value="annual">전체기간 연도별</option><option value="monthly">선택연도 월별</option></select></label><label>소수 자릿수 <select id="displayDecimals" data-readonly-skip="1"><option value="0">0자리 정수</option><option value="1">1자리</option><option value="2">2자리</option><option value="3">3자리</option></select></label>');}
+  $('#displayUnit').value=unitKey();$('#periodMode').value=periodMode;$('#displayDecimals').value=String(moneyDigits());
   $('#planYear').dataset.readonlySkip='1';
   const fixed=$('[data-bind="meta.years"]')?.closest('.fgrid')?.querySelector('select[disabled]');if(fixed){fixed.innerHTML='<option>결과: '+unitLabel()+' / 입력: 원</option>';}
 }
@@ -2907,7 +2952,7 @@ function renderRankSettings(){
   let box=$('#rankSettings');if(!box){box=document.createElement('div');box.id='rankSettings';box.className='card extended-card';$('#view-cost').prepend(box);}
   const ranks=S.payroll.ranks||[];
   const fields=[['salary','기본월급 · 원'],['pension','국민연금 %'],['health','건강보험 %'],['care','요양/건강보험료 %'],['employment','고용 %'],['accident','산재 %'],['retirement','퇴직 %'],['welfare','복리/월 · 원'],['cardLimit','카드월한도 · 원'],['cardUse','예상사용률 %'],['travel','여비/월 · 원']];
-  box.innerHTML=`<div class="card-h"><div><h2>직급별 연도 임금테이블 · Y${editYear+1}</h2><p>모든 요율은 사용자 입력 계획값이며 법정 자동요율이 아닙니다. 요양 = 건강보험료 × 요양률. 부서가 직급에 연결되면 기존 부서급여를 대체합니다.</p></div><button class="btn" id="addRank">직급 추가</button></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<h3>부서·직급 연결 · 선택연도 인원은 기존 부서표에서 입력</h3>${resultTable(['부서','직급 · 미연결=기존 급여','제조/판매/관리'],S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear);return [esc(d.name),`<select data-link-dept="${d.id}" data-link-field="rankId"><option value="">기존 부서급여</option>${ranks.map(r=>`<option value="${r.id}" ${dy.rankId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`,`<select data-link-dept="${d.id}" data-link-field="role">${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([k,n])=>`<option value="${k}" ${(dy.role||(d.mfg?'manufacturing':'admin'))===k?'selected':''}>${n}</option>`).join('')}</select>`];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
+  box.innerHTML=`<div class="card-h"><div><h2>직급별 연도 임금테이블 · Y${editYear+1}</h2><p>모든 요율은 사용자 입력 계획값이며 법정 자동요율이 아닙니다. 기본값은 2026년 사업주 부담 기준(국민연금 4.75%·건강 3.595%·요양=건강보험료×13.14%·고용 1.15%(150인 미만)·산재 1.4% 평균·퇴직 8.33%)이며 업종·규모에 따라 다르니 수정하세요. 요양 = 건강보험료 × 요양률. 부서가 직급에 연결되면 기존 부서급여를 대체합니다.</p></div><button class="btn" id="addRank">직급 추가</button><button class="btn" id="fillRanks" style="margin-left:6px">기본 9직급</button></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<h3>부서·직급 연결 · 선택연도 인원은 기존 부서표에서 입력</h3>${resultTable(['부서','직급 · 미연결=기존 급여','제조/판매/관리'],S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear);return [esc(d.name),`<select data-link-dept="${d.id}" data-link-field="rankId"><option value="">기존 부서급여</option>${ranks.map(r=>`<option value="${r.id}" ${dy.rankId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`,`<select data-link-dept="${d.id}" data-link-field="role">${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([k,n])=>`<option value="${k}" ${(dy.role||(d.mfg?'manufacturing':'admin'))===k?'selected':''}>${n}</option>`).join('')}</select>`];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
 }
 function selectedMonthly(){return R.monthly?.slice(editYear*12,editYear*12+12)||[];}
 function renderPeriodResults(){
@@ -2930,6 +2975,7 @@ document.addEventListener('change',e=>{
   const el=e.target;if(!Gate.approved)return;
   if(el.id==='periodMode'){commitStable();periodMode=el.value;renderPeriodResults();return;}
   if(el.id==='displayUnit'){S.meta.displayUnit=el.value;saveState();paint();return;}
+  if(el.id==='displayDecimals'){S.meta.displayDecimals=Math.max(0,Math.min(3,+el.value||0));saveState();paint();return;}
   if(!canEdit())return;let changed=false;
   if(['vatEnabled','vatCycle','vatRefund','vatDelay'].includes(el.id)){S.vat=S.vat||{};const key={vatEnabled:'enabled',vatCycle:'cycle',vatRefund:'refundMode',vatDelay:'refundDelay'}[el.id];S.vat[key]=el.type==='checkbox'?el.checked:el.id==='vatRefund'?el.value:num(el.value);changed=true;}
   if(el.dataset.taxField){const f=el.dataset.taxField,v=el.type==='checkbox'?el.checked:['salesIncluded','purchaseIncluded'].includes(f)?el.value==='true':f==='mode'?el.value:num(el.value);let owner;if(el.dataset.taxId){owner=findNode(el.dataset.taxId).node;owner.vat=owner.vat||{};owner.vat.years=owner.vat.years||{};owner.vat.years[editYear]={...owner.vat.years[editYear],[f]:v};}else if(el.dataset.assetTax){S.vat=S.vat||{};S.vat.assets=S.vat.assets||{};owner=S.vat.assets;owner[el.dataset.assetTax]={...owner[el.dataset.assetTax],[f]:v};}else if(el.dataset.expTax){const [list,id]=el.dataset.expTax.split(':');owner=S.sga[list].find(it=>it.id===id);owner.vat={...owner.vat,[f]:v};}changed=true;}
@@ -2937,7 +2983,7 @@ document.addEventListener('change',e=>{
   if(el.dataset.linkDept){const d=S.payroll.departments.find(d=>d.id===el.dataset.linkDept);putAnnual(d,editYear,el.dataset.linkField,el.value);changed=true;}
   if(changed){saveState();paint();}
 });
-document.addEventListener('click',e=>{const id=e.target.closest('button')?.id;if(id==='addRank'&&canEdit()){S.payroll.ranks=S.payroll.ranks||[];S.payroll.ranks.push({id:uid('rank'),name:'새 직급',salary:0,pension:0,health:0,care:0,employment:0,accident:0,retirement:0,welfare:0,cardLimit:0,cardUse:0,travel:0,years:{}});paint();}if(id==='exportPeriod'&&Gate.approved){const d=$('#periodResults')._export;download('기간별_원장.csv','\ufeff'+[d.head,...d.rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));}});
+document.addEventListener('click',e=>{const id=e.target.closest('button')?.id;if(id==='fillRanks'&&canEdit()){if(confirm('직급표를 사원~부사장 9직급 기본값으로 다시 채울까요? 입력한 직급·요율은 사라집니다.')){S.payroll.ranks=rankDefaults();paint();}}if(id==='addRank'&&canEdit()){S.payroll.ranks=S.payroll.ranks||[];S.payroll.ranks.push({id:uid('rank'),name:'새 직급',salary:0,pension:0,health:0,care:0,employment:0,accident:0,retirement:0,welfare:0,cardLimit:0,cardUse:0,travel:0,years:{}});paint();}if(id==='exportPeriod'&&Gate.approved){const d=$('#periodResults')._export;download('기간별_원장.csv','\ufeff'+[d.head,...d.rows].map(r=>r.map(csvCell).join(',')).join('\r\n'));}});
 const financeExtendedBase=renderFinance;renderFinance=function(){if(!Gate.approved)return;financeExtendedBase();appendFinanceDetails();renderPeriodResults();};
 const valueExtendedBase=renderValue;renderValue=function(){if(!Gate.approved)return;valueExtendedBase();renderCurrencyPanels();};
 function appendFinanceDetails(){
@@ -2981,3 +3027,15 @@ demandCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()]
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
