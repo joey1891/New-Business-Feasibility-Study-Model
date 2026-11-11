@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -366,6 +366,11 @@ table.tbl.plain thead th{position:static}
 .detail-toggle{border:0;background:transparent;text-align:left;cursor:pointer;font-size:inherit;font-weight:inherit;line-height:1.5;padding:3px 2px;color:inherit;white-space:normal}.detail-toggle span[aria-hidden]{color:var(--teal);display:inline-block;width:13px}.detail-toggle:hover{color:var(--teal)}.tree-depth{display:inline-block;min-width:17px;border:1px solid var(--line);border-radius:3px;text-align:center;color:var(--teal);font-size:10px}.detail-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;background:var(--tealSoft);font-size:11.5px}.detail-tools label{display:flex;align-items:center;gap:7px;font-weight:700}.detail-tools select{width:auto;max-width:270px;padding:6px}.detail-tools input{width:80px;padding:6px}.detail-tools span{color:var(--mut);font-size:11px}.linked-analysis{margin-top:16px}.detail-analysis{min-width:1000px}.detail-analysis td:first-child{max-width:340px;white-space:normal}.account-node td:first-child{min-width:310px;white-space:normal}.account-node td:not(:first-child){min-width:95px}.account-node td{font-size:11.5px}.formula-note{margin:12px 0 0;font-size:11.5px;line-height:1.85;overflow-wrap:anywhere}.wc-card{margin-top:16px}.wc-card input{min-width:100px}#fcfTable{min-width:960px}#fcfTable td:first-child,#stmtTable td:first-child{min-width:290px;max-width:430px;white-space:normal}#fcfTable td:not(:first-child){min-width:95px}#view-value>.cols{grid-template-columns:minmax(0,1fr)}#view-value>.cols>.rail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));position:static;gap:16px}#view-value>.cols>.rail .note{margin:0}.tablewrap{overscroll-behavior-x:contain}@media(max-width:700px){#view-value>.cols>.rail{grid-template-columns:1fr}.detail-tools label{flex-wrap:wrap}}@media print{.detail-tools{display:none}.detail-toggle{color:inherit}}
 .formula-note{font-size:12.5px;padding:16px;line-height:1.9}.detail-tools:focus-within{box-shadow:inset 0 0 0 1px var(--teal)}
 .auth-gate{min-height:100vh;display:grid;place-items:center;padding:28px;background:var(--navy)}.gate-card{width:min(100%,470px);padding:36px;background:var(--card);border-radius:10px;border-top:5px solid var(--teal);box-shadow:var(--shadow)}.gate-mark{font-weight:800;color:var(--teal);font-size:13px}.gate-card h1{font-size:26px;margin:14px 0 8px}.gate-card p{font-size:13px;color:var(--mut)}.gate-status{margin:20px 0;padding:12px;background:var(--tealSoft);border-radius:5px;overflow-wrap:anywhere}.gate-card form{display:grid;gap:14px;margin-bottom:12px}.gate-card label{font-size:12px;font-weight:700;display:grid;gap:6px}.gate-card input{width:100%;padding:10px;border:1px solid var(--line);border-radius:4px}.gate-security{margin-top:24px;font-size:11px!important;line-height:1.8}[hidden]{display:none!important}
+.autosave{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:11.5px;color:var(--mut);padding:6px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--card)}
+.autosave input{width:auto;margin:0;accent-color:var(--teal)}
+.autosave.on{color:var(--teal2);border-color:#bcd8d3;background:var(--tealSoft)}
+.autosave.on input{accent-color:var(--teal2)}
+.btn.saved{background:var(--greenSoft);border-color:#c8e4d5;color:var(--green)}
 .extended-card{margin:18px 0}.extended-card h3{font-size:13px;margin:16px 0 8px}.extended-result{min-width:880px}.extended-result th,.extended-result td{padding:8px 10px}.extended-result td:first-child{min-width:240px;max-width:420px;white-space:normal;overflow-wrap:anywhere}.extended-result input{min-width:90px;max-width:145px;width:100%;padding:6px;border:1px solid var(--line);border-radius:4px}.extended-result select{min-width:105px;width:auto;padding:6px}#rankSettings .extended-result{min-width:1640px}#rankSettings .extended-result td:first-child{min-width:190px}#vatSettings .extended-result{min-width:1050px}#demandTree .treecell{min-width:380px}#demandTree input.txt{min-width:180px}#demandTree{min-width:1640px}#periodResults .extended-result{min-width:1050px}.yearbar label{display:flex;gap:6px;align-items:center}.extended-card details summary{cursor:pointer;font-weight:700;padding:10px;background:var(--tealSoft)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -408,6 +413,8 @@ table.tbl.plain thead th{position:static}
         <p class="desc" id="pageDesc"></p>
       </div>
       <div class="actions no-print">
+        <label class="check autosave" title="입력할 때마다 자동 저장합니다"><input type="checkbox" id="autoSaveToggle" checked><span>자동저장</span></label>
+        <button class="btn teal" id="btnSaveNow" title="지금 저장합니다 (Ctrl+S)">저장하기</button>
         <button class="btn ghost" id="btnSample" title="예시 데이터로 되돌립니다">예시 불러오기</button>
         <button class="btn ghost" id="btnSave" title="JSON 파일로 저장">JSON 저장</button>
         <label class="btn ghost" for="fileImport" style="margin:0">JSON 열기</label>
@@ -2225,6 +2232,7 @@ function periods(){
 }
 
 function renderFinance(){
+  {const _n0=document.getElementById('stmtNote'); if(_n0){_n0.hidden=false;if(_n0.parentElement)_n0.parentElement.hidden=false;}}
   if(!document.getElementById('stmtTable')) return;
   $$('.ftab').forEach(b=>b.classList.toggle('on',b.dataset.stmt===finTab));
   const P=periods();
@@ -2282,7 +2290,7 @@ function renderFinance(){
     rows.push({l:'순이익률',v:R.pl.map(p=>pcv(p.nm)),cls:'subtotal'});
     T.innerHTML=buildStmt(rows,P);
     T.classList.add('stmt');
-    document.getElementById('stmtNote').innerHTML='<b>읽는 법</b> — 매출은 실제 판매 기준입니다. 재고가 모자라 못 판 수량은 매출에 잡히지 않으므로 <b>04 재고·발주</b>의 판매 손실을 함께 보세요. 제조인력 인건비는 매출원가로, 나머지 부서 인건비는 판관비로 자동 분류됩니다.';
+    const _sn=document.getElementById('stmtNote'); if(_sn){_sn.innerHTML='';_sn.hidden=true;if(_sn.parentElement)_sn.parentElement.hidden=true;}
   }
   else if(finTab==='mgmt'){
     document.getElementById('stmtTitle').textContent='관리회계 손익계산서';
@@ -2600,14 +2608,14 @@ function bindStatic(){
     const f=e.target.files&&e.target.files[0]; if(!f) return;
     const rd=new FileReader();
     const readEpoch=Gate.epoch;
-    rd.onload=()=>{if(!Gate.approved||readEpoch!==Gate.epoch)return;try{if(!canEdit())throw Error('읽기 전용입니다.');const imported=convertProject(JSON.parse(String(rd.result)));saveState();S=imported.state;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=imported.legacy;Workspace.notice=imported.warnings.join('\n');Workspace.dbStatus='JSON 로컬 가져오기 · DB 미저장';syncInputs();renderDemand();renderInvSettings();renderCost();paint();$('#projName').value=S.meta.name;toast('별도 로컬 프로젝트로 가져왔습니다');}catch(err){toast('JSON 가져오기 실패: '+safeMessage(err));}};
+    rd.onload=()=>{if(!Gate.approved||readEpoch!==Gate.epoch)return;try{if(!canEdit())throw Error('읽기 전용입니다.');const imported=convertProject(JSON.parse(String(rd.result)));saveState(true);S=imported.state;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=imported.legacy;Workspace.notice=imported.warnings.join('\n');Workspace.dbStatus='JSON 로컬 가져오기 · DB 미저장';syncInputs();renderDemand();renderInvSettings();renderCost();paint();$('#projName').value=S.meta.name;toast('별도 로컬 프로젝트로 가져왔습니다');}catch(err){toast('JSON 가져오기 실패: '+safeMessage(err));}};
     rd.readAsText(f); e.target.value='';
   });
   const oy=$('#orderYear');
   if(oy) oy.addEventListener('change',e=>{ orderYear=+e.target.value; renderInventory(); });
   const cp=$('#chartProduct');
   if(cp) cp.addEventListener('change',e=>drawInvChart(e.target.value));
-  window.addEventListener('beforeunload',saveState);
+  window.addEventListener('beforeunload',()=>saveState(true));
 }
 function orderCsv(){
   const rows=[['발주월','제품','발주수량','발주금액','입고월','지급예정월']];
@@ -2623,6 +2631,7 @@ function init(){
   bindStatic(); syncInputs();
   $('#projName').value=S.meta.name||'';
   renderDemand(); renderInvSettings(); renderCost();
+  if(typeof saveBadge==='function')saveBadge();
   const h=(location.hash||'').replace('#','');
   switchView(VIEW_META[h]?h:'assume');
 }
@@ -2645,6 +2654,47 @@ saveState=function(){
   const el=$('#saveState');if(el)el.textContent=Workspace.localStatus;
   updateStatuses();
 };
+/* ---------- 자동저장 · 저장하기 ---------- */
+const AUTOSAVE_KEY='fp-autosave-v1';
+let autoSaveOn=(function(){try{return localStorage.getItem(AUTOSAVE_KEY)!=='off';}catch(e){return true;}})();
+let pendingDirty=false,lastSavedAt=null;
+const persistProject=saveState;
+function saveBadge(){
+  const lab=document.querySelector('.autosave'),tg=document.getElementById('autoSaveToggle'),btn=document.getElementById('btnSaveNow');
+  if(tg)tg.checked=autoSaveOn;
+  if(lab)lab.classList.toggle('on',autoSaveOn);
+  const el=document.getElementById('saveState');
+  const t=lastSavedAt?lastSavedAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):null;
+  if(el)el.textContent=autoSaveOn?(pendingDirty?'자동 저장 대기 · 변경됨':(t?'자동 저장됨 · '+t:'자동 저장 켜짐')):'자동저장 꺼짐 · '+(pendingDirty?'저장 필요':'변경 없음');
+  if(btn){btn.classList.toggle('saved',!pendingDirty&&!!t);btn.textContent=pendingDirty?'저장하기':'저장됨';}
+}
+function markDirty(){pendingDirty=true;const el=document.getElementById('saveState');if(el)el.textContent=autoSaveOn?'변경됨 · 곧 저장':'변경됨 · 저장 필요';const b=document.getElementById('btnSaveNow');if(b){b.classList.remove('saved');b.textContent='저장하기';}}
+saveState=function(force){
+  if(!canEdit())return;
+  if(!autoSaveOn&&!force){markDirty();return saveBadge();}
+  persistProject();pendingDirty=false;lastSavedAt=new Date();saveBadge();
+};
+function manualSave(){
+  if(!canEdit()){toast('읽기 전용 · 저장 권한이 없습니다');return;}
+  saveState(true);
+  toast('저장했습니다 · '+new Date().toLocaleTimeString('ko-KR'));
+}
+function setAutoSave(on){
+  autoSaveOn=!!on;try{localStorage.setItem(AUTOSAVE_KEY,autoSaveOn?'on':'off');}catch(e){}
+  if(autoSaveOn){saveState(true);toast('자동저장을 켰습니다 · 입력 즉시 저장');}
+  else{toast('자동저장을 껐습니다 · 「저장하기」로 저장하세요');saveBadge();}
+}
+document.addEventListener('click',e=>{
+  if(e.target.closest('#btnSaveNow')){e.preventDefault();manualSave();}
+});
+document.addEventListener('change',e=>{
+  if(e.target.id==='autoSaveToggle')setAutoSave(e.target.checked);
+});
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();manualSave();}
+});
+window.addEventListener('beforeunload',e=>{if(pendingDirty&&!autoSaveOn){e.preventDefault();e.returnValue='저장하지 않은 변경이 있습니다.';return e.returnValue;}});
+try{saveBadge();}catch(e){}
 function shiftProduct(s,field,ratio){flattenProducts(s).forEach(p=>{for(let y=0;y<s.meta.years;y++){const py=productYear(p,y);putAnnual(p.node,y,field,field==='months'?py.months.map(v=>Math.round(v*ratio)):py[field]*ratio);}});}
 function shiftDiscount(s,delta){const rr=compute(s);for(let y=0;y<s.meta.years;y++){putAnnual(s.assume,y,'waccMode','manual');putAnnual(s.assume,y,'wacc',Math.max(0,rr.waccYears[y]*100+delta));}}
 function updateStatuses(){
@@ -2708,8 +2758,8 @@ function activateLocal(id){
   S=ensureState(clone(row.inputs));Workspace.localId=id;Workspace.dbId=row.dbId||null;Workspace.sourceId=row.sourceId||null;Workspace.legacy=!!row.legacy;Workspace.isPublic=!!row.isPublic;Workspace.notice=Workspace.legacy?(S.migration?.warnings||[]).join('\n'):'';Workspace.dbStatus='로컬 복구본 · DB 동기화 미확인';resetView();saveState();
 }
 function resetView(){editYear=0;R=compute(S);syncInputs();$('#projName').value=S.meta.name;window.__S=S;switchView(currentView);}
-function newProject(){if(Workspace.busy||!canEdit()||!confirm('현재 프로젝트는 보관하고 새 빈 프로젝트를 만들까요?'))return;saveState();Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.notice='';Workspace.docs=[];Workspace.dbStatus='새 로컬 프로젝트 · DB 미저장';S=freshState();saveState();resetView();renderWorkspace();}
-function duplicateLocal(){if(!canEdit())return;const name=prompt('새 프로젝트 이름',S.meta.name+' 복사');if(!name?.trim())return;saveState();S=clone(S);S.meta.name=name.trim();Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.dbStatus='다른 이름의 로컬 프로젝트 · DB 미저장';saveState();resetView();renderWorkspace();}
+function newProject(){if(Workspace.busy||!canEdit()||!confirm('현재 프로젝트는 보관하고 새 빈 프로젝트를 만들까요?'))return;saveState(true);Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.notice='';Workspace.docs=[];Workspace.dbStatus='새 로컬 프로젝트 · DB 미저장';S=freshState();saveState();resetView();renderWorkspace();}
+function duplicateLocal(){if(!canEdit())return;const name=prompt('새 프로젝트 이름',S.meta.name+' 복사');if(!name?.trim())return;saveState(true);S=clone(S);S.meta.name=name.trim();Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.dbStatus='다른 이름의 로컬 프로젝트 · DB 미저장';saveState();resetView();renderWorkspace();}
 function safeMessage(e){return String(e?.message||e||'알 수 없는 오류').replace(/eyJ[A-Za-z0-9_.-]+/g,'[보안값 숨김]').replace(/https:\/\/[^\s]+/g,'[주소 숨김]');}
 function requireDB(write=false){if(!Workspace.client)throw Error('DB 연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하세요.');if(!Gate.approved||!Workspace.user||Workspace.checking)throw Error('로그인과 승인이 필요합니다.');if(write&&!Workspace.admin)throw Error('뷰어는 읽기 전용입니다.');}
 async function approveUser(user){
@@ -2751,7 +2801,7 @@ async function saveDB(asNew=false){
     const id=Workspace.dbId,payload={name,inputs:snapshot,updated_at:new Date().toISOString(),is_public:Workspace.isPublic};
     const q=(asNew||!id)?Workspace.client.from('feasibility_projects').insert({...payload,user_id:Workspace.user.id}):Workspace.client.from('feasibility_projects').update(payload).eq('id',id);
     const {data,error}=await q.select('id').single();if(error)throw error;if(!data?.id)throw Error('저장 성공 응답에 프로젝트 ID가 없습니다.');
-    Workspace.dbId=data.id;Workspace.legacy=false;Workspace.sourceId=null;S.meta.name=name;saveState();Workspace.dbStatus=rev+1===Workspace.revision?'DB 저장 확인 · '+new Date().toLocaleTimeString('ko-KR'):'DB 저장 확인 · 저장 중 추가 변경은 미저장';
+    Workspace.dbId=data.id;Workspace.legacy=false;Workspace.sourceId=null;S.meta.name=name;saveState(true);Workspace.dbStatus=rev+1===Workspace.revision?'DB 저장 확인 · '+new Date().toLocaleTimeString('ko-KR'):'DB 저장 확인 · 저장 중 추가 변경은 미저장';
     $('#projName').value=name;
   }catch(e){Workspace.dbStatus='DB 저장 실패 · 서버 저장 미확인: '+safeMessage(e);}
   finally{Workspace.busy=false;updateStatuses();enforceReadonly();}
@@ -2870,7 +2920,7 @@ function refreshFinanceDetails(){
   let tools=$('#accountTools');if(!tools){tools=document.createElement('div');tools.id='accountTools';$('#stmtTable').closest('.tablewrap').before(tools);}
   tools.innerHTML=['pl','mgmt'].includes(finTab)?detailToolbar():'';
   if(['pl','mgmt'].includes(finTab)){
-    $('#stmtNote').innerHTML+='<div class="divider"></div>'+allocationNote;
+    if(finTab!=='pl')$('#stmtNote').innerHTML+='<div class="divider"></div>'+allocationNote;
     renderLinkedAnalysis();
   }else if($('#linkedAnalysis'))$('#linkedAnalysis').remove();
 }
@@ -3209,10 +3259,10 @@ const financeExtendedBase=renderFinance;renderFinance=function(){if(!Gate.approv
 const valueExtendedBase=renderValue;renderValue=function(){if(!Gate.approved)return;valueExtendedBase();renderCurrencyPanels();};
 function appendFinanceDetails(){
   const table=$('#stmtTable');if(!table)return;
-  if(['pl','mgmt'].includes(finTab)&&R.pl[0].pay.sgaComponents){const rows=PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l ind">판관 인건비 · ${n}</td>${R.pl.map(p=>'<td>'+m(-num(p.pay.sgaComponents?.[k]))+'</td>').join('')}</tr>`).join('');table.tBodies[0].insertAdjacentHTML('beforeend',rows);}
+  if(finTab==='mgmt'&&R.pl[0].pay.sgaComponents){const rows=PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l ind">판관 인건비 · ${n}</td>${R.pl.map(p=>'<td>'+m(-num(p.pay.sgaComponents?.[k]))+'</td>').join('')}</tr>`).join('');table.tBodies[0].insertAdjacentHTML('beforeend',rows);}
   if(finTab==='bs'){table.tBodies[0].insertAdjacentHTML('beforeend',`<tr><td class="l">부가세대급금 (자산합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatCredit)+'</td>').join('')}</tr><tr><td class="l">부가세예수금 (부채합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatDue)+'</td>').join('')}</tr>`);}
 }
-const extendedMountBase=mountApproved;mountApproved=function(...args){extendedMountBase(...args);if(Gate.approved)renderExtensions();};
+const extendedMountBase=mountApproved;mountApproved=function(...args){extendedMountBase(...args);if(Gate.approved){renderExtensions();if(typeof saveBadge==='function')saveBadge();}};
 function renderCurrencyPanels(){
   if(!Gate.approved||!R)return;
   if($('#stmtUnit'))$('#stmtUnit').textContent='결과 단위: '+unitLabel();
@@ -3319,6 +3369,7 @@ document.addEventListener('click',e=>{
 </script>
 </body>
 </html>
+
 
 
 
