@@ -3231,7 +3231,8 @@ function renderPeriodResults(){
   box._export={head:['계정',...rows.map(r=>r.label)],rows:fields.map(([k,n,money])=>[n+(money?' ('+unitLabel()+')':''),...rows.map(r=>r[k]===null?'계산불가':money?num(r[k])/MoneyUnits[unitKey()].factor:r[k])])};
   if(currentView==='demand'&&periodMode==='annual')renderDemandAnnual(box);
 }
-function renderDemandAnnual(box){const rows=R.products.map(p=>[esc(p.path.join(' › ')),...R.pl.flatMap((pl,y)=>{const ms=p.rows.slice(y*12,y*12+12),q=ms.reduce((a,m)=>a+m.sold,0),rev=ms.reduce((a,m)=>a+m.revenue,0);return [won(q),formatMoney(q?rev/q:0),formatMoney(rev)];})]);box.insertAdjacentHTML('beforeend','<h3>제품 경로별 연간 실제판매·가중단가·매출</h3>'+resultTable(['제품 전체경로',...R.pl.flatMap((p,y)=>['Y'+(y+1)+' 수량','Y'+(y+1)+' 공급가 단가 · '+unitLabel(),'Y'+(y+1)+' 매출 · '+unitLabel()])],rows));}
+function priceFmt(v){const n=num(v);if(!Number.isFinite(n))return '—';return Math.round(n).toLocaleString('ko-KR');}
+function renderDemandAnnual(box){const rows=R.products.map(p=>[esc(p.path.join(' › ')),...R.pl.flatMap((pl,y)=>{const ms=p.rows.slice(y*12,y*12+12),q=ms.reduce((a,m)=>a+m.sold,0),rev=ms.reduce((a,m)=>a+m.revenue,0);return [won(q),q?priceFmt(rev/q):'—',formatMoney(rev)];})]);box.insertAdjacentHTML('beforeend','<h3>제품 경로별 연간 실제판매·가중단가·매출</h3>'+resultTable(['제품 전체경로',...R.pl.flatMap((p,y)=>['Y'+(y+1)+' 수량','Y'+(y+1)+' 공급가 단가 · 원','Y'+(y+1)+' 매출 · '+unitLabel()])],rows)+'<div class="cap">공급가 단가 = 해당 연도 <b>매출 공급가액 ÷ 실제 판매수량</b>(부가세 제외 가중평균). 단가는 금액 단위 설정과 무관하게 항상 <b>원</b>으로 표시합니다 — 백만원 단위로 환산하면 1만~3만원대 단가가 0으로 반올림되기 때문입니다. 판매수량이 0인 연도는 —로 표시됩니다.</div>');}
 function renderOrderSummary(){
   let box=$('#orderAnnualSummary');if(!box){box=document.createElement('div');box.id='orderAnnualSummary';box.className='card extended-card';$('#view-inventory').append(box);}
   const rows=[];(R.invGroups||[]).forEach(p=>{for(let y=0;y<R.H;y++){const orders=p.orders.filter(o=>Math.floor(o.month/12)===y),arrival=p.rows.slice(y*12,y*12+12).reduce((v,m)=>v+m.arrival,0);if(orders.length||arrival)rows.push(['Y'+(y+1),esc(p.parentLabel),orders.length,won(orders.reduce((v,o)=>v+o.qty,0)),formatMoney(orders.reduce((v,o)=>v+o.supply,0)),formatMoney(orders.reduce((v,o)=>v+o.vat,0)),formatMoney(orders.reduce((v,o)=>v+o.gross,0)),won(arrival)]);}});
@@ -3369,6 +3370,7 @@ document.addEventListener('click',e=>{
 </script>
 </body>
 </html>
+
 
 
 
