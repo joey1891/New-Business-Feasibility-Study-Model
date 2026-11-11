@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -552,7 +552,7 @@ table.tbl.plain thead th{position:static}
         <div class="card-h"><div><h2><span class="no">01</span>제품별 발주 조건 · 통합 재고</h2><p>리드타임·안전재고·최소발주량만 정하면 발주 시점과 수량이 자동 확정됩니다. 거래처가 여러 곳이어도 재고는 하나로 통합해 계산합니다.</p></div></div>
         <div id="invStockOpt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 10px"></div>
         <div class="tablewrap"><table class="tbl" id="invSettings"></table></div>
-        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. <b>현재재고</b>는 t=0 매입액에 포함됩니다. 재고·발주는 <b>거래처와 무관하게 제품 단위로 통합</b>되며, 최소 발주량은 <b>3,000개</b>입니다. 같은 제품을 거래처별로 나눠 입력했다면 초기재고는 합산되어 하나의 재고로 관리됩니다.</div>
+        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. 표의 <b>원가·판가</b>는 부가세를 제외한 공급가액입니다(입력 단가는 VAT 포함). <b>현재재고</b>는 t=0 매입액에 포함됩니다. 재고·발주는 <b>거래처와 무관하게 제품 단위로 통합</b>되며, 최소 발주량은 <b>3,000개</b>입니다. 같은 제품을 거래처별로 나눠 입력했다면 초기재고는 합산되어 하나의 재고로 관리됩니다.</div>
       </div>
       <div style="height:14px"></div>
 
@@ -882,6 +882,7 @@ function normNode(n,level){
 function ensureState(s0){
   const d=defaultState();
   let s=s0&&typeof s0==='object'?s0:{};
+  const prevVer=num(s.schemaVersion,0);
   s.meta=Object.assign({},d.meta,s.meta||{});
   s.assume=Object.assign({},d.assume,s.assume||{});
   s.invest=Object.assign({},d.invest,s.invest||{});
@@ -920,13 +921,14 @@ function ensureState(s0){
     if(!Array.isArray(s.nonop[k])) s.nonop[k]=[];
     s.nonop[k].forEach(it=>{ if(!it.id) it.id=uid('n'); it.type=it.type==='rate'?'rate':'amount'; it.value=Math.max(0,num(it.value,0)); it.grow=num(it.grow,0); });
   });
+  if(prevVer<6) s.vat=Object.assign({},s.vat,{enabled:true});
   if(!s.inv.byProduct||typeof s.inv.byProduct!=='object') s.inv.byProduct={};
   if(num(s.inv.moqFloor,0)<3000){
     Object.values(s.inv.byProduct).forEach(c=>{ if(c&&typeof c==='object'&&num(c.moq,0)<3000){ c.moq=3000; if(!num(c.lot,0))c.lot=50; } });
     s.inv.moqFloor=3000;
   }
   s.inv.autoScaleStock=false;
-  s.schemaVersion=5;
+  s.schemaVersion=6;
   s.company=s.company||{};
   s.wc=s.wc||{years:{}};
   return s;
@@ -1430,9 +1432,9 @@ if(typeof module!=='undefined') module.exports={compute,defaultState,ensureState
 
 'use strict';
 // All monetary state remains KRW. VAT is an opt-in planning model, never a filing engine.
-function vatConfig(s){return {enabled:false,cycle:3,refundMode:'carry',refundDelay:2,assets:{},...s.vat};}
+function vatConfig(s){return {enabled:true,cycle:3,refundMode:'carry',refundDelay:2,assets:{},...s.vat};}
 function taxSplit(amount,rate,included){rate=Math.max(0,num(rate))/100;const supply=included?amount/(1+rate):amount;return {supply,tax:supply*rate,gross:supply*(1+rate)};}
-function productTax(n,y,v){const c={mode:'taxable',salesRate:10,purchaseRate:10,salesIncluded:false,purchaseIncluded:false,deductible:100,...n.vat,...n.vat?.years?.[y]};if(!v.enabled)return {...c,salesRate:0,purchaseRate:0,deductible:0};if(c.mode!=='taxable')c.salesRate=0;if(c.mode==='exempt')c.deductible=0;return c;}
+function productTax(n,y,v){const c={mode:'taxable',salesRate:10,purchaseRate:10,salesIncluded:true,purchaseIncluded:true,deductible:100,...n.vat,...n.vat?.years?.[y]};if(!v.enabled)return {...c,salesRate:0,purchaseRate:0,deductible:0};if(c.mode!=='taxable')c.salesRate=0;if(c.mode==='exempt')c.deductible=0;return c;}
 function prepareExtended(s){
   const v=vatConfig(s);s._vat=v;s._vatOpening=0;s._assetVat={capex:0,intangible:0,stock:0};
   const original=flattenProducts(s);
@@ -1882,7 +1884,7 @@ function renderTree(){
   const totalQ=R.products.reduce((a,p)=>a+prodQty(p),0);
    const totalR=R.products.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px"><col style="width:52px">${Array.from({length:12},()=>'<col style="width:52px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
-    <thead><tr><th class="l sticky">분류 / 제품</th><th>Y${editYear+1} 수량<span class="u">개</span></th><th>Y${editYear+1} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원</span></th><th>원가 입력<span class="u">원</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
+    <thead><tr><th class="l sticky">분류 / 제품</th><th>Y${editYear+1} 수량<span class="u">개</span></th><th>Y${editYear+1} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
     ${Array.from({length:12},(_,i)=>`<th>${i+1}월</th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="4"></td>
@@ -1986,7 +1988,7 @@ function renderInvSettings(){
       <td>${won(py.cost)}</td><td>${won(py.price)}</td><td>${man(first.openingValue)}</td>
     </tr>`;
   }).join('');
-  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>원가<span class="u">원</span></th><th>판가<span class="u">원</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
+  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
     <tbody>${rows||'<tr><td colspan="9" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
 }
 
@@ -3152,8 +3154,8 @@ function renderExtensions(){
 function renderVatSettings(){
   let box=$('#vatSettings');if(!box){box=document.createElement('div');box.id='vatSettings';box.className='card extended-card';$('#view-assume').append(box);}
   const v=vatConfig(S),products=flattenProducts(S),expense=Object.entries(S.sga).flatMap(([list,items])=>items.map(it=>({list,it})));
-  box.innerHTML=`<div class="card-h"><div><h2>부가세 계획모형 · 입력금액은 원</h2><p>기존 단가는 공급가액으로 유지합니다. 국가명으로 과세를 판정하지 않습니다. 법정 신고·예정고지·조기환급 앱이 아닙니다.</p></div></div><div class="detail-tools"><label><input id="vatEnabled" type="checkbox" ${v.enabled?'checked':''}>부가세 계획 반영</label><label>정산주기<select id="vatCycle"><option value="3" ${+v.cycle===3?'selected':''}>분기 · 다음달 납부</option><option value="6" ${+v.cycle===6?'selected':''}>반기 · 다음달 납부</option><option value="1" ${+v.cycle===1?'selected':''}>월별 · 단순가정</option></select></label><label>매입초과<select id="vatRefund"><option value="carry" ${v.refundMode==='carry'?'selected':''}>이월</option><option value="delay" ${v.refundMode==='delay'?'selected':''}>설정개월 후 환급</option></select></label><label>환급 지연<input id="vatDelay" type="number" min="1" value="${v.refundDelay}">개월</label></div><p class="help">세율 기본 10%는 한국 국내 일반과세 시나리오의 변경 가능한 계획값입니다. 면세는 매출세액 0·매입공제 0, 영세율은 매출세액 0·매입공제 설정 유지. 공제불가 매입세액은 취득원가/비용에 포함합니다.</p>
-  ${resultTable(['제품 전체 경로','과세구분','매출세율 %','매입세율 %','매출단가','매입단가','매입공제 %'],products.map(p=>{const c=productTax(p.node,editYear,{enabled:true});return [esc(p.path.join(' › ')),`<select data-tax-id="${p.id}" data-tax-field="mode">${[['taxable','과세'],['zero','영세율'],['exempt','면세']].map(([k,n])=>`<option value="${k}" ${c.mode===k?'selected':''}>${n}</option>`).join('')}</select>`,...['salesRate','purchaseRate'].map(k=>`<input type="number" data-tax-id="${p.id}" data-tax-field="${k}" value="${c[k]}">`),...['salesIncluded','purchaseIncluded'].map(k=>`<select data-tax-id="${p.id}" data-tax-field="${k}"><option value="false" ${!c[k]?'selected':''}>별도</option><option value="true" ${c[k]?'selected':''}>포함</option></select>`),`<input type="number" min="0" max="100" data-tax-id="${p.id}" data-tax-field="deductible" value="${c.deductible}">`];}))}
+  box.innerHTML=`<div class="card-h"><div><h2>부가세 계획모형 · 입력금액은 원</h2><p>입력한 단가·원가는 <b>부가세 포함 금액</b>으로 보고, 공급가액은 <b>÷(1+세율)</b>로 환산합니다. 국가명으로 과세를 판정하지 않습니다. 법정 신고·예정고지·조기환급 앱이 아닙니다.</p></div></div><div class="detail-tools"><label><input id="vatEnabled" type="checkbox" ${v.enabled?'checked':''}>부가세 계획 반영</label><label>정산주기<select id="vatCycle"><option value="3" ${+v.cycle===3?'selected':''}>분기 · 다음달 납부</option><option value="6" ${+v.cycle===6?'selected':''}>반기 · 다음달 납부</option><option value="1" ${+v.cycle===1?'selected':''}>월별 · 단순가정</option></select></label><label>매입초과<select id="vatRefund"><option value="carry" ${v.refundMode==='carry'?'selected':''}>이월</option><option value="delay" ${v.refundMode==='delay'?'selected':''}>설정개월 후 환급</option></select></label><label>환급 지연<input id="vatDelay" type="number" min="1" value="${v.refundDelay}">개월</label></div><p class="help">세율 기본 10%는 한국 국내 일반과세 시나리오의 변경 가능한 계획값입니다. 단가 구분이 <b>포함</b>이면 입력 단가 ÷(1+세율)이 공급가액·매출이 되고, <b>별도</b>면 입력 단가가 그대로 공급가액입니다. 면세는 매출세액 0·매입공제 0, 영세율은 매출세액 0·매입공제 설정 유지. 공제불가 매입세액은 취득원가/비용에 포함합니다.</p>
+  ${resultTable(['제품 전체 경로','과세구분','매출세율 %','매입세율 %','매출단가 · 부가세','매입단가 · 부가세','매입공제 %'],products.map(p=>{const c=productTax(p.node,editYear,{enabled:true});return [esc(p.path.join(' › ')),`<select data-tax-id="${p.id}" data-tax-field="mode">${[['taxable','과세'],['zero','영세율'],['exempt','면세']].map(([k,n])=>`<option value="${k}" ${c.mode===k?'selected':''}>${n}</option>`).join('')}</select>`,...['salesRate','purchaseRate'].map(k=>`<input type="number" data-tax-id="${p.id}" data-tax-field="${k}" value="${c[k]}">`),...['salesIncluded','purchaseIncluded'].map(k=>`<select data-tax-id="${p.id}" data-tax-field="${k}"><option value="false" ${!c[k]?'selected':''}>별도</option><option value="true" ${c[k]?'selected':''}>포함</option></select>`),`<input type="number" min="0" max="100" data-tax-id="${p.id}" data-tax-field="deductible" value="${c.deductible}">`];}))}
   <h3>초기 투자 부가세 · 미설정은 과세하지 않음</h3>${resultTable(['구분','과세 반영','세율 %','포함','공제 %'],['capex','intangible'].map(k=>{const a={enabled:false,rate:10,included:false,deductible:100,...v.assets?.[k]};return [k==='capex'?'CAPEX':'무형투자',`<input type="checkbox" data-asset-tax="${k}" data-tax-field="enabled" ${a.enabled?'checked':''}>`,`<input type="number" data-asset-tax="${k}" data-tax-field="rate" value="${a.rate}">`,`<input type="checkbox" data-asset-tax="${k}" data-tax-field="included" ${a.included?'checked':''}>`,`<input type="number" data-asset-tax="${k}" data-tax-field="deductible" value="${a.deductible}">`];}))}
   <details><summary>판관비 개별 과세·공제 설정 (급여는 제외)</summary>${resultTable(['항목','과세','세율 %','포함','공제 %'],expense.map(({list,it})=>{const a={enabled:false,rate:10,included:false,deductible:100,...it.vat};return [esc(it.name),`<input type="checkbox" data-exp-tax="${list}:${it.id}" data-tax-field="enabled" ${a.enabled?'checked':''}>`,`<input type="number" data-exp-tax="${list}:${it.id}" data-tax-field="rate" value="${a.rate}">`,`<input type="checkbox" data-exp-tax="${list}:${it.id}" data-tax-field="included" ${a.included?'checked':''}>`,`<input type="number" data-exp-tax="${list}:${it.id}" data-tax-field="deductible" value="${a.deductible}">`];}))}</details><p class="help">순자산 TV는 미결 부가세대급금−예수금을 포함합니다. 기간 밖 실제 납부·환급은 실행하지 않고 미결잔액으로 표시합니다. TV 미포함/Gordon은 선택한 TV 정책을 따릅니다. <a href="https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2401&cntntsId=7761" target="_blank" rel="noopener">국세청 부가세 개요</a> · <a href="https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694" target="_blank" rel="noopener">국세청 신고납부 안내·예외</a></p>`;
 }
@@ -3232,7 +3234,7 @@ function renderCurrencyPanels(){
     ['nonopInc','nonopExp','nonopIncNC','nonopExpNC'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[3].textContent='금액 · '+unitLabel();});
   }
   if(currentView==='inventory'){
-    const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=(R.invGroups||[])[i];if(!p)return;const py=productYear(p.members[0],editYear);tr.cells[6].textContent=formatMoney(py.cost);tr.cells[7].textContent=formatMoney(py.price);});[6,7,8].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=['원가','판가','연초재고가치'][i-6]+'<span class="u">'+unitLabel()+'</span>';});
+    const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=(R.invGroups||[])[i];if(!p)return;const py=productYear(p.members[0],editYear);tr.cells[6].textContent=formatMoney(py.cost);tr.cells[7].textContent=formatMoney(py.price);});[6,7,8].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=(i===8?['연초재고가치'][0]:['원가','판가'][i-6])+'<span class="u">'+(i===8?unitLabel():'공급가')+'</span>';});
   }
   if(currentView==='value'&&$('#tvFormula')){
     const b=R.bs.at(-1),a=assumeYear(S,R.H-1),f=v=>formatMoney(v)+' '+unitLabel();
@@ -3317,6 +3319,11 @@ document.addEventListener('click',e=>{
 </script>
 </body>
 </html>
+
+
+
+
+
 
 
 
