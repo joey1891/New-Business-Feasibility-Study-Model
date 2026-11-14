@@ -383,6 +383,25 @@ td.dsel input{background:rgba(47,125,143,.14)}
 .extended-card{margin:18px 0}.extended-card h3{font-size:13px;margin:16px 0 8px}.extended-result{min-width:880px}.extended-result th,.extended-result td{padding:8px 10px}.extended-result td:first-child{min-width:240px;max-width:420px;white-space:normal;overflow-wrap:anywhere}.extended-result input{min-width:90px;max-width:145px;width:100%;padding:6px;border:1px solid var(--line);border-radius:4px}.extended-result select{min-width:105px;width:auto;padding:6px}#rankSettings .extended-result{min-width:1640px}#rankSettings .extended-result td:first-child{min-width:190px}#vatSettings .extended-result{min-width:1050px}#demandTree .treecell{min-width:380px}#demandTree input.txt{min-width:180px}#demandTree{min-width:1640px}#periodResults .extended-result{min-width:1050px}.yearbar label{display:flex;gap:6px;align-items:center}.extended-card details summary{cursor:pointer;font-weight:700;padding:10px;background:var(--tealSoft)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+/* ===== 보고서 규격 · 전 섹션 표 크기 통일 ===== */
+.tbl thead th{height:36px;padding:8px 10px;font-size:12px;line-height:1.2;white-space:nowrap}
+.tbl tbody td{height:34px;padding:7px 10px;font-size:12px;line-height:1.25}
+.tbl tbody td input.cell{height:28px;padding:4px 6px;font-size:12px}
+.tbl tbody td input.cell.dim,.cell.dim{background:var(--tealSoft);color:var(--mut)}
+.extended-result thead th{height:36px;padding:8px 10px;font-size:12px}
+.extended-result tbody td{height:34px;padding:7px 10px;font-size:12px}
+#periodResults .extended-result td{height:34px}
+.card-h h2{font-size:14px;line-height:1.3}
+.card-h p{font-size:11.5px;line-height:1.45}
+.kv{padding:6px 0;font-size:12.5px}
+.t0note{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 14px;font-size:12.5px}
+.t0note .t{font-weight:700;white-space:nowrap}
+.t0note .kvs{display:flex;flex-wrap:wrap;gap:6px 12px}
+.t0note .kv2{white-space:nowrap;color:var(--mut);font-size:12px}
+.t0note .kv2 b{color:var(--ink);margin-left:4px}
+</style>
 </head>
 
 <body>
@@ -1611,7 +1630,9 @@ function extendMonthly(r){
     monthly.push({label:t0m?('T0 · '+month.mm+'월'):('Y'+(y+1)+' '+month.mm+'월'),y:t0m?-1:y,i,qty,rev,cogs,gp,sga,dep,ebit,tax:(t0m?p.tax:r.pl[y].tax)/dvE,ni,cfo:r.cfoM[i],cfi:0,cff:-r.repayM[i],net:r.cfoM[i]-r.repayM[i],begin:i?r.cashM[i-1]:r.cash0,cash:r.cashM[i],...b,ppe,intang,otherAsset,otherLiab,assets,liab,equity,check:assets-liab-equity,variable:cogs+p.sga.variable.amt/dvE,cm:rev-cogs-p.sga.variable.amt/dvE,fixed:(p.pay.sga+p.sga.fixed.amt+p.sga.semi.amt+p.dep)/dvE,nopat,fcff,tv,flow,pv:flow===null?null:flow/r.discounts[y<0?0:y],salesVAT:tax.output,grossBill:rev+tax.output,inputVAT:tax.input,vatPaid:tax.paid,vatRefund:tax.refunded,vatOffset:tax.offset,payTotal:p.pay.total/dvE,...parts,ordered:r.products.reduce((v,p)=>v+p.rows[i].ordered,0),arrived:r.products.reduce((v,p)=>v+p.rows[i].arrival,0),stockQty:r.products.reduce((v,p)=>v+p.rows[i].stock,0)});
   });
   const balanceKeys=['cash','ar','ap','inv','ppe','intang','otherAsset','otherLiab','prepaid','receivable','advance','accrued','vatCredit','vatDue','assets','liab','equity','check','stockQty'];
-   const annual=Array.from({length:r.H},(_,y)=>{const ms=monthly.slice(r.off+y*12,r.off+(y+1)*12),last=ms.at(-1),row={label:fyShort(y,s),y};Object.keys(last).forEach(k=>{if(['label','y','i'].includes(k))return;row[k]=balanceKeys.includes(k)?last[k]:k==='begin'?ms[0].begin:ms.some(m=>m[k]===null)?null:ms.reduce((v,m)=>v+num(m[k]),0);});return row;});
+   const annual=[];
+  if(r.off){const t0ms=monthly.slice(0,r.off),last0=t0ms.at(-1),row0={label:'T0 · '+t0Label(s),y:-1};Object.keys(last0).forEach(k=>{if(['label','y','i'].includes(k))return;row0[k]=balanceKeys.includes(k)?last0[k]:k==='begin'?t0ms[0].begin:t0ms.some(m=>m[k]===null)?null:t0ms.reduce((v,m)=>v+num(m[k]),0);});annual.push(row0);}
+  Array.from({length:r.H},(_,y)=>{const ms=monthly.slice(r.off+y*12,r.off+(y+1)*12),last=ms.at(-1),row={label:fyShort(y,s),y};Object.keys(last).forEach(k=>{if(['label','y','i'].includes(k))return;row[k]=balanceKeys.includes(k)?last[k]:k==='begin'?ms[0].begin:ms.some(m=>m[k]===null)?null:ms.reduce((v,m)=>v+num(m[k]),0);});annual.push(row);});
   if(r.off){const m0=monthly[r.off-1],cap=r.s.invest.equity+r.s.assume.openingCash;
     r.t0bs={cash:m0.cash,ar:m0.ar,inv:m0.inv,ppe:m0.ppe,intang:m0.intang,otherAsset:m0.otherAsset,assets:m0.assets,ap:m0.ap,debt:r.debtM[r.off-1],otherLiab:m0.otherLiab,liab:m0.liab,capital:cap,retained:m0.equity-cap,equity:m0.equity,prepaid:m0.prepaid,receivable:m0.receivable,advance:m0.advance,accrued:m0.accrued,check:Math.round(m0.check)||0};}
   r.monthly=monthly;r.annualDetail=annual;return r;
@@ -1951,8 +1972,8 @@ function demandRowHtml(n,depth,idx){
     <td>${won(q)}</td><td>${man(q*n.price)}</td><td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="price" value="${n.price}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="cost" value="${n.cost}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
-    <td><input class="cell bulk" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄" aria-label="1년 월수량 일괄 입력"></td>
-    ${(n.months||[]).map((v,i)=>{const m=custOf(n.id);return `<td><input class="cell mo" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${v}" aria-label="${fyMonth(i)}월">${m>1?`<div class="molbl">${won((+v||0)*m)}</div>`:''}</td>`;}).join('')}
+    <td><input class="cell bulk${t0Sel?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄"${t0Sel?' disabled title="T0 모드 · 월별 열에 입력"':''} aria-label="1년 월수량 일괄 입력"></td>
+    ${(n.months||[]).map((v,i)=>{const m=custOf(n.id),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${v}" ${lock?'disabled title="T0 이전 월 · 입력 불가"':''} aria-label="${fyMonth(i)}월">${m>1?`<div class="molbl">${won((+v||0)*m)}</div>`:''}</td>`;}).join('')}
     <td class="tot-col strong">${won(q)}</td>
     <td class="tot-col">${man(q*(+n.price||0))}</td>
     <td></td>
@@ -2806,12 +2827,12 @@ function enforceReadonly(){
   if(!ro&&$('#waccInput'))$('#waccInput').disabled=assumeYear(S,editYear).waccMode!=='manual';
   $$('.company-input,[data-write],#copyPrevious').forEach(el=>el.disabled=ro||Workspace.busy);
   $$('#view-company [data-db-write]').forEach(el=>el.disabled=!Workspace.user||!Workspace.admin||Workspace.busy);
-  $$('#dbProjects,#newProject,#dbLogout,#dbList,#listDocuments').forEach(el=>el.disabled=Workspace.busy);
+  $$('#dbProjects,#newProject,#dbLogout,#dbList,#listDocuments,#dbDelete').forEach(el=>el.disabled=Workspace.busy);if($('#dbDelete'))$('#dbDelete').disabled=Workspace.busy||!Workspace.user||!Workspace.admin||!Workspace.dbId;
 }
 function refreshAnnualUI(){
   editYear=Math.min(editYear,S.meta.years-1);
   const yr=$('#planYear');if(yr){yr.innerHTML=`<option value="t0">T=0 · 개시 시점</option>`+Array.from({length:S.meta.years},(_,y)=>`<option value="${y}">${fyShort(y)}</option>`).join('');yr.value=t0Sel?'t0':String(editYear);}
-  if($('#yearContext'))$('#yearContext').textContent=t0Sel?`편집 대상 T=0 · 개시 시점${t0MonthsOf(S)?' · '+t0Label(S):''} / 초기투자·개시BS·운전자본 T=0 잔액`:`편집 대상 ${fyShort(editYear)} / 개시투자·개시현금은 T=0 전용`;
+  if($('#yearContext'))$('#yearContext').textContent=t0Sel?`편집 대상 T0 · ${t0Label(S)}`:`편집 대상 ${fyShort(editYear)}`;
   if($('#copyPrevious'))$('#copyPrevious').disabled=t0Sel||!editYear||!canEdit();
   if(currentView==='demand'){
     $$('#view-demand .kpi .k').forEach(el=>{el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1));});
@@ -2869,6 +2890,22 @@ async function connectDB(){
     const {data,error}=await Workspace.client.auth.getSession();if(error)throw error;await approveUser(data?.session?.user);
     Workspace.client.auth.onAuthStateChange((event,session)=>{if(event==='SIGNED_OUT'){Workspace.user=null;Workspace.admin=false;Workspace.projects=[];Workspace.docs=[];Workspace.dbId=null;Workspace.localId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.notice='';S=freshState();Workspace.dbStatus='로그아웃 · DB 접근 없음';resetView();renderWorkspace();}});
   }catch(e){Workspace.dbStatus='DB 연결 실패: '+safeMessage(e);updateStatuses();}
+}
+async function deleteDB(){
+  try{requireDB(true);if(Workspace.busy)throw Error('다른 DB 작업이 진행 중입니다.');
+    const id=Workspace.dbId;if(!id)throw Error('삭제할 프로젝트를 먼저 DB 목록에서 선택하세요.');
+    const row=Workspace.projects.find(p=>p.id===id),nm=row?row.name:'(이름 없음)';
+    if(!confirm(`DB 프로젝트를 삭제할까요?\n· 이름: ${nm}\n· 서버에서 완전히 사라지며 되돌릴 수 없습니다.`))return;
+    if(!confirm(`마지막 확인 · '${nm}' 을(를) 정말 삭제합니다. 계속할까요?`))return;
+    Workspace.busy=true;Workspace.dbStatus='프로젝트 삭제 중 · 응답 대기';enforceReadonly();updateStatuses();
+    const {error}=await Workspace.client.from('feasibility_projects').delete().eq('id',id);
+    if(error)throw error;
+    Workspace.projects=Workspace.projects.filter(p=>p.id!==id);
+    Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.docs=[];
+    S=freshState('프로젝트를 선택하세요');R=compute(S);resetView();
+    Workspace.dbStatus='프로젝트 삭제 확인 · '+nm+' 제거됨';toast('프로젝트를 삭제했습니다 · '+nm);
+  }catch(e){Workspace.dbStatus='프로젝트 삭제 실패: '+safeMessage(e);toast('⚠ 삭제 실패 · '+safeMessage(e));}
+  finally{Workspace.busy=false;updateStatuses();enforceReadonly();renderWorkspace();}
 }
 async function listDB(){
   Workspace.projects=[];Workspace.dbStatus='DB 목록 조회 중';updateStatuses();
@@ -2938,7 +2975,7 @@ function renderWorkspace(){
   box.innerHTML=`<div class="workspace-grid"><div class="card"><div class="card-h"><div><h2>프로젝트 보관함</h2><p>프로젝트는 DB에서만 불러오고 DB에만 저장합니다. 로컬 보관은 없습니다.</p></div></div>
     <div class="workspace-actions"><button class="btn" id="newProject" data-write>새 빈 프로젝트</button></div>
     <p class="status-line">변경사항은 입력 즉시 표시되며, <b>「DB 명시적 저장」</b> 또는 <b>「DB 다른 이름 저장」</b>으로만 서버에 기록됩니다.</p><div class="divider"></div>
-    <div class="workspace-actions"><button class="btn" id="dbList">DB 목록 불러오기</button><button class="btn dark" id="dbSave" data-db-write>DB 명시적 저장</button><button class="btn teal" id="dbSaveAs" data-db-write>DB 다른 이름 저장</button></div>
+    <div class="workspace-actions"><button class="btn" id="dbList">DB 목록 불러오기</button><button class="btn dark" id="dbSave" data-db-write>DB 명시적 저장</button><button class="btn teal" id="dbSaveAs" data-db-write>DB 다른 이름 저장</button><button class="btn" id="dbDelete" style="color:#b33;border-color:#b33">선택 프로젝트 삭제</button></div><p class="help" style="font-size:11px;color:var(--mut)">삭제는 본인 소유 프로젝트만 가능하며 되돌릴 수 없습니다. 서버에서 행이 완전히 제거됩니다.</p>
     <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)} · ${p.updated_at?new Date(p.updated_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'시각없음'}${p.is_public?' · 공개':''}</option>`).join('')}</select></label>
     <label class="check"><input id="projectPublic" type="checkbox" data-db-write ${Workspace.isPublic?'checked':''}>승인된 뷰어에게 공개</label><p id="dbStatus" class="status-line" role="status"></p>
     <div class="note amber" id="legacyNotice" hidden></div>
@@ -2980,7 +3017,7 @@ document.addEventListener('change',e=>{
 });
 document.addEventListener('click',async e=>{const id=e.target.closest('button')?.id;
   if(e.target.closest('[data-demand-scroll]')){const direction=e.target.closest('[data-demand-scroll]').dataset.demandScroll;$('#demandScroll').scrollTo({left:direction==='left'?0:$('#demandScroll').scrollWidth,behavior:'smooth'});}
-  if(id==='copyPrevious')copyPrevious();if(id==='newProject')newProject();if(id==='dbList')await listDB();if(id==='dbSave')await saveDB();if(id==='dbSaveAs')await saveDB(true);if(id==='listDocuments')await listDocuments();if(id==='uploadDocument')await uploadDocument();
+  if(id==='copyPrevious')copyPrevious();if(id==='newProject')newProject();if(id==='dbList')await listDB();if(id==='dbSave')await saveDB();if(id==='dbSaveAs')await saveDB(true);if(id==='dbDelete')await deleteDB();if(id==='listDocuments')await listDocuments();if(id==='uploadDocument')await uploadDocument();
   if(id==='loginToggle')$('#loginForm').hidden=!$('#loginForm').hidden;
   if(id==='dbLogout'){try{if(Workspace.client){const {error}=await Workspace.client.auth.signOut();if(error)throw error;}Workspace.user=null;Workspace.admin=false;Workspace.projects=[];Workspace.docs=[];Workspace.dbId=null;Workspace.localId=null;Workspace.notice='';S=freshState();Workspace.dbStatus='로그아웃 · DB 접근 없음';resetView();renderWorkspace();}catch(err){Workspace.dbStatus='로그아웃 실패: '+safeMessage(err);updateStatuses();}}
 });
@@ -3121,7 +3158,7 @@ function mountApproved(user,admin,session){
   S=freshState(admin?'새 프로젝트':'프로젝트를 선택하세요');
   if(admin){Workspace.localStatus='로컬 보관 없음 · DB 전용';listDB().catch(()=>{});}
   try{DetailState=JSON.parse(localStorage.getItem(DETAIL_KEY+':'+user.id)||'{}');}catch(_){DetailState={};}
-  R=compute(S);window.__S=S;window.__R=R;editYear=0;currentView=admin?'assume':'company';
+  R=compute(S);window.__S=S;window.__R=R;currentView='demand';resetView();
   init();renderWorkspace();
   $$('.ftab').forEach(el=>el.dataset.readonlySkip='1');
   host.hidden=false;document.getElementById('authGate').hidden=true;enforceReadonly();
@@ -3526,21 +3563,13 @@ document.addEventListener('click',e=>{
 /* ===== T=0 선택연도 · 화면별 개시 정보 배너 ===== */
 var t0Sel=false;
 function t0BannerHtml(){
-  const wc=wcT0(S),wcSum=Object.values(wc).reduce((a,b)=>a+b,0),off=t0MonthsOf(S);
+  if(!t0Sel||!Gate.approved||!S||!R)return '';
+  const off=t0MonthsOf(S);
+  const wcSum=(S.wc&&S.wc.t0)?Object.values(S.wc.t0).reduce((a,b)=>a+Math.max(0,num(b)),0):0;
   const stQty=(R.invGroups||[]).reduce((a,g)=>a+(g.openStock||0),0);
-  const top=[['T=0 투자액(I0)',shortWon(R.I0)],['T0 운영 FCFF',off?shortWon(R.t0fcff):'—'],['개시 현금',shortWon(R.cash0)+' (최소 '+shortWon(R.minCash)+')'],['초기재고',won(stQty)+'개 · '+shortWon(R.openingStock)],['t=0 운전자본 잔액',wcSum?shortWon(wcSum):'미설정']];
-  const per={
-    assume:'<b>기본가정</b> · 사업 시작 연도·월이 T0입니다. 시작월~12월은 T0 부분기간, <b>이듬해 1월부터 Y1(달력연도)</b>입니다. 운전자본 <b>T=0 잔액</b>은 "고급 · 영업 운전자본" 표의 T=0 열에서 입력합니다.',
-    invest:'<b>초기투자</b> · 이 화면 전체가 T0 편집 화면입니다(t=0에 나가는 돈 · 개시 재무상태표 · 자금 수지).',
-    demand:'<b>판매수요</b> · T0 기간(시작월~12월) 수요는 <b>T=0 운영 기간 판매수요 표</b>에, Y1(이듬해 1~12월)부터는 월별 수요를 입력합니다. 현재재고 입력은 04 재고·발주 표에 있습니다.',
-    inventory:'<b>재고·발주</b> · 표의 <b>현재재고</b>가 T0 초기재고 매입액으로 들어가고, 발주는 T0 수요부터 계획됩니다. 월별 원장에서 T0 기간을 선택할 수 있습니다.',
-    cost:'<b>인건비·판관비</b> · T0 기간 인건비·고정비는 Y1 값의 월수 비율로 자동 계산되고, <b>T=0 기간 월별 채용</b> 표에서 T0 채용을 입력하면 Y1 인원에 누적 반영됩니다.',
-    finance:'<b>재무제표</b> · 연간 표는 달력연도(Y1~) 기준입니다. T0 현금흐름은 현금흐름표 개시행(cf0)과 07 사업성 FCFF 표의 T0 열에서 확인합니다.',
-    value:'<b>사업성</b> · T0 열 = 투자(I0) + T0 운영 FCFF. NPV·IRR·회수기간에 T0 운영이 포함됩니다.'
-  }[currentView]||'';
-  return '<div class="note" style="border-color:#2f7d8f"><span class="t">선택: T=0 · 개시 시점 (사업 시작 '+num(S.meta.startYear)+'.'+smOf(S)+')</span>'+per
-    +'<div class="divider"></div>'+top.map(([n,v])=>'<div class="kv"><span class="k">'+n+'</span><span class="v">'+v+'</span></div>').join('')
-    +'<div class="cap">T0 = 사업 시작 시점의 부분기간(시작월~12월)입니다. 이듬해 1월 1일부터 Y1(달력연도)이 시작되며 판매수요·채용·재고가 연속 반영됩니다. 연간 편집으로 돌아가려면 Y1~를 선택하세요.</div></div>';
+  const top=[['T0 투자액(I0)',shortWon(R.I0)],['T0 운영 FCFF',off?shortWon(R.t0fcff):'—'],['개시 현금',shortWon(R.cash0)],['초기재고',won(stQty)+'개 · '+shortWon(R.openingStock)],['T0 운전자본 잔액',wcSum?shortWon(wcSum):'미설정']];
+  return '<div class="note t0note"><span class="t">선택: T0 · 개시 시점 (사업 시작 '+num(S.meta.startYear)+'.'+smOf(S)+', 부분기간 '+off+'개월)</span>'
+    +'<span class="kvs">'+top.map(([nm,v])=>'<span class="kv2">'+nm+' <b>'+v+'</b></span>').join('')+'</span></div>';
 }
 function renderT0Banner(){
   document.querySelectorAll('[data-t0banner]').forEach(el=>el.remove());
@@ -3716,6 +3745,9 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
+
+
 
 
 
