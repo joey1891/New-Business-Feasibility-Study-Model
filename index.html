@@ -2766,7 +2766,14 @@ saveState=function(force){
 function manualSave(){
   if(!canEdit()){toast('읽기 전용 · 저장 권한이 없습니다');return;}
   saveState(true);
-  toast('저장했습니다 · '+new Date().toLocaleTimeString('ko-KR'));
+  // 상단 「저장하기」는 로컬 저장 후 가능하면 DB 저장까지 진행한다 — 과거에는 로컬만 저장하고
+  // '저장했습니다' 토스트를 띄워 DB 저장을 한 것으로 오해시켰다(저장 실패 신고의 근본 원인).
+  if(Workspace.client&&Workspace.user&&Workspace.admin&&typeof saveDB==='function'&&!Workspace.busy){
+    toast('로컬 저장 완료 · DB 저장을 진행합니다');
+    saveDB(false);
+  }else{
+    toast('⚠ 로컬에만 저장했습니다 · DB 저장은 기업자료 탭의 「DB 명시적 저장」으로 하세요');
+  }
 }
 function setAutoSave(on){
   autoSaveOn=!!on;try{localStorage.setItem(AUTOSAVE_KEY,autoSaveOn?'on':'off');}catch(e){}
@@ -3707,6 +3714,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
