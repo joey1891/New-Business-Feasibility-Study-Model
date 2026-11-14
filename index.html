@@ -885,7 +885,7 @@ function defaultState(){
 /* ---------- 정규화 ---------- */
 function normNode(n,level){
   const hasKids=Array.isArray(n.children)&&n.children.length>0;
-  const isProd=level>=9||!hasKids;
+  const isProd=level>=9||(!Array.isArray(n.children)&&!hasKids);
   const out={id:n.id||uid(isProd?'p':'g'),name:String(n.name||(isProd?'제품':'그룹'))};
   if(isProd){
     out.level=Math.min(9,level);out.months=Array.from({length:12},(_,i)=>Math.max(0,Math.round(num((n.months||[])[i],0))));
@@ -2035,7 +2035,7 @@ function addChild(id){
   info.node.children=info.node.children||[];
   info.node.children.push(child);
   COLLAPSED.delete(id);
-  renderDemand(); paint();
+  saveState(); renderDemand(); paint();
 }
 function delNode(id){
   const info=findNode(id); if(!info) return;
@@ -2043,7 +2043,7 @@ function delNode(id){
   if(!confirm(`'${nm}' 가지를 삭제할까요? 하위 제품도 모두 사라집니다.`)) return;
   if(!info.parent){ S.sales.tree=S.sales.tree.filter(n=>n.id!==id); }
   else { info.parent.children=info.parent.children.filter(n=>n.id!==id); }
-  renderDemand(); paint();
+  saveState(); renderDemand(); paint();
 }
 function demandCsv(){
   const rows=[['수익모델','국가','브랜드','사업영역','판매형태','채널','거래처','품목군','제품','거래처 수','단가','원가','성장률',...Array.from({length:12},(_,i)=>(i+1)+'월'),'연간','매출']];
@@ -2671,13 +2671,13 @@ function bindStatic(){
     if(t.dataset.toggle){ const id=t.dataset.toggle; COLLAPSED.has(id)?COLLAPSED.delete(id):COLLAPSED.add(id); renderTree(); paint(); return; }
     if(t.dataset.add){ addChild(t.dataset.add); return; }
     if(t.dataset.delnode){ delNode(t.dataset.delnode); return; }
-    if(t.dataset.deldept){ S.payroll.departments=S.payroll.departments.filter(d=>d.id!==t.dataset.deldept); renderCost(); paint(); return; }
-    if(t.dataset.delsga){ const [k,id]=t.dataset.delsga.split(':'); S.sga[k]=S.sga[k].filter(x=>x.id!==id); renderCost(); paint(); return; }
-    if(t.dataset.delno){ const [k,id]=t.dataset.delno.split(':'); S.nonop[k]=S.nonop[k].filter(x=>x.id!==id); renderCost(); paint(); return; }
-    if(t.dataset.addsga){ const k=t.dataset.addsga; S.sga[k].push({id:uid('s'),name:'새 항목',type:k==='variable'?'rate':'amount',value:k==='variable'?1:1000000,grow:3}); renderCost(); paint(); return; }
-    if(t.dataset.addno){ const k=t.dataset.addno; S.nonop[k].push({id:uid('n'),name:'새 항목',type:'amount',value:0,grow:0}); renderCost(); paint(); return; }
+    if(t.dataset.deldept){ S.payroll.departments=S.payroll.departments.filter(d=>d.id!==t.dataset.deldept); saveState(); renderCost(); paint(); return; }
+    if(t.dataset.delsga){ const [k,id]=t.dataset.delsga.split(':'); S.sga[k]=S.sga[k].filter(x=>x.id!==id); saveState(); renderCost(); paint(); return; }
+    if(t.dataset.delno){ const [k,id]=t.dataset.delno.split(':'); S.nonop[k]=S.nonop[k].filter(x=>x.id!==id); saveState(); renderCost(); paint(); return; }
+    if(t.dataset.addsga){ const k=t.dataset.addsga; S.sga[k].push({id:uid('s'),name:'새 항목',type:k==='variable'?'rate':'amount',value:k==='variable'?1:1000000,grow:3}); saveState(); renderCost(); paint(); return; }
+    if(t.dataset.addno){ const k=t.dataset.addno; S.nonop[k].push({id:uid('n'),name:'새 항목',type:'amount',value:0,grow:0}); saveState(); renderCost(); paint(); return; }
     if(t.dataset.stmt){ finTab=t.dataset.stmt; renderFinance(); return; }
-    if(t.id==='btnAddRoot'){ S.sales.tree.push({id:uid('g'),name:'새 수익모델',children:[]}); renderDemand(); paint(); return; }
+    if(t.id==='btnAddRoot'){ S.sales.tree.push({id:uid('g'),name:'새 수익모델',children:[]}); saveState(); renderDemand(); paint(); return; }
     if(t.id==='btnToggleAll'){
       allCollapsed=!allCollapsed; COLLAPSED=new Set();
       if(allCollapsed) (function w(a){ (a||[]).forEach(n=>{ if(n.children&&n.children.length){COLLAPSED.add(n.id); w(n.children);} }); })(S.sales.tree);
@@ -2687,7 +2687,7 @@ function bindStatic(){
     if(t.id==='btnOrderCsv'){ orderCsv(); return; }
     if(t.id==='btnAddPayroll'){
       S.payroll.departments.push({id:uid('d'),name:'새 부서',heads:1,salary:3000000,headAdd:0,mfg:false});
-      renderCost(); paint(); return;
+      saveState(); renderCost(); paint(); return;
     }
     if(t.id==='btnSave'){ download('사업계획_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(S,null,2),'application/json'); toast('JSON 파일로 저장했습니다'); return; }
     if(t.id==='btnPrint'){ window.print(); return; }
@@ -3696,6 +3696,8 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
+
 
 
 
