@@ -1742,7 +1742,7 @@ function migrateV3(o){
   }catch(e){}
   return ensureState(s);
 }
-function saveState(){ try{ localStorage.setItem(APP_KEY,JSON.stringify(S)); $('#saveState').textContent='자동 저장됨'; }catch(e){ $('#saveState').textContent='저장 실패'; } }
+function saveState(){ try{ localStorage.setItem(APP_KEY,JSON.stringify(S)); const el=$('#saveState');if(el&&!String(el.textContent).startsWith('DB'))el.textContent='로컬 임시 저장 · DB 저장 아님'; }catch(e){ $('#saveState').textContent='로컬 저장 실패'; } }
 function toast(msg){ const el=$('#toast'); if(!el)return; el.textContent=msg; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('show'),2200); }
 function deepGet(path){ return path.split('.').reduce((o,k)=>(o==null?undefined:o[k]),S); }
 function deepSet(path,v){ const p=path.split('.'); let o=S; for(let i=0;i<p.length-1;i++) o=o[p[i]]; o[p[p.length-1]]=v; }
@@ -2754,10 +2754,10 @@ function saveBadge(){
   if(lab)lab.classList.toggle('on',autoSaveOn);
   const el=document.getElementById('saveState');
   const t=lastSavedAt?lastSavedAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):null;
-  if(el)el.textContent=autoSaveOn?(pendingDirty?'자동 저장 대기 · 변경됨':(t?'자동 저장됨 · '+t:'자동 저장 켜짐')):'자동저장 꺼짐 · '+(pendingDirty?'저장 필요':'변경 없음');
+  if(el)el.textContent=autoSaveOn?(pendingDirty?'로컬 대기 · 변경됨 · DB 저장 아님':(t?'로컬 임시 저장 · '+t:'로컬 자동저장 켜짐')):'로컬 자동저장 꺼짐 · '+(pendingDirty?'저장 필요':'변경 없음');
   if(btn){btn.classList.toggle('saved',!pendingDirty&&!!t);btn.textContent=pendingDirty?'저장하기':'저장됨';}
 }
-function markDirty(){pendingDirty=true;const el=document.getElementById('saveState');if(el)el.textContent=autoSaveOn?'변경됨 · 곧 저장':'변경됨 · 저장 필요';const b=document.getElementById('btnSaveNow');if(b){b.classList.remove('saved');b.textContent='저장하기';}}
+function markDirty(){pendingDirty=true;const el=document.getElementById('saveState');if(el)el.textContent=autoSaveOn?'변경됨 · 로컬 대기 · DB 저장 아님':'변경됨 · 저장 필요';const b=document.getElementById('btnSaveNow');if(b){b.classList.remove('saved');b.textContent='저장하기';}}
 saveState=function(force){
   if(!canEdit())return;
   if(!autoSaveOn&&!force){markDirty();return saveBadge();}
@@ -2865,8 +2865,9 @@ async function connectDB(){
 }
 async function listDB(){
   Workspace.projects=[];Workspace.dbStatus='DB 목록 조회 중';updateStatuses();
-  try{requireDB();const {data,error}=await Workspace.client.from('feasibility_projects').select('id,name,updated_at,inputs,is_public,user_id').order('updated_at',{ascending:false});if(error)throw error;if(!Array.isArray(data))throw Error('목록 응답 형식 오류');Workspace.projects=Workspace.admin?data:data.filter(p=>p.is_public===true||p.user_id===Workspace.user.id);Workspace.dbStatus=Workspace.projects.length?'DB 목록 조회 확인 · '+Workspace.projects.length+'개':'DB 목록이 비어 있습니다 · 예시 자료가 아닙니다';}
-  catch(e){Workspace.dbStatus='DB 목록 실패: '+safeMessage(e);}renderWorkspace();
+  try{requireDB();const {data,error}=await Workspace.client.from('feasibility_projects').select('id,name,updated_at,inputs,is_public,user_id').order('updated_at',{ascending:false});if(error)throw error;if(!Array.isArray(data))throw Error('목록 응답 형식 오류');Workspace.projects=Workspace.admin?data:data.filter(p=>p.is_public===true||p.user_id===Workspace.user.id);const dup={};Workspace.projects.forEach(pr=>{dup[pr.name]=(dup[pr.name]||0)+1;});const dups=Object.entries(dup).filter(([,k])=>k>1);
+    Workspace.dbStatus=Workspace.projects.length?'DB 목록 조회 확인 · '+Workspace.projects.length+'개'+(dups.length?' · 이름 중복: '+dups.slice(0,3).map(([nm,k])=>nm+'('+k+')').join(', ')+' · 갱신시각으로 최신 행을 선택하세요':''):'DB 목록이 비어 있습니다 · 예시 자료가 아닙니다';}
+  catch(e){Workspace.dbStatus='DB 목록 실패: '+safeMessage(e);if(/JWT|401|permission denied|만료|세션/i.test(String(e?.message||e)))gateLock('로그인 세션이 만료되었거나 거부되었습니다. 다시 로그인하세요.');}renderWorkspace();
 }
 function activateDB(id){
   requireDB();const row=Workspace.projects.find(p=>p.id===id);if(!row)throw Error('허용된 DB 목록에서 프로젝트를 선택하세요.');
@@ -2883,9 +2884,16 @@ async function saveDB(asNew=false){
     const id=Workspace.dbId,payload={name,inputs:snapshot,updated_at:new Date().toISOString(),is_public:Workspace.isPublic};
     const q=(asNew||!id)?Workspace.client.from('feasibility_projects').insert({...payload,user_id:Workspace.user.id}):Workspace.client.from('feasibility_projects').update(payload).eq('id',id);
     const {data,error}=await q.select('id').single();if(error)throw error;if(!data?.id)throw Error('저장 성공 응답에 프로젝트 ID가 없습니다.');
-    Workspace.dbId=data.id;Workspace.legacy=false;Workspace.sourceId=null;S.meta.name=name;saveState(true);Workspace.dbStatus=rev+1===Workspace.revision?'DB 저장 확인 · '+new Date().toLocaleTimeString('ko-KR'):'DB 저장 확인 · 저장 중 추가 변경은 미저장';
-    $('#projName').value=name;
-  }catch(e){Workspace.dbStatus='DB 저장 실패 · 서버 저장 미확인: '+safeMessage(e);}
+    Workspace.dbId=data.id;Workspace.legacy=false;Workspace.sourceId=null;S.meta.name=name;saveState(true);const kind=(asNew||!id)?'신규 생성':'갱신';
+    let vfy='';
+    try{const back=await Workspace.client.from('feasibility_projects').select('updated_at,inputs').eq('id',Workspace.dbId).single();
+      if(back.data){const sameLen=Math.abs(JSON.stringify(back.data.inputs||{}).length-JSON.stringify(snapshot).length)<64;
+        vfy=sameLen?' · 서버 재조회 확인됨':' · ⚠ 서버에 저장된 내용 크기 불일치';}
+      else vfy=' · ⚠ 재조회 실패';}catch(_){vfy=' · ⚠ 재조회 실패';}
+    Workspace.dbStatus='DB 저장 확인 · '+kind+' · '+name+' · '+new Date().toLocaleTimeString('ko-KR')+vfy;
+    if(rev+1!==Workspace.revision)Workspace.dbStatus+=' · 저장 중 추가 변경은 미저장';
+    $('#projName').value=name;toast((asNew||!id?'새 DB 프로젝트로 저장했습니다 · ':'DB 프로젝트를 갱신했습니다 · ')+name+(asNew||!id?' · 목록에 새 행이 생깁니다':''));
+  }catch(e){Workspace.dbStatus='DB 목록 실패: '+safeMessage(e);if(/JWT|401|permission denied|만료|세션/i.test(String(e?.message||e)))gateLock('로그인 세션이 만료되었거나 거부되었습니다. 다시 로그인하세요.');}
   finally{Workspace.busy=false;updateStatuses();enforceReadonly();}
   return Workspace.dbStatus.startsWith('DB 저장 확인')?Workspace.dbId:null;
 }
@@ -2922,7 +2930,7 @@ function renderWorkspace(){
     <div class="workspace-actions"><button class="btn" id="newProject" data-write>새 빈 프로젝트</button></div>
     <p class="status-line">변경사항은 입력 즉시 표시되며, <b>「DB 명시적 저장」</b> 또는 <b>「DB 다른 이름 저장」</b>으로만 서버에 기록됩니다.</p><div class="divider"></div>
     <div class="workspace-actions"><button class="btn" id="dbList">DB 목록 불러오기</button><button class="btn dark" id="dbSave" data-db-write>DB 명시적 저장</button><button class="btn teal" id="dbSaveAs" data-db-write>DB 다른 이름 저장</button></div>
-    <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)} · ${p.updated_at?String(p.updated_at).slice(0,16).replace('T',' '):'시각없음'}${p.is_public?' · 공개':''}</option>`).join('')}</select></label>
     <label class="check"><input id="projectPublic" type="checkbox" data-db-write ${Workspace.isPublic?'checked':''}>승인된 뷰어에게 공개</label><p id="dbStatus" class="status-line" role="status"></p>
     <div class="note amber" id="legacyNotice" hidden></div>
   </div><div class="card"><div class="card-h"><div><h2>계정 · 승인</h2><p>원본 승인 흐름을 유지합니다. 뷰어는 읽기 전용입니다.</p></div></div>
@@ -3699,6 +3707,8 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
+
 
 
 
