@@ -431,10 +431,11 @@ table.tbl.plain thead th{position:static}
       <div class="cols">
         <div class="stack">
           <div class="card">
-            <div class="card-h"><div><h2><span class="no">01</span>계획의 뼈대</h2><p>분석 기간과 기준연도. 모든 표의 Y1은 이 연도부터 시작합니다.</p></div></div>
+            <div class="card-h"><div><h2><span class="no">01</span>계획의 뼈대</h2><p>분석 기간과 기준연도. 모든 표의 Y1은 이 연도부터 시작하며, 판매수요는 t=0 시작 월부터 반영됩니다.</p></div></div>
             <div class="fgrid">
               <label class="field"><span class="lb">사업명</span><span class="inp"><input type="text" data-bind="meta.name" placeholder="예: 2027 프리미엄 리빙 사업"></span></label>
               <label class="field"><span class="lb">기준연도 (Y1)</span><span class="inp"><input type="number" data-bind="meta.startYear" min="2020" max="2100" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">t=0 시작 월</span><select data-bind="meta.startMonth" data-num="1"><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select><span class="help">이 월부터 판매수요계획을 반영합니다</span></label>
               <label class="field"><span class="lb">분석 기간</span><select data-bind="meta.years" data-num="1"><option value="3">3년</option><option value="4">4년</option><option value="5">5년</option><option value="6">6년</option><option value="7">7년</option></select></label>
               <label class="field"><span class="lb">금액 표시 단위</span><select disabled><option>상단 결과 단위 선택</option></select><span class="help">입력은 원, 결과는 상단에서 원·백만원·억원 선택</span></label>
             </div>
@@ -448,32 +449,31 @@ table.tbl.plain thead th{position:static}
           </div>
 
           <div class="card">
-            <div class="card-h"><div><h2><span class="no">02</span>운전자본 · 잔존가치</h2><p>매출채권 회수·매입채무 지급 조건과 최소 운영현금. 인건비·판관비는 05번에서 입력합니다.</p></div></div>
+            <div class="card-h"><div><h2><span class="no">02</span>운전자본</h2><p>매출채권 회수·매입채무 지급·재고자산 회전 조건과 최소 운영현금. 인건비·판관비는 05번에서 입력합니다.</p></div></div>
             <div class="fgrid">
               <label class="field"><span class="lb">매출채권 회수기간</span><span class="inp"><input type="number" data-bind="assume.arDays" min="0" max="365" step="1"><i>일</i></span></label>
               <label class="field"><span class="lb">매입채무 지급기간</span><span class="inp"><input type="number" data-bind="assume.apDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">재고자산 회전기간</span><span class="inp"><input type="text" id="invDaysView" readonly><i>일</i></span><span class="help">04번 재고·발주 계획 기준 자동계산 (평균재고 ÷ 매출원가 × 365)</span></label>
               <label class="field"><span class="lb">초기 보유현금</span><span class="inp"><input type="text" class="comma" data-bind="assume.openingCash" inputmode="numeric"><i>원</i></span><span class="help">기존 법인 통장 잔액</span></label>
               <label class="field"><span class="lb">최소 운영현금</span><span class="inp"><input type="number" data-bind="assume.minCashMonths" step="1" min="0"><i>개월치 인건비</i></span><span class="help">현금 고갈 판정 기준</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>잔존가치</h2><p>사업성 TV는 최종 계획연도 값을 사용합니다.</p></div></div>
+            <div class="fgrid">
               <label class="field"><span class="lb">잔존가치 방식 · 선택연도 가정</span><select data-bind="assume.tvMode"><option value="none">미포함(0)</option><option value="nav">순자산가치 방식</option><option value="gordon">영구성장모형 방식</option></select><span class="help">사업성 TV는 최종 계획연도 값을 사용합니다.</span></label>
               <label class="field"><span class="lb">영구성장률 (고든)</span><span class="inp"><input type="number" data-bind="assume.g" step="0.1"><i>%</i></span><span class="help">영구성장 모형 선택 시에만 사용</span></label>
             </div>
           </div>
         </div>
 
-        <aside class="rail">
-          <div class="card" id="assumeSummary"></div>
-          <div class="note">
-            <span class="t">이 파일에서 달라진 점</span>
-            기존 5번 <b>운전자본·제조경비</b> 섹션은 없앴습니다. 재고는 <b>04 재고·발주</b>에서 수요에 맞춰 자동 계획되고, 그 결과가 손익·현금흐름에 한 번만 반영됩니다.
-          </div>
-        </aside>
+
       </div>
     </section>
 
     <!-- ========== 02 초기 투자 ========== -->
     <section class="view" id="view-invest">
-      <div class="kpis" id="investKpis"></div>
-      <div style="height:14px"></div>
       <div class="cols">
         <div class="stack">
           <div class="card">
@@ -481,6 +481,7 @@ table.tbl.plain thead th{position:static}
             <div class="fgrid">
               <label class="field"><span class="lb">유형자산 투자 (CAPEX)</span><span class="inp"><input type="text" class="comma" data-bind="invest.capex" inputmode="numeric"><i>원</i></span></label>
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.capexLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
               <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
               <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">04번 현재재고 × 원가 자동계산</span></label>
@@ -502,13 +503,7 @@ table.tbl.plain thead th{position:static}
           </div>
         </div>
 
-        <aside class="rail">
-          <div class="card" id="fundingBox"></div>
-          <div class="note amber">
-            <span class="t">자본금은 수익이 아니라 재원입니다</span>
-            NPV(기업가치)는 <b>영업이 만든 현금</b>으로 계산하므로 자본금 납입 자체는 현금유입으로 넣지 않습니다. 대신 자본금으로 산 <b>CAPEX·초기재고(t=0 유출)</b>을 빼야 합니다. 이 파일은 그 t=0 투자액을 표에 명시합니다.
-          </div>
-        </aside>
+
       </div>
     </section>
 
@@ -540,9 +535,8 @@ table.tbl.plain thead th{position:static}
         </div>
       </div>
       <div style="height:14px"></div>
-      <div class="two-panel">
-        <div class="card"><div class="card-h"><div><h2>연도별 예상</h2><p>수요 × 성장률. 재고 부족으로 못 판 수량은 실제 판매에서 제외됩니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
-        <div class="card" id="demandMix"></div>
+      <div class="card flush">
+        <div style="padding:14px 16px"><div class="card-h" style="padding:0"><div><h2>연도별 예상</h2><p>수요 × 성장률. 재고 부족으로 못 판 수량은 실제 판매에서 제외됩니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
       </div>
     </section>
 
@@ -622,18 +616,24 @@ table.tbl.plain thead th{position:static}
           </div>
 
           <div class="card">
-            <div class="card-h"><div><h2><span class="no">02</span>판매비와 관리비</h2><p>고정비 · 준변동비 · 변동비를 구분합니다. 변동비는 매출에 비례하고, 나머지는 인상률만큼 오릅니다.</p></div></div>
-            <div class="sub-h">고정비</div>
-            <div class="tablewrap"><table class="tbl" id="sgaFixed"></table></div>
-            <div class="sub-h" style="margin-top:14px">준변동비</div>
-            <div class="tablewrap"><table class="tbl" id="sgaSemi"></table></div>
-            <div class="sub-h" style="margin-top:14px">변동비 (매출 대비)</div>
-            <div style="margin:-4px 0 6px;font-size:10.5px;color:#8a99ab">매출%로 입력하면 매출에 비례해 자동 계산됩니다.</div>
-            <div class="tablewrap"><table class="tbl" id="sgaVar"></table></div>
+            <div class="card-h"><div><h2><span class="no">02</span>인건비성 경비</h2><p>급여·4대보험·<b>퇴직금</b>·복리후생 등 인건비성 경비를 판매비와 관리비와 별도 계정으로 분리해 관리합니다. 금액은 부서·직급표(01번)에서 입력합니다.</p></div></div>
+            <div class="tablewrap"><table class="tbl" id="laborCostTable"></table></div>
+            <div class="cap">퇴직급여충당(퇴직금)이 포함됩니다. 제조 인력은 매출원가로, 판매·관리 인력은 판관비로 분류됩니다.</div>
           </div>
 
           <div class="card">
-            <div class="card-h"><div><h2><span class="no">03</span>영업외 수익 · 비용</h2><p>이자비용은 02번 차입에서 자동 계산되므로 여기에 넣지 마세요. 비현금 항목은 현금흐름표에서 조정됩니다.</p></div></div>
+            <div class="card-h"><div><h2><span class="no">03</span>판매비와 관리비</h2><p>변동비 · 고정비 · 준변동비 순으로 구분합니다. 여비교통비·수도광열비·통신비는 고정비에 포함됩니다. 변동비는 매출에 비례하고, 나머지는 인상률만큼 오릅니다.</p></div></div>
+            <div class="sub-h">변동비 (매출 대비)</div>
+            <div style="margin:-4px 0 6px;font-size:10.5px;color:#8a99ab">매출%로 입력하면 매출에 비례해 자동 계산됩니다.</div>
+            <div class="tablewrap"><table class="tbl" id="sgaVar"></table></div>
+            <div class="sub-h" style="margin-top:14px">고정비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaFixed"></table></div>
+            <div class="sub-h" style="margin-top:14px">준변동비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaSemi"></table></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">04</span>영업외 수익 · 비용</h2><p>이자비용은 02번 차입에서 자동 계산되므로 여기에 넣지 마세요. 비현금 항목은 현금흐름표에서 조정됩니다.</p></div></div>
             <div class="two-panel">
               <div><div class="sub-h">영업외 수익</div><div class="tablewrap"><table class="tbl" id="nonopInc"></table></div></div>
               <div><div class="sub-h">영업외 비용</div><div class="tablewrap"><table class="tbl" id="nonopExp"></table></div></div>
@@ -642,13 +642,6 @@ table.tbl.plain thead th{position:static}
           </div>
         </div>
 
-        <aside class="rail">
-          <div class="card" id="costRail"></div>
-          <div class="note">
-            <span class="t">관리회계와 재무회계의 차이</span>
-            이 화면의 <b>변동비/고정비 구분</b>이 06번 <b>관리회계 손익계산서</b>의 공헌이익·BEP로 이어집니다. 재무제표는 성격별(매출원가·판관비)로, 관리회계는 원가행태별로 같은 숫자를 다시 묶습니다.
-          </div>
-        </aside>
       </div>
     </section>
 
@@ -846,7 +839,10 @@ function defaultState(){
         {id:uid('s'),name:'임차료',type:'amount',value:24000000,grow:3},
         {id:uid('s'),name:'관리비·공과금',type:'amount',value:6000000,grow:3},
         {id:uid('s'),name:'보험료',type:'amount',value:2400000,grow:2},
-        {id:uid('s'),name:'세금과공과',type:'amount',value:1800000,grow:2}
+        {id:uid('s'),name:'세금과공과',type:'amount',value:1800000,grow:2},
+        {id:uid('s'),name:'여비교통비',type:'amount',value:2000000,grow:3},
+        {id:uid('s'),name:'수도광열비',type:'amount',value:1500000,grow:3},
+        {id:uid('s'),name:'통신비',type:'amount',value:800000,grow:3}
       ],
       semi:[
         {id:uid('s'),name:'물류·운송비',type:'amount',value:18000000,grow:4},
@@ -899,8 +895,9 @@ function ensureState(s0){
   s.inv=Object.assign({},d.inv,s.inv||{});
   s.meta.years=Math.min(7,Math.max(3,Math.round(num(s.meta.years,5))));
   s.meta.startYear=Math.max(2000,Math.min(2100,Math.round(num(s.meta.startYear,2027))));
+  s.meta.startMonth=Math.min(12,Math.max(1,Math.round(num(s.meta.startMonth,1))));
   ['taxRate','ke','wacc','minCashMonths','arDays','apDays','openingCash','g'].forEach(k=>s.assume[k]=num(s.assume[k],d.assume[k]));
-  ['capex','capexLife','intangible','intangibleLife','equity','debt','rate'].forEach(k=>s.invest[k]=num(s.invest[k],d.invest[k]));
+  ['capex','capexLife','intangible','intangibleLife','longInvest','equity','debt','rate'].forEach(k=>s.invest[k]=num(s.invest[k],d.invest[k]));
   s.invest.capexLife=Math.max(1,Math.round(s.invest.capexLife));
   s.invest.intangibleLife=Math.max(1,Math.round(s.invest.intangibleLife));
   if(!Array.isArray(s.sales&&s.sales.tree)) s.sales={tree:[]};
@@ -919,6 +916,11 @@ function ensureState(s0){
     x.headAdd=num(x.headAdd,0); x.mfg=!!x.mfg;
     if(Array.isArray(x.mix)) x.mix=x.mix.filter(m=>m&&m.rankId).map(m=>({rankId:m.rankId,heads:Math.max(0,num(m.heads))}));
     if(x.hirePlan&&typeof x.hirePlan==='object'){const hp={};Object.keys(x.hirePlan).forEach(yy=>{const p=x.hirePlan[yy];if(!p||typeof p!=='object')return;const o={};Object.keys(p).forEach(rk=>{const v=Math.max(0,num(p[rk]));if(v)o[rk]=v;});if(Object.keys(o).length)hp[yy]=p&&Object.keys(p).length?hp[yy]||{}:{};Object.keys(p).forEach(rk=>{const v=Math.max(0,num(p[rk]));if(v){hp[yy]=hp[yy]||{};hp[yy][rk]=v;}});});x.hirePlan=hp;}else delete x.hirePlan;
+    if(x.hirePlanM&&typeof x.hirePlanM==='object'){const hm={};Object.keys(x.hirePlanM).forEach(yy=>{const p=x.hirePlanM[yy];if(!p||typeof p!=='object')return;const o={};Object.keys(p).forEach(rk=>{const arr=Array.isArray(p[rk])?p[rk].slice(0,12):[];const a=Array.from({length:12},(_,i)=>Math.max(0,num(arr[i],0)));if(a.some(v=>v>0))o[rk]=a;});if(Object.keys(o).length)hm[yy]=o;});x.hirePlanM=hm;}else delete x.hirePlanM;
+  });
+  ['여비교통비','수도광열비','통신비'].forEach(nm=>{
+    const exists=['fixed','semi','variable'].some(k=>(s.sga[k]||[]).some(it=>it.name===nm));
+    if(!exists){const def={여비교통비:2000000,수도광열비:1500000,통신비:800000}[nm];s.sga.fixed.push({id:uid('s'),name:nm,type:'amount',value:def,grow:3});}
   });
   ['fixed','semi','variable'].forEach(k=>{
     if(!Array.isArray(s.sga[k])) s.sga[k]=[];
@@ -1010,13 +1012,14 @@ function buildMonths(startYear,n){
 }
 
 /* ---------- 재고 시뮬레이션 ---------- */
-function simulateProduct(p,cfg,months,H){
+function simulateProduct(p,cfg,months,H,startMonth){
+  const sm=Math.min(12,Math.max(1,Math.round(num(startMonth,1))));
   const NM=months.length,cost=Math.max(0,productYear(p,0).cost||0);
   const mult=Math.max(0,num(p.custCount,1));
   const dem=[];
   for(let i=0;i<NM;i++){
     const yi=Math.floor(i/12);
-    const q=num(productYear(p,yi).months[i%12])*mult;
+    const q=(i%12>=sm-1)?num(productYear(p,yi).months[i%12])*mult:0;
     dem.push(Math.max(0,Math.round(q)));
   }
   let stock=Math.max(0,num(cfg.stock,0));
@@ -1060,13 +1063,14 @@ function invGroupParent(p){
   for(let i=0;i<8;i++){ if(i===6) continue; if(a[i]) out.push(a[i]); }
   return out.join(' \u203a ');
 }
-function productDemand(p,months){
+function productDemand(p,months,startMonth){
+  const sm=Math.min(12,Math.max(1,Math.round(num(startMonth,1))));
   const mult=Math.max(0,num(p.custCount,1)),out=[];
-  for(let i=0;i<months.length;i++){ const yi=Math.floor(i/12); out.push(Math.max(0,Math.round(num(productYear(p,yi).months[i%12])*mult))); }
+  for(let i=0;i<months.length;i++){ const yi=Math.floor(i/12); out.push((i%12>=sm-1)?Math.max(0,Math.round(num(productYear(p,yi).months[i%12])*mult)):0); }
   return out;
 }
 function buildInvGroups(s,products,months,H){
-  const NM=months.length,buckets=new Map();
+  const NM=months.length,sm=Math.min(12,Math.max(1,Math.round(num(s.meta&&s.meta.startMonth,1)))),buckets=new Map();
   products.forEach(p=>{ const k=invGroupKey(p); if(!buckets.has(k)) buckets.set(k,[]); buckets.get(k).push(p); });
   const groups=[];
   buckets.forEach((members,key)=>{
@@ -1076,7 +1080,7 @@ function buildInvGroups(s,products,months,H){
       const arr=Array(12).fill(0); let demSum=0,costW=0,priceW=0;
       members.forEach(m=>{
         const py=productYear(m,y),mult=Math.max(0,num(m.custCount,1));
-        for(let i=0;i<12;i++){ const q=Math.max(0,Math.round(num(py.months[i])*mult)); arr[i]+=q; demSum+=q; costW+=q*Math.max(0,num(py.cost,0)); priceW+=q*Math.max(0,num(py.price,0)); }
+        for(let i=0;i<12;i++){ const q=(i>=sm-1)?Math.max(0,Math.round(num(py.months[i])*mult)):0; arr[i]+=q; demSum+=q; costW+=q*Math.max(0,num(py.cost,0)); priceW+=q*Math.max(0,num(py.price,0)); }
       });
       yMonths.push(arr);
       yCost.push(demSum?costW/demSum:Math.max(0,num(productYear(anchor,y).cost,0)));
@@ -1088,12 +1092,12 @@ function buildInvGroups(s,products,months,H){
     const gYears={};
     for(let y=0;y<H;y++){ const be=productYear(anchor,y); gYears[y]=Object.assign({},be,{price:yPrice[y],cost:yCost[y],months:yMonths[y].slice()}); }
     const gp={id:anchor.id,name:anchor.name,custCount:1,node:{years:gYears}};
-    const sim=simulateProduct(gp,cfg,months,H);
+    const sim=simulateProduct(gp,cfg,months,H,sm);
     const g={key,id:anchor.id,name:anchor.name,parentLabel:invGroupParent(anchor),label:invGroupParent(anchor),
       members,memberIds:members.map(m=>m.id),cfg,stock,openStock:Math.round(stock),
       unitCost:(cfg.openingUnitCost!=null?cfg.openingUnitCost:productYear(anchor,0).cost),
       dem:sim.dem,rows:sim.rows,orders:sim.orders,L:sim.L,cost:yCost[0],price:yPrice[0]};
-    const dems=members.map(m=>productDemand(m,months));
+    const dems=members.map(m=>productDemand(m,months,sm));
     members.forEach((m,mi)=>{ m.rows=new Array(NM); m.dem=dems[mi]; m.orders=[]; m.gid=key; m.groupLabel=invGroupParent(anchor); });
     for(let i=0;i<NM;i++){
       const row=sim.rows[i];
@@ -1256,7 +1260,7 @@ function compute(s0){
     niM[i]=revM[i]-cogsM[i]-y.pay.mfg/12-y.pay.sga/12-sgaMonthly-y.dep/12-y.intr/12+nonOpMonthly-y.tax/12;
   }
 
-  const cash0=s.invest.equity+s.invest.debt+s.assume.openingCash-s.invest.capex-s.invest.intangible-openingStock-vat.opening;
+  const cash0=s.invest.equity+s.invest.debt+s.assume.openingCash-s.invest.capex-s.invest.intangible-s.invest.longInvest-openingStock-vat.opening;
   let cash=cash0;
   const dInvArr=[];
   for(let i=0;i<NM;i++){
@@ -1264,7 +1268,7 @@ function compute(s0){
     const dAR=arM[i]-prevAR,dInv=invM[i]-prevInv,dAP=apM[i]-prevAP;
     const yi=months[i].yi,y=years[yi];
     const nonCashAdj=(y.nonop.expNonCash.amt-y.nonop.incNonCash.amt)/12;
-    const wc=wcYear(s,yi),prevWC=i?wcMonth(s,i-1):{prepaid:0,receivable:0,advance:0,accrued:0},nowWC=wcMonth(s,i);
+    const wc=wcYear(s,yi),prevWC=i?wcMonth(s,i-1):wcT0(s),nowWC=wcMonth(s,i);
     const wcCash=-(nowWC.prepaid-prevWC.prepaid)-(nowWC.receivable-prevWC.receivable)+(nowWC.advance-prevWC.advance)+(nowWC.accrued-prevWC.accrued);
     cfoM[i]=niM[i]+y.dep/12+nonCashAdj-dAR-dInv+dAP+wcCash+vat.rows[i].cashAdjustment;
     cash+=cfoM[i]-repayM[i];
@@ -1282,7 +1286,7 @@ function compute(s0){
     const cfo=cfoM.slice(a,b).reduce((x,v)=>x+v,0);
     const repay=repayM.slice(a,b).reduce((x,v)=>x+v,0);
     const dAR=(arM[last]-(y?arM[a-1]:0)),dInv=(invM[last]-(y?invM[a-1]:openingStock)),dAP=(apM[last]-(y?apM[a-1]:0));
-    const wc=wcYear(s,y),pwc=y?wcYear(s,y-1):{prepaid:0,receivable:0,advance:0,accrued:0};
+    const wc=wcYear(s,y),pwc=y?wcYear(s,y-1):wcT0(s);
     cf.push({y,ni:r.ni,dep:r.dep,depPPE:r.depPPE,depInt:r.depInt,nonCashExp:r.nonop.expNonCash.amt,nonCashInc:r.nonop.incNonCash.amt,
       dPrepaid:wc.prepaid-pwc.prepaid,dReceivable:wc.receivable-pwc.receivable,dAdvance:wc.advance-pwc.advance,dAccrued:wc.accrued-pwc.accrued,
       dAR,dInv,dAP,vatCash:vat.rows.slice(a,b).reduce((v,m)=>v+m.cashAdjustment,0),dVatCredit:vat.rows[last].credit-(y?vat.rows[a-1].credit:vat.opening),dVatDue:vat.rows[last].due-(y?vat.rows[a-1].due:0),cfo,cfi:0,cff:-repay,net:cfo-repay,begin:y?cashM[a-1]:cash0,end:cashM[last],interest:r.intr,tax:r.tax});
@@ -1299,7 +1303,7 @@ function compute(s0){
   }
 
   /* 사업성 */
-  const I0=s.invest.capex+s.invest.intangible+openingStock+vat.opening;
+  const I0=s.invest.capex+s.invest.intangible+s.invest.longInvest+openingStock+vat.opening;
   const fcf=[];
   for(let y=0;y<H;y++){
     const nwc=operatingNWC(bs[y]);
@@ -1309,7 +1313,7 @@ function compute(s0){
     fcf.push({y,nopat,dep:pl[y].dep,dnwc,fcff:nopat+pl[y].dep-dnwc});
   }
   const lastBS=bs[H-1];
-  const navTV=operatingNWC(lastBS)+lastBS.ppe+lastBS.intang;
+  const navTV=operatingNWC(lastBS)+lastBS.ppe+lastBS.intang+(lastBS.invest||0);
   const waccYears=Array.from({length:H},(_,y)=>{const a=assumeYear(s,y);return a.waccMode==='manual'?a.wacc/100:(()=>{
     const E=s.invest.equity+s.assume.openingCash,D=s.invest.debt;
     if(E+D<=0) return a.ke/100;
@@ -1394,14 +1398,15 @@ function compute(s0){
   return enrichDetail({s,H,NM,months,products,invGroups,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,
     tv,tvMode,tvValid,navTV,I0,cash0,openingStock,vat,totals,minCash,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,niM,cfoM,repayM,debtM,interestM,
     diag,funding,equityIrr:eqIrr,moic,exitEquity,eqCF:eqCF,flows,pvCum,
-    bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,vatCredit:vat.opening,vatDue:0,
-      assets:cash0+openingStock+s.invest.capex+s.invest.intangible+vat.opening,ap:0,debt:s.invest.debt,
+    bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,invest:s.invest.longInvest,vatCredit:vat.opening,vatDue:0,
+      assets:cash0+openingStock+s.invest.capex+s.invest.intangible+s.invest.longInvest+vat.opening,ap:0,debt:s.invest.debt,
       liab:s.invest.debt,capital:s.invest.equity+s.assume.openingCash,retained:0,
       equity:s.invest.equity+s.assume.openingCash,
-       check:(cash0+openingStock+s.invest.capex+s.invest.intangible+vat.opening)-(s.invest.debt+s.invest.equity+s.assume.openingCash)}});
+       check:(cash0+openingStock+s.invest.capex+s.invest.intangible+s.invest.longInvest+vat.opening)-(s.invest.debt+s.invest.equity+s.assume.openingCash)}});
 }
 function wcYear(s,y){const w=s.wc?.years?.[y]||{};return Object.fromEntries(['prepaid','receivable','advance','accrued'].map(k=>[k,Math.max(0,num(w[k]))]));}
-function wcMonth(s,i){const y=Math.floor(i/12),f=(i%12+1)/12,a=y?wcYear(s,y-1):{prepaid:0,receivable:0,advance:0,accrued:0},b=wcYear(s,y);return Object.fromEntries(Object.keys(b).map(k=>[k,a[k]+(b[k]-a[k])*f]));}
+function wcT0(s){const w=(s.wc&&s.wc.t0)||{};return Object.fromEntries(['prepaid','receivable','advance','accrued'].map(k=>[k,Math.max(0,num(w[k]))]));}
+function wcMonth(s,i){const y=Math.floor(i/12),f=(i%12+1)/12,a=y?wcYear(s,y-1):wcT0(s),b=wcYear(s,y);return Object.fromEntries(Object.keys(b).map(k=>[k,a[k]+(b[k]-a[k])*f]));}
 function operatingNWC(b){return b.ar+b.inv+(b.prepaid||0)+(b.receivable||0)+(b.vatCredit||0)-b.ap-(b.advance||0)-(b.accrued||0)-(b.vatDue||0);}
 function enrichDetail(r){
   const keys=['rev','productCost','mfgAlloc','cogs','gp','sellingAlloc','varCost','cm','qty'];
@@ -1746,7 +1751,7 @@ function renderAssume(){
    const y1=R.pl[editYear]||{rev:0};
    const pay=y1.pay?.total||0;
    const sga=y1.sga?(y1.sga.fixed.amt+y1.sga.semi.amt+y1.sga.variable.amt):0;
-  $('#assumeSummary').innerHTML=`
+   if($('#assumeSummary'))$('#assumeSummary').innerHTML=`
     <div class="card-h"><div><h2>이 계획의 요약</h2><p>입력을 바꾸면 즉시 다시 계산됩니다.</p></div></div>
      <div class="kv big"><span class="k">Y${editYear+1} 할인율 (WACC)</span><span class="v">${waccPct}%</span></div>
      <div class="kv"><span class="k">Y${editYear+1} 매출</span><span class="v">${shortWon(y1.rev)}</span></div>
@@ -1772,7 +1777,7 @@ function renderInvest(){
   const need=R.I0, fund=inv.equity+inv.debt+a.openingCash, gap=fund-need;
   if($('#openingStockView')) $('#openingStockView').value=won(R.openingStock);
   if($('#minCashView')) $('#minCashView').value=won(R.minCash);
-  $('#investKpis').innerHTML=
+  if($('#investKpis'))$('#investKpis').innerHTML=
     kpi('t=0 투자액',shortWon(need),'원','CAPEX + 무형 + 초기재고')+
     kpi('조달총액',shortWon(fund),'원',`자본금 ${shortWon(inv.equity)} · 차입 ${shortWon(inv.debt)}`)+
     kpi('개시 현금',shortWon(R.cash0),'원',`최소 운영현금 ${shortWon(R.minCash)}`,R.cash0<R.minCash?'red':'green')+
@@ -1781,7 +1786,7 @@ function renderInvest(){
   const uses=[['유형자산 (CAPEX)',inv.capex],['무형자산',inv.intangible],['초기 재고 매입',R.openingStock]];
   const srcs=[['자기자본 (자본금)',inv.equity],['타인자본 (차입)',inv.debt],['기초 보유현금',a.openingCash]];
   const maxv=Math.max(need,fund,1);
-  $('#fundingBox').innerHTML=`
+  if($('#fundingBox'))$('#fundingBox').innerHTML=`
     <div class="card-h"><div><h2>자금 수지</h2><p>t=0에 들어오는 돈과 나가는 돈.</p></div><span class="badge ${gap<0?'bad':'ok'}">${gap<0?'부족':'균형'}</span></div>
     <div class="sub-h">조달</div>
     ${srcs.map(([n,v])=>`<div class="kv"><span class="k">${n}</span><span class="v">${man(v)}만원</span></div><div class="bar"><i class="src" style="width:${Math.max(2,v/maxv*100)}%"></i></div>`).join('')}
@@ -1794,16 +1799,27 @@ function renderInvest(){
 
   const b=R.bs0;
   const row=(n,v)=>`<tr><td class="l">${n}</td><td>${man(v)}</td></tr>`;
+  const grp=n=>`<tr class="grp"><td class="l" colspan="2" style="font-weight:800;letter-spacing:-.02em;background:var(--bg2,#f6f8fa)">${n}</td></tr>`;
+  const tot=(n,v)=>`<tr class="total"><td class="l">${n}</td><td>${man(v)}</td></tr>`;
+  const ca0=b.cash+b.inv,nca0=(b.invest||0)+b.ppe+b.intang,vt0=(R.vat&&R.vat.opening)||0;
   $('#openingBS').innerHTML=`
     <thead><tr><th class="l">계정</th><th>금액 <span class="u">만원</span></th></tr></thead><tbody>
-    ${row('현금',b.cash)}${row('매출채권',0)}${row('재고자산',b.inv)}${row('유형자산',b.ppe)}${row('무형자산',b.intang)}
-    <tr class="total"><td class="l">자산 합계</td><td>${man(b.assets)}</td></tr>
-    ${row('매입채무',0)}${row('차입금',b.debt)}
-    <tr class="total"><td class="l">부채 합계</td><td>${man(b.liab)}</td></tr>
-    ${row('납입자본',b.capital)}${row('이익잉여금',0)}
-    <tr class="total"><td class="l">자본 합계</td><td>${man(b.equity)}</td></tr>
-    <tr class="hl"><td class="l"><b>부채 + 자본</b></td><td><b>${man(b.liab+b.equity)}</b></td></tr>
-    <tr><td class="l">검증 (자산 − 부채 − 자본)</td><td class="${Math.abs(b.check)>1?'neg':''}">${Math.round(b.check).toLocaleString('ko-KR')}</td></tr>
+    ${grp('유동자산')}
+    ${row('현금',b.cash)}${row('초기재고',b.inv)}
+    ${tot('유동자산 합계',ca0)}
+    ${grp('비유동자산')}
+    ${row('투자자산',b.invest||0)}${row('유형자산',b.ppe)}${row('무형자산',b.intang)}
+    ${tot('비유동자산 합계',nca0)}
+    ${tot('자산합계',b.assets)}
+    ${vt0?`<tr class="hl"><td class="l">부가세 선지출 공제액 (자산합계에 포함)</td><td>${man(vt0)}</td></tr>`:''}
+    ${grp('부채')}
+    ${row('차입금',b.debt)}
+    ${tot('부채 합계',b.liab)}
+    ${grp('자본')}
+    ${row('자본금',b.capital)}
+    ${tot('자본 합계',b.equity)}
+    ${tot('부채와 자본 합계',b.liab+b.equity)}
+    <tr><td class="l">균형검증 (자산 − 부채 − 자본)</td><td class="${Math.abs(b.check)>1?'neg':''}">${Math.round(b.check).toLocaleString('ko-KR')}</td></tr>
     </tbody>`;
   $('#openingBalBadge').textContent=Math.abs(b.check)<1?'균형':'불일치';
   $('#openingBalBadge').className='badge '+(Math.abs(b.check)<1?'ok':'bad');
@@ -1931,7 +1947,7 @@ function renderDemand(){
   });
   const arr=[...byProduct.values()].sort((a,b)=>b.rev-a.rev).slice(0,6);
   const tot=arr.reduce((a,x)=>a+x.rev,0)||1;
-   $('#demandMix').innerHTML=`<div class="card-h"><div><h2>제품 구성</h2><p>계획기간 누적 매출 기준. 매출은 이름별 합산, 재고·발주는 거래처와 무관하게 제품 단위로 통합됩니다.</p></div></div>
+   if($('#demandMix'))$('#demandMix').innerHTML=`<div class="card-h"><div><h2>제품 구성</h2><p>계획기간 누적 매출 기준. 매출은 이름별 합산, 재고·발주는 거래처와 무관하게 제품 단위로 통합됩니다.</p></div></div>
     ${arr.map(x=>`<div class="mixrow"><span class="nm">${esc(x.name)}</span><span class="mixbar"><i style="width:${Math.max(2,x.rev/tot*100)}%"></i></span><span class="pc">${(x.rev/tot*100).toFixed(1)}%</span><span class="amt">${man(x.rev)}만</span></div>`).join('')||'<div class="empty">제품을 추가하세요</div>'}
     <div class="cap">제품별 누적 판매수량과 매출총이익률은 <b>07 사업성 → 세그먼트별 수익성</b>에서 더 자세히 볼 수 있습니다.</div>`;
 }
@@ -2116,11 +2132,17 @@ function drawInvChart(name){
     s+=`<line class="gridline" x1="${L}" x2="${W-Rr}" y1="${y}" y2="${y}"/>`;
     s+=`<text class="axis" x="${L-6}" y="${y+3}" text-anchor="end">${v>=1000?Math.round(v/100)/10+'k':Math.round(v)}</text>`; }
   for(let y=0;y<R.H;y++){ const i=y*12; if(i>0){const x=X(i);s+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${T+ih}" stroke="#e3e9f0" stroke-dasharray="3 3"/>`;}
-    s+=`<text class="axis" x="${X(i+5.5)}" y="${H-6}" text-anchor="middle">Y${y+1}</text>`; }
+    s+=`<text class="axis" x="${X(i+5.5)}" y="${H-6}" text-anchor="middle">Y${y+1} · ${R.months[i].y}</text>`; }
+  s+=`<text class="axis" x="${L-8}" y="${H-6}" text-anchor="end" style="font-weight:700">T0</text>`;
   s+=`<polyline points="${p.rows.map((r,i)=>X(i)+','+Y(r.ss)).join(' ')}" fill="none" stroke="#a9781f" stroke-dasharray="5 4" stroke-width="1.2"/>`;
   s+=`<polyline points="${p.rows.map((r,i)=>X(i).toFixed(1)+','+Y(r.stock).toFixed(1)).join(' ')}" fill="none" stroke="#12283f" stroke-width="1.7"/>`;
   p.orders.forEach(o=>{ if(o.month>=NM) return;
-    s+=`<circle cx="${X(o.month)}" cy="${Y(p.rows[o.month].stock)}" r="3.2" fill="#a33a2b"><title>${R.months[o.month].label} 발주 ${won(o.qty)}개</title></circle>`; });
+    s+=`<circle cx="${X(o.month)}" cy="${Y(p.rows[o.month].stock)}" r="3.2" fill="#a33a2b"><title>${R.months[o.month].y}년 ${o.month%12+1}월 발주 ${won(o.qty)}개 · 입고 ${R.months[o.arrMonth]?R.months[o.arrMonth].y+'년 '+(o.arrMonth%12+1)+'월':'기간 밖'}</title></circle>`; });
+  const cw=iw/Math.max(1,NM-1);
+  p.rows.forEach((r,i)=>{
+    const ord=p.orders.find(o=>o.month===i),arr=r.arrival||0;
+    s+=`<rect x="${(X(i)-cw/2).toFixed(1)}" y="${T}" width="${cw.toFixed(1)}" height="${ih}" fill="transparent" style="pointer-events:all"><title>${R.months[i].y}년 ${i%12+1}월 · 기말재고 ${won(Math.round(r.stock))}개 / 발주점 ${won(Math.round(r.rop))}개 / 안전재고 ${won(Math.round(r.ss))}개 / 당월발주 ${ord?won(ord.qty):0}개 / 당월입고 ${won(arr)}개</title></rect>`;
+  });
   box.innerHTML=svgWrap(s,W,H);
 }
 
@@ -2135,11 +2157,12 @@ function drawCashChart(){
     s+=`<line class="gridline" x1="${L}" x2="${W-Rr}" y1="${y}" y2="${y}"/>`;
     s+=`<text class="axis" x="${L-6}" y="${y+3}" text-anchor="end">${axW(v)}</text>`; }
   for(let y=0;y<R.H;y++){ const i=y*12; if(i>0){const x=L+iw*i/NM;s+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${T+ih}" stroke="#e3e9f0" stroke-dasharray="3 3"/>`;}
-    s+=`<text class="axis" x="${L+iw*(i+6)/NM}" y="${H-6}" text-anchor="middle">Y${y+1}</text>`; }
+    s+=`<text class="axis" x="${L+iw*(i+6)/NM}" y="${H-6}" text-anchor="middle">Y${y+1} · ${R.months[i].y}</text>`; }
+  s+=`<text class="axis" x="${L-8}" y="${H-6}" text-anchor="end" style="font-weight:700">T0</text>`;
   s+=`<polyline points="${R.cashM.map((v,i)=>(L+iw*(i+0.5)/NM)+','+Y(R.minCashYears[Math.floor(i/12)])).join(' ')}" fill="none" stroke="#a9781f" stroke-dasharray="5 4" stroke-width="1.2"/>`;
   R.cashM.forEach((v,i)=>{
-    const x=L+iw*(i+0.5)/NM-bw/2,y=Y(v),y0=Y(0);
-    s+=`<rect x="${x.toFixed(1)}" y="${Math.min(y,y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y0-y)).toFixed(1)}" fill="${v<R.minCashYears[Math.floor(i/12)]?'#a33a2b':'#12283f'}" opacity=".88"><title>${R.months[i].label} ${shortWon(v)}</title></rect>`;
+    const x=L+iw*(i+0.5)/NM-bw/2,y=Y(v),y0=Y(0),mn=R.minCashYears[Math.floor(i/12)];
+    s+=`<rect x="${x.toFixed(1)}" y="${Math.min(y,y0).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y0-y)).toFixed(1)}" fill="${v<mn?'#a33a2b':'#12283f'}" opacity=".88"><title>${R.months[i].y}년 ${i%12+1}월 · 월말 현금 ${won(Math.round(v))}원 / 최소 운영현금 ${won(Math.round(mn))}원</title></rect>`;
   });
   box.innerHTML=svgWrap(s,W,H);
 }
@@ -2205,16 +2228,15 @@ function renderCost(){
   nonopTable('incCash',document.getElementById('nonopInc'));
   nonopTable('expCash',document.getElementById('nonopExp'));
 
-  const rail=document.getElementById('costRail');
-  if(rail){
-    const rev=y1.rev||1;
-    const rows=[['인건비',y1.pay.total],['고정비',y1.sga.fixed.amt],['준변동비',y1.sga.semi.amt],['변동 판관비',y1.sga.variable.amt],['감가상각',y1.dep]];
-    rail.innerHTML=`<div class="card-h"><div><h2>Y${editYear+1} 비용 구조</h2><p>선택연도 매출 대비 비중.</p></div></div>
-      ${rows.map(([n,v])=>`<div class="kv"><span class="k">${n}</span><span class="v">${man(v)}만원 · ${pct(v/rev*100)}</span></div><div class="bar"><i class="use" style="width:${Math.max(2,v/rev*100)}%"></i></div>`).join('')}
-      <div class="divider"></div>
-      <div class="kv big"><span class="k">영업이익</span><span class="v ${y1.ebit<0?'neg':''}">${man(y1.ebit)}만원</span></div>
-      <div class="kv"><span class="k">영업이익률</span><span class="v">${pct(y1.rev?y1.ebit/y1.rev*100:0)}</span></div>
-      <div class="cap">계획기간 누적 인건비 ${man(payTotal)}만원 · 판관비 ${man(sgaTotal)}만원</div>`;
+  const lc=document.getElementById('laborCostTable');
+  if(lc){
+    const p=R.pl[editYear]||{pay:{total:0,mfg:0,sga:0,mfgComponents:null,sgaComponents:null}};
+    const comp=PAY_COMPONENTS.map(([k,n])=>{
+      const mf=p.pay.mfgComponents?num(p.pay.mfgComponents[k]):null,sg=p.pay.sgaComponents?num(p.pay.sgaComponents[k]):null;
+      return `<tr><td class="l">${n}${k==='retirement'?' · 퇴직금':''}</td><td>${mf===null?'—':man(mf)}</td><td>${sg===null?'—':man(sg)}</td><td><b>${mf===null?'—':man(mf+sg)}</b></td></tr>`;
+    }).join('');
+    lc.innerHTML=`<thead><tr><th class="l">인건비성 경비 계정 · Y${editYear+1}<span class="u">만원</span></th><th>제조 인건비</th><th>판매·관리 인건비</th><th>합계</th></tr></thead><tbody>${comp}
+    <tr class="total"><td class="l">인건비 합계 (퇴직금 포함)</td><td>${man(p.pay.mfg)}</td><td>${man(p.pay.sga)}</td><td><b>${man(p.pay.total)}</b></td></tr></tbody>`;
   }
 }
 
@@ -2963,7 +2985,7 @@ function fcffNodes(){
       {id:'noncash',label:'비현금유출비용(가산)',values:v(p=>p.dep),children:[{id:'dep',label:'감가상각비',values:[0,...R.cf.map(c=>c.depPPE)]},{id:'amort',label:'무형자산상각비',values:[0,...R.cf.map(c=>c.depInt)]},{id:'other',label:'기타 영업 비현금 조정 · 미설정=0 (금융·영업외 제외)',values:z}]},
       {id:'wc-in',label:'영업자산부채 변동(유입)',values:wcSum(inflow),children:inflow},
       {id:'tv',label:'잔존가치(Terminal Value) · 최종연도만',values:[0,...R.pl.map((p,y)=>y===R.H-1?R.tv:0)]}]},
-    {id:'out',label:'2. 현금의 유출(-)',cls:'subtotal',values:R.fcffDetails.outflows,children:[{id:'capex',label:'CAPEX · 취득원가 / 공제 VAT는 대급금에 표시',values:[R.s.invest.capex,...R.pl.map(()=>0)]},{id:'intangible',label:'무형자산투자액 · 운영연도 신규투자 미지원=0',values:[R.s.invest.intangible,...R.pl.map(()=>0)]},{id:'wc-out',label:'영업자산부채 변동(유출)',values:wcSum(outflow),children:outflow}]},
+    {id:'out',label:'2. 현금의 유출(-)',cls:'subtotal',values:R.fcffDetails.outflows,children:[{id:'capex',label:'CAPEX · 취득원가 / 공제 VAT는 대급금에 표시',values:[R.s.invest.capex,...R.pl.map(()=>0)]},{id:'intangible',label:'무형자산투자액 · 운영연도 신규투자 미지원=0',values:[R.s.invest.intangible,...R.pl.map(()=>0)]},{id:'invest',label:'투자자산투자액 · 운영연도 신규투자 미지원=0',values:[R.s.invest.longInvest||0,...R.pl.map(()=>0)]},{id:'wc-out',label:'영업자산부채 변동(유출)',values:wcSum(outflow),children:outflow}]},
     {id:'fcff',label:'잉여현금흐름 FCFF (TV 포함)',cls:'total',values:R.flows},{id:'cum',label:'누적 FCFF',cls:'subtotal',values:R.fcffDetails.cumulative},{id:'pv',label:'할인된 FCFF(PV) · 연도별 누적할인',values:R.fcffDetails.pv},{id:'cum-pv',label:'누적 PV',cls:'subtotal',values:R.pvCum}
   ];
 }
@@ -2974,11 +2996,12 @@ function renderDetailedFCFF(){
   table.closest('.card').querySelector('h2').textContent='잉여현금흐름(FCFF) 추정';
   tools.innerHTML=`<div class="detail-tools"><label>잔존가치(TV) 산출방식 <select id="terminalMode">${[['none','미포함(0)'],['nav','순자산가치 방식'],['gordon','영구성장모형 방식']].map(([k,v])=>`<option value="${k}" ${R.tvMode===k?'selected':''}>${v}</option>`).join('')}</select></label><label>영구성장률 g <input id="terminalGrowth" type="number" step="0.1" value="${a.g}"> %</label><span>최종연도 Y${R.H} 가정과 양방향 연동</span></div>`;
   let formula=$('#tvFormula');if(!formula){formula=document.createElement('div');formula.id='tvFormula';formula.className='note formula-note';table.closest('.tablewrap').after(formula);}
-  const b=R.bs[R.H-1];formula.innerHTML=`<b>잔존가치 산출식 · 금액 원 / 표 만원</b><br>${R.tvMode==='none'?'TV = 0 (미포함)':R.tvMode==='nav'?`TV = 매출채권 ${won(b.ar)} + 재고 ${won(b.inv)} + 선급금 ${won(b.prepaid)} + 미수금 ${won(b.receivable)} − 매입채무 ${won(b.ap)} − 선수금 ${won(b.advance)} − 미지급금 ${won(b.accrued)} + 유형 ${won(b.ppe)} + 무형 ${won(b.intang)} + 기타 영업 비유동 0 = ${won(R.tv)}원. 현금·차입 및 영업외 대응자산/부채 제외.`:`TV = 최종 영업 FCFF ${won(R.fcf[R.H-1].fcff)} × (1 + ${a.g}%) ÷ (최종 WACC ${(R.waccYears[R.H-1]*100).toFixed(4)}% − ${a.g}%) = ${R.tv===null?'<strong class="neg">계산불가 · WACC ≤ g</strong>':won(R.tv)+'원'}`}<br>t0 유출 = CAPEX ${won(S.invest.capex)} + 무형 ${won(S.invest.intangible)} + 초기재고 ${won(R.openingStock)} = I0 ${won(R.I0)}원 (재고 중복 없음).<br>FCFF = NOPAT + 영업 상각 − 영업자산부채 순증가 − 투자. 금융·영업외 비현금 항목은 FCFF에 가산하지 않습니다. 모델세금은 max(영업이익, 0) × 해당 연도 세율입니다.`;
+  const b=R.bs[R.H-1];formula.innerHTML=`<b>잔존가치 산출식 · 금액 원 / 표 만원</b><br>${R.tvMode==='none'?'TV = 0 (미포함)':R.tvMode==='nav'?`TV = 매출채권 ${won(b.ar)} + 재고 ${won(b.inv)} + 선급금 ${won(b.prepaid)} + 미수금 ${won(b.receivable)} − 매입채무 ${won(b.ap)} − 선수금 ${won(b.advance)} − 미지급금 ${won(b.accrued)} + 유형 ${won(b.ppe)} + 무형 ${won(b.intang)} + 기타 영업 비유동 0 = ${won(R.tv)}원. 현금·차입 및 영업외 대응자산/부채 제외.`:`TV = 최종 영업 FCFF ${won(R.fcf[R.H-1].fcff)} × (1 + ${a.g}%) ÷ (최종 WACC ${(R.waccYears[R.H-1]*100).toFixed(4)}% − ${a.g}%) = ${R.tv===null?'<strong class="neg">계산불가 · WACC ≤ g</strong>':won(R.tv)+'원'}`}<br>t0 유출 = CAPEX ${won(S.invest.capex)} + 투자자산 ${won(S.invest.longInvest||0)} + 무형 ${won(S.invest.intangible)} + 초기재고 ${won(R.openingStock)} = I0 ${won(R.I0)}원 (재고 중복 없음).<br>FCFF = NOPAT + 영업 상각 − 영업자산부채 순증가 − 투자. 금융·영업외 비현금 항목은 FCFF에 가산하지 않습니다. 모델세금은 max(영업이익, 0) × 해당 연도 세율입니다.`;
 }
 function renderWCInputs(){
-  if(!$('#wcInputTable')){const card=document.createElement('div');card.className='card wc-card';card.innerHTML='<div class="card-h"><div><h2>고급 · 영업 운전자본 연말 잔액</h2><p>미입력=0 · 연말 잔액까지 월별 선형 이행 · t0 잔액은 0 · CF/BS/FCFF/TV에 동일 반영</p></div></div><p class="neg" id="wcLegacyWarning"></p><div class="tablewrap"><table class="tbl" id="wcInputTable"></table></div>';$('#view-assume').append(card);}
-  $('#wcInputTable').innerHTML=`<thead><tr><th class="l">연말 잔액 · 원</th>${periods().map(p=>`<th>${p}</th>`).join('')}</tr></thead><tbody>${[['prepaid','선급금·선급비용'],['receivable','미수금·미수수익'],['advance','선수금·선수수익'],['accrued','미지급금·예수금']].map(([k,label])=>`<tr><td class="l">${label}</td>${R.pl.map((p,y)=>`<td><input type="text" inputmode="numeric" class="cell comma" data-wc-key="${k}" data-wc-year="${y}" value="${won(wcYear(S,y)[k])}"></td>`).join('')}</tr>`).join('')}</tbody>`;
+  if(!$('#wcInputTable')){const card=document.createElement('div');card.className='card wc-card';card.innerHTML='<div class="card-h"><div><h2>고급 · 영업 운전자본 잔액</h2><p>미입력=0 · T=0 개시 시점부터 연말 잔액까지 월별 선형 이행 · CF/BS/FCFF/TV에 동일 반영</p></div></div><p class="neg" id="wcLegacyWarning"></p><div class="tablewrap"><table class="tbl" id="wcInputTable"></table></div>';$('#view-assume').append(card);}
+  const t0=wcT0(S);
+  $('#wcInputTable').innerHTML=`<thead><tr><th class="l">잔액 · 원</th><th>T=0<span class="u">개시 시점</span></th>${periods().map(p=>`<th>${p}</th>`).join('')}</tr></thead><tbody>${[['prepaid','선급금·선급비용'],['receivable','미수금·미수수익'],['advance','선수금·선수수익'],['accrued','미지급금·예수금']].map(([k,label])=>`<tr><td class="l">${label}</td><td><input type="text" inputmode="numeric" class="cell comma" data-wc-key="${k}" data-wc-year="t0" value="${won(t0[k])}"></td>${R.pl.map((p,y)=>`<td><input type="text" inputmode="numeric" class="cell comma" data-wc-key="${k}" data-wc-year="${y}" value="${won(wcYear(S,y)[k])}"></td>`).join('')}</tr>`).join('')}</tbody>`;
   $('#wcLegacyWarning').textContent=S.migration?.source?'주의: 기존 프로젝트의 운전자본 잔액·비율 자료는 원본 보존 필드에 남아 있으며 자동 적용되지 않습니다. 이 표의 실제 연말 잔액을 확인해 입력하세요.':'';
 }
 const financeBase=renderFinance;renderFinance=function(){financeBase();refreshFinanceDetails();enforceReadonly();};
@@ -2995,7 +3018,7 @@ document.addEventListener('change',e=>{
     if(!canEdit()||Workspace.busy)return;putAnnual(S.assume,R.H-1,e.target.id==='terminalMode'?'tvMode':'g',e.target.id==='terminalMode'?e.target.value:num(e.target.value));syncInputs();paint();
   }
 });
-document.addEventListener('input',e=>{const el=e.target;if(!el.dataset.wcKey)return;e.stopImmediatePropagation();if(!canEdit()||Workspace.busy)return;S.wc=S.wc||{years:{}};putAnnual(S.wc,+el.dataset.wcYear,el.dataset.wcKey,Math.max(0,num(el.value)));R=compute(S);window.__R=R;saveState();},true);
+document.addEventListener('input',e=>{const el=e.target;if(!el.dataset.wcKey)return;e.stopImmediatePropagation();if(!canEdit()||Workspace.busy)return;S.wc=S.wc||{years:{}};const v=Math.max(0,num(el.value));if(el.dataset.wcYear==='t0'){S.wc.t0=S.wc.t0||{};S.wc.t0[el.dataset.wcKey]=v;}else{putAnnual(S.wc,+el.dataset.wcYear,el.dataset.wcKey,v);}R=compute(S);window.__R=R;saveState();},true);
 document.addEventListener('DOMContentLoaded',()=>{$$('.ftab').forEach(el=>el.dataset.readonlySkip='1');});
 
 'use strict';
@@ -3176,6 +3199,7 @@ function writeStable(el){
       d.hirePlan=d.hirePlan||{};d.hirePlan[y]=d.hirePlan[y]||{};
       if(v)d.hirePlan[y][rk]=v;else delete d.hirePlan[y][rk];
       if(!Object.keys(d.hirePlan[y]).length)delete d.hirePlan[y];
+      if(d.hirePlanM&&d.hirePlanM[y]&&d.hirePlanM[y][rk]&&d.hirePlanM[y][rk].reduce((a,b)=>a+Math.max(0,num(b)),0)!==v){delete d.hirePlanM[y][rk];if(!Object.keys(d.hirePlanM[y]).length)delete d.hirePlanM[y];}
     }
     saveState();rpDirty=true;return;
   }
@@ -3204,7 +3228,7 @@ function renderExtensions(){
 function renderVatSettings(){
   let box=$('#vatSettings');if(!box){box=document.createElement('div');box.id='vatSettings';box.className='card extended-card';$('#view-assume').append(box);}
   const v=vatConfig(S),products=flattenProducts(S),expense=Object.entries(S.sga).flatMap(([list,items])=>items.map(it=>({list,it})));
-  box.innerHTML=`<div class="card-h"><div><h2>부가세 계획모형 · 입력금액은 원</h2><p>입력한 단가·원가는 <b>부가세 포함 금액</b>으로 보고, 공급가액은 <b>÷(1+세율)</b>로 환산합니다. 국가명으로 과세를 판정하지 않습니다. 법정 신고·예정고지·조기환급 앱이 아닙니다.</p></div></div><div class="detail-tools"><label><input id="vatEnabled" type="checkbox" ${v.enabled?'checked':''}>부가세 계획 반영</label><label>정산주기<select id="vatCycle"><option value="3" ${+v.cycle===3?'selected':''}>분기 · 다음달 납부</option><option value="6" ${+v.cycle===6?'selected':''}>반기 · 다음달 납부</option><option value="1" ${+v.cycle===1?'selected':''}>월별 · 단순가정</option></select></label><label>매입초과<select id="vatRefund"><option value="carry" ${v.refundMode==='carry'?'selected':''}>이월</option><option value="delay" ${v.refundMode==='delay'?'selected':''}>설정개월 후 환급</option></select></label><label>환급 지연<input id="vatDelay" type="number" min="1" value="${v.refundDelay}">개월</label></div><p class="help">세율 기본 10%는 한국 국내 일반과세 시나리오의 변경 가능한 계획값입니다. 단가 구분이 <b>포함</b>이면 입력 단가 ÷(1+세율)이 공급가액·매출이 되고, <b>별도</b>면 입력 단가가 그대로 공급가액입니다. 면세는 매출세액 0·매입공제 0, 영세율은 매출세액 0·매입공제 설정 유지. 공제불가 매입세액은 취득원가/비용에 포함합니다.</p>
+  box.innerHTML=`<div class="card-h"><div><h2>부가세 계획모형</h2><p>입력한 단가·원가는 <b>부가세 포함 금액</b>으로 보고, 공급가액은 <b>÷(1+세율)</b>로 환산합니다. 국가명으로 과세를 판정하지 않습니다. 법정 신고·예정고지·조기환급 앱이 아닙니다.</p></div></div><div class="detail-tools"><label><input id="vatEnabled" type="checkbox" ${v.enabled?'checked':''}>부가세 계획 반영</label><label>정산주기<select id="vatCycle"><option value="3" ${+v.cycle===3?'selected':''}>분기 · 다음달 납부</option><option value="6" ${+v.cycle===6?'selected':''}>반기 · 다음달 납부</option><option value="1" ${+v.cycle===1?'selected':''}>월별 · 단순가정</option></select></label><label>매입초과<select id="vatRefund"><option value="carry" ${v.refundMode==='carry'?'selected':''}>이월</option><option value="delay" ${v.refundMode==='delay'?'selected':''}>설정개월 후 환급</option></select></label><label>환급 지연<input id="vatDelay" type="number" min="1" value="${v.refundDelay}">개월</label></div><p class="help">세율 기본 10%는 한국 국내 일반과세 시나리오의 변경 가능한 계획값입니다. 단가 구분이 <b>포함</b>이면 입력 단가 ÷(1+세율)이 공급가액·매출이 되고, <b>별도</b>면 입력 단가가 그대로 공급가액입니다. 면세는 매출세액 0·매입공제 0, 영세율은 매출세액 0·매입공제 설정 유지. 공제불가 매입세액은 취득원가/비용에 포함합니다.</p>
   ${resultTable(['제품 전체 경로','과세구분','매출세율 %','매입세율 %','매출단가 · 부가세','매입단가 · 부가세','매입공제 %'],products.map(p=>{const c=productTax(p.node,editYear,{enabled:true});return [esc(p.path.join(' › ')),`<select data-tax-id="${p.id}" data-tax-field="mode">${[['taxable','과세'],['zero','영세율'],['exempt','면세']].map(([k,n])=>`<option value="${k}" ${c.mode===k?'selected':''}>${n}</option>`).join('')}</select>`,...['salesRate','purchaseRate'].map(k=>`<input type="number" data-tax-id="${p.id}" data-tax-field="${k}" value="${c[k]}">`),...['salesIncluded','purchaseIncluded'].map(k=>`<select data-tax-id="${p.id}" data-tax-field="${k}"><option value="false" ${!c[k]?'selected':''}>별도</option><option value="true" ${c[k]?'selected':''}>포함</option></select>`),`<input type="number" min="0" max="100" data-tax-id="${p.id}" data-tax-field="deductible" value="${c.deductible}">`];}))}
   <h3>초기 투자 부가세 · 미설정은 과세하지 않음</h3>${resultTable(['구분','과세 반영','세율 %','포함','공제 %'],['capex','intangible'].map(k=>{const a={enabled:false,rate:10,included:false,deductible:100,...v.assets?.[k]};return [k==='capex'?'CAPEX':'무형투자',`<input type="checkbox" data-asset-tax="${k}" data-tax-field="enabled" ${a.enabled?'checked':''}>`,`<input type="number" data-asset-tax="${k}" data-tax-field="rate" value="${a.rate}">`,`<input type="checkbox" data-asset-tax="${k}" data-tax-field="included" ${a.included?'checked':''}>`,`<input type="number" data-asset-tax="${k}" data-tax-field="deductible" value="${a.deductible}">`];}))}
   <details><summary>판관비 개별 과세·공제 설정 (급여는 제외)</summary>${resultTable(['항목','과세','세율 %','포함','공제 %'],expense.map(({list,it})=>{const a={enabled:false,rate:10,included:false,deductible:100,...it.vat};return [esc(it.name),`<input type="checkbox" data-exp-tax="${list}:${it.id}" data-tax-field="enabled" ${a.enabled?'checked':''}>`,`<input type="number" data-exp-tax="${list}:${it.id}" data-tax-field="rate" value="${a.rate}">`,`<input type="checkbox" data-exp-tax="${list}:${it.id}" data-tax-field="included" ${a.included?'checked':''}>`,`<input type="number" data-exp-tax="${list}:${it.id}" data-tax-field="deductible" value="${a.deductible}">`];}))}</details><p class="help">순자산 TV는 미결 부가세대급금−예수금을 포함합니다. 기간 밖 실제 납부·환급은 실행하지 않고 미결잔액으로 표시합니다. TV 미포함/Gordon은 선택한 TV 정책을 따릅니다. <a href="https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2401&cntntsId=7761" target="_blank" rel="noopener">국세청 부가세 개요</a> · <a href="https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694" target="_blank" rel="noopener">국세청 신고납부 안내·예외</a></p>`;
@@ -3218,7 +3242,7 @@ function renderRankSettings(){
   const fields=[['salary','연봉 · 원'],['pension','국민연금 %'],['health','건강보험 %'],['care','요양/건강보험료 %'],['employment','고용 %'],['accident','산재 %'],['retirement','퇴직 %'],['welfare','복리/월 · 원'],['cardLimit','카드월한도 · 원'],['cardUse','예상사용률 %'],['travel','여비/월 · 원']];
   box.innerHTML=`<div class="card-h"><div><h2>직급별 연도 임금테이블 · Y${editYear+1}</h2><p>모든 요율은 사용자 입력 계획값이며 법정 자동요율이 아닙니다. <span id="rankRateNote">${S.payroll.rateYear?('적용 중: '+S.payroll.rateYear+'년 사업주 부담 요율 · '+RANK_RATE_PRESETS[S.payroll.rateYear].note):'요율을 직접 입력 중입니다. 연도를 고르면 9개 직급 전체에 적용됩니다.'}</span> 요양 = 건강보험료 × 요양률, 산재는 업종별로 다르므로 실제 고지서로 확인하세요. 요양 = 건강보험료 × 요양률. 부서가 직급에 연결되면 기존 부서급여를 대체합니다.</p></div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
 <label class="check" style="white-space:nowrap">보험료 요율 <select id="rankRateYear" data-readonly-skip="1"><option value="">직접 입력</option><option value="2025">2025년 사업주</option><option value="2026">2026년 사업주</option></select></label>
-<button class="btn" id="addRank">직급 추가</button><button class="btn" id="fillRanks">기본 9직급</button></div></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<h3>부서·직급 연결 · 선택연도 인원은 기존 부서표에서 입력</h3>${resultTable(['부서','직급 · 미연결=기존 급여','제조/판매/관리'],S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear);return [esc(d.name),`<select data-link-dept="${d.id}" data-link-field="rankId"><option value="">기존 부서급여</option>${ranks.map(r=>`<option value="${r.id}" ${dy.rankId===r.id?'selected':''}>${esc(r.name)}</option>`).join('')}</select>`,`<select data-link-dept="${d.id}" data-link-field="role">${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([k,n])=>`<option value="${k}" ${(dy.role||(d.mfg?'manufacturing':'admin'))===k?'selected':''}>${n}</option>`).join('')}</select>`];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
+<button class="btn" id="addRank">직급 추가</button><button class="btn" id="fillRanks">기본 9직급</button></div></div>${resultTable(['직급',...fields.map(f=>f[1])],ranks.map(r=>{const ry=annual(r,editYear);return [`<input data-rank-id="${r.id}" data-rank-field="name" value="${esc(r.name)}">`,...fields.map(([k])=>`<input type="number" min="0" data-rank-id="${r.id}" data-rank-field="${k}" value="${num(ry[k])}">`)];}))}<p class="help">카드한도 자체는 비용이 아닙니다. 월한도 × 예상사용률 × 인원 × 12만 반영합니다. 제조 직급의 급여·보험·퇴직·부대비는 제조인건비로 배부, 판매/관리는 판관비와 고정비의 개별 항목으로 표시합니다. 기존 수동 판관비는 자동 삭제하지 않으므로 중복 항목은 사용자가 제거하세요.</p>`;
 }
 function selectedMonthly(){return R.monthly?.slice(editYear*12,editYear*12+12)||[];}
 function renderPeriodResults(){
@@ -3229,10 +3253,8 @@ function renderPeriodResults(){
   box.innerHTML=`<div class="card-h"><div><h2>${periodMode==='monthly'?'Y'+(editYear+1)+' 선택연도 월별':'전체 사업기간 연도별'} · 공통 원장 보기</h2><p>흐름은 합계, 잔액은 마지막 잔액. 단가 집계는 판매수량 가중평균. 금액: ${unitLabel()} / 입력 원 유지. 월별 FCFF는 연말 할인계수를 동일 적용하므로 월 PV 합계=연간 PV. 월 IRR은 표시하지 않습니다.</p></div><button class="btn sm" id="exportPeriod">현재표 CSV</button></div>`+resultTable(['계정',...rows.map(r=>r.label)],fields.map(([k,n,money])=>[n,...rows.map(r=>money?(r[k]===null?'계산불가':formatMoney(r[k])):won(r[k]))]));
   view.prepend(box);
   box._export={head:['계정',...rows.map(r=>r.label)],rows:fields.map(([k,n,money])=>[n+(money?' ('+unitLabel()+')':''),...rows.map(r=>r[k]===null?'계산불가':money?num(r[k])/MoneyUnits[unitKey()].factor:r[k])])};
-  if(currentView==='demand'&&periodMode==='annual')renderDemandAnnual(box);
+  if(currentView==='demand'&&periodMode==='annual'){}
 }
-function priceFmt(v){const n=num(v);if(!Number.isFinite(n))return '—';return Math.round(n).toLocaleString('ko-KR');}
-function renderDemandAnnual(box){const rows=R.products.map(p=>[esc(p.path.join(' › ')),...R.pl.flatMap((pl,y)=>{const ms=p.rows.slice(y*12,y*12+12),q=ms.reduce((a,m)=>a+m.sold,0),rev=ms.reduce((a,m)=>a+m.revenue,0);return [won(q),q?priceFmt(rev/q):'—',formatMoney(rev)];})]);box.insertAdjacentHTML('beforeend','<h3>제품 경로별 연간 실제판매·가중단가·매출</h3>'+resultTable(['제품 전체경로',...R.pl.flatMap((p,y)=>['Y'+(y+1)+' 수량','Y'+(y+1)+' 공급가 단가 · 원','Y'+(y+1)+' 매출 · '+unitLabel()])],rows)+'<div class="cap">공급가 단가 = 해당 연도 <b>매출 공급가액 ÷ 실제 판매수량</b>(부가세 제외 가중평균). 단가는 금액 단위 설정과 무관하게 항상 <b>원</b>으로 표시합니다 — 백만원 단위로 환산하면 1만~3만원대 단가가 0으로 반올림되기 때문입니다. 판매수량이 0인 연도는 —로 표시됩니다.</div>');}
 function renderOrderSummary(){
   let box=$('#orderAnnualSummary');if(!box){box=document.createElement('div');box.id='orderAnnualSummary';box.className='card extended-card';$('#view-inventory').append(box);}
   const rows=[];(R.invGroups||[]).forEach(p=>{for(let y=0;y<R.H;y++){const orders=p.orders.filter(o=>Math.floor(o.month/12)===y),arrival=p.rows.slice(y*12,y*12+12).reduce((v,m)=>v+m.arrival,0);if(orders.length||arrival)rows.push(['Y'+(y+1),esc(p.parentLabel),orders.length,won(orders.reduce((v,o)=>v+o.qty,0)),formatMoney(orders.reduce((v,o)=>v+o.supply,0)),formatMoney(orders.reduce((v,o)=>v+o.vat,0)),formatMoney(orders.reduce((v,o)=>v+o.gross,0)),won(arrival)]);}});
@@ -3268,18 +3290,27 @@ function renderCurrencyPanels(){
   if(!Gate.approved||!R)return;
   if($('#stmtUnit'))$('#stmtUnit').textContent='결과 단위: '+unitLabel();
   if(currentView==='assume'){
-    const p=R.pl[editYear];$('#assumeSummary').innerHTML='<div class="card-h"><div><h2>선택연도 요약</h2><p>결과 '+unitLabel()+' / 입력은 원</p></div></div>'+[['매출 공급가액',p.rev],['인건비',p.pay.total],['판관비·급여제외',p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt],['초기투자 · 공제 VAT 포함',R.I0],['개시현금',R.cash0],['NPV',R.npv]].map(([n,v])=>'<div class="kv"><span>'+n+'</span><b>'+formatMoney(v)+' '+unitLabel()+'</b></div>').join('');
+    const p=R.pl[editYear];
+    const invD=p.cogs>0?Math.round(R.invM.slice(editYear*12,editYear*12+12).reduce((a,v)=>a+v,0)/12/(p.cogs/365)):null;
+    if($('#invDaysView'))$('#invDaysView').value=(invD===null||!Number.isFinite(invD))?'—':won(invD);
   }
   if(currentView==='invest'){
-    const b=R.bs0;$('#openingBS').innerHTML='<thead><tr><th class="l">개시 재무상태</th><th>'+unitLabel()+'</th></tr></thead><tbody>'+[['현금',b.cash],['초기재고',b.inv],['유형자산',b.ppe],['무형자산',b.intang],['부가세대급금',b.vatCredit],['자산합계',b.assets],['차입금',b.debt],['자본',b.equity],['균형검증',b.check]].map(([n,v])=>'<tr><td class="l">'+n+'</td><td>'+formatMoney(v)+'</td></tr>').join('')+'</tbody>';
-    $('#fundingBox').innerHTML='<h2>개시 자금 대사 · '+unitLabel()+'</h2>'+[['자본·차입·기존현금',R.funding],['투자·재고·공제VAT',R.I0],['개시현금',R.cash0],['필요 최소현금',R.minCash]].map(([n,v])=>'<div class="kv"><span>'+n+'</span><b>'+formatMoney(v)+'</b></div>').join('');
+    const b=R.bs0,vt=R.vat&&R.vat.opening||0,ca=b.cash+b.inv,nca=(b.invest||0)+b.ppe+b.intang;
+    const u=unitLabel(),row=(n,v)=>'<tr><td class="l">'+n+'</td><td>'+formatMoney(v)+' '+u+'</td></tr>';
+    const grp=n=>'<tr class="grp"><td class="l" colspan="2" style="font-weight:800;letter-spacing:-.02em">'+n+'</td></tr>';
+    const tot=(n,v)=>'<tr class="total"><td class="l">'+n+'</td><td>'+formatMoney(v)+' '+u+'</td></tr>';
+    $('#openingBS').innerHTML='<thead><tr><th class="l">계정</th><th>'+u+'</th></tr></thead><tbody>'
+      +grp('유동자산')+row('현금',b.cash)+row('초기재고',b.inv)+tot('유동자산 합계',ca)
+      +grp('비유동자산')+row('투자자산',b.invest||0)+row('유형자산',b.ppe)+row('무형자산',b.intang)+tot('비유동자산 합계',nca)
+      +tot('자산합계',b.assets)
+      +(vt?'<tr class="hl"><td class="l">부가세 선지출 공제액 (자산합계에 포함)</td><td>'+formatMoney(vt)+' '+u+'</td></tr>':'')
+      +grp('부채')+row('차입금',b.debt)+tot('부채 합계',b.liab)
+      +grp('자본')+row('자본금',b.capital)+tot('자본 합계',b.equity)
+      +tot('부채와 자본 합계',b.liab+b.equity)
+      +'<tr><td class="l">균형검증 (자산 − 부채 − 자본)</td><td class="'+(Math.abs(b.check)>1?'neg':'')+'">'+formatMoney(b.check)+'</td></tr></tbody>';
     $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.minCash);
   }
-  if(currentView==='demand'){
-    const seg=R.segment(9);$('#demandMix').innerHTML='<h2>제품별 기간누적 매출 · '+unitLabel()+'</h2>'+seg.map(x=>'<div class="kv"><span>'+esc(x.name)+'</span><b>'+formatMoney(x.rev)+'</b></div>').join('');
-  }
   if(currentView==='cost'){
-    const p=R.pl[editYear],pr=p.pay;$('#costRail').innerHTML='<h2>Y'+(editYear+1)+' 비용 구조 · '+unitLabel()+'</h2>'+[['급여·보험·부대비 합계',pr.total],['제조인건비 배부',pr.mfg],['판관 인건비',pr.sga],['고정 판관비',p.sga.fixed.amt],['준변동 판관비',p.sga.semi.amt],['변동 판관비',p.sga.variable.amt],['영업이익',p.ebit]].map(([n,v])=>'<div class="kv"><span>'+n+'</span><b>'+formatMoney(v)+'</b></div>').join('');
     const payroll=$('#payrollTable');if(payroll?.tHead)payroll.tHead.rows[0].cells[7].textContent='Y'+(editYear+1)+' · '+unitLabel();
     ['sgaFixed','sgaSemi','sgaVar'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[4].innerHTML='Y'+(editYear+1)+'<span class="u">'+unitLabel()+'</span>';});
     ['nonopInc','nonopExp','nonopIncNC','nonopExpNC'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[3].textContent='금액 · '+unitLabel();});
@@ -3289,7 +3320,7 @@ function renderCurrencyPanels(){
   }
   if(currentView==='value'&&$('#tvFormula')){
     const b=R.bs.at(-1),a=assumeYear(S,R.H-1),f=v=>formatMoney(v)+' '+unitLabel();
-    $('#tvFormula').innerHTML='<b>TV 산출 · 결과 '+unitLabel()+'</b><br>'+(R.tvMode==='none'?'TV=0 · 미포함':R.tvMode==='nav'?'TV = AR '+f(b.ar)+' + 재고 '+f(b.inv)+' + 선급 '+f(b.prepaid)+' + 미수 '+f(b.receivable)+' + VAT대급금 '+f(b.vatCredit)+' − AP '+f(b.ap)+' − 선수 '+f(b.advance)+' − 미지급 '+f(b.accrued)+' − VAT예수금 '+f(b.vatDue)+' + 유형 '+f(b.ppe)+' + 무형 '+f(b.intang)+' = '+f(R.tv):'TV = 최종 영업FCFF '+f(R.fcf.at(-1).fcff)+' × (1 + '+a.g+'%) / (최종 WACC '+(R.waccYears.at(-1)*100).toFixed(4)+'% − '+a.g+'%) = '+(R.tv===null?'계산불가':f(R.tv)))+'<br>t0 = 취득원가 CAPEX '+f(R.s.invest.capex)+' + 무형 '+f(R.s.invest.intangible)+' + 초기재고 '+f(R.openingStock)+' + 공제 VAT 선지출 '+f(R.vat.opening)+' = I0 '+f(R.I0)+'. 부가세는 수익이 아니며 미결대급금·예수금은 순자산 TV에 반영, 현금·차입은 제외합니다. 기간밖 정산은 실제 현금화하지 않습니다.';
+    $('#tvFormula').innerHTML='<b>TV 산출 · 결과 '+unitLabel()+'</b><br>'+(R.tvMode==='none'?'TV=0 · 미포함':R.tvMode==='nav'?'TV = AR '+f(b.ar)+' + 재고 '+f(b.inv)+' + 선급 '+f(b.prepaid)+' + 미수 '+f(b.receivable)+' + VAT대급금 '+f(b.vatCredit)+' − AP '+f(b.ap)+' − 선수 '+f(b.advance)+' − 미지급 '+f(b.accrued)+' − VAT예수금 '+f(b.vatDue)+' + 유형 '+f(b.ppe)+' + 무형 '+f(b.intang)+' = '+f(R.tv):'TV = 최종 영업FCFF '+f(R.fcf.at(-1).fcff)+' × (1 + '+a.g+'%) / (최종 WACC '+(R.waccYears.at(-1)*100).toFixed(4)+'% − '+a.g+'%) = '+(R.tv===null?'계산불가':f(R.tv)))+'<br>t0 = 취득원가 CAPEX '+f(R.s.invest.capex)+' + 투자자산 '+f(R.s.invest.longInvest||0)+' + 무형 '+f(R.s.invest.intangible)+' + 초기재고 '+f(R.openingStock)+' + 공제 VAT 선지출 '+f(R.vat.opening)+' = I0 '+f(R.I0)+'. 부가세는 수익이 아니며 미결대급금·예수금은 순자산 TV에 반영, 현금·차입은 제외합니다. 기간밖 정산은 실제 현금화하지 않습니다.';
   }
 }
 const resultKpiBase=kpi;kpi=function(label,value,unit,sub,cls){if(unit==='원'&&typeof value==='string'&&value.endsWith(' '+unitLabel())){value=value.slice(0,-unitLabel().length-1);unit=unitLabel();}return resultKpiBase(label,value,unit,sub,cls);};
@@ -3325,21 +3356,63 @@ function renderRankMatrix(){
         `<select data-rpdept-sel="${d.id}" data-rkfrom="${rk}"><option value="">-</option>${S.payroll.ranks.map(r=>`<option value="${r.id}"${r.id===rk?' selected':''}>${r.name}</option>`).join('')}</select>`,
         ...cells,
         `<b>${won(cnt)}</b>`,
-        formatMoney(cost)
+        formatMoney(cost),
+        rk?`<button class="del" data-rpdel-dept="${d.id}" data-rpdel-rank="${rk}" title="직급 행 삭제">✕</button>`:''
       ]);
     });
     const tot=deptPlanHeads(d,editYear)||Math.max(0,num(deptYear(S,d,editYear).heads));
     const amt=(R.pl[editYear]?.pay?.byDept||[]).find(b=>b.id===d.id)?.amount||0;
-    rows.push([`<b>${esc(d.name)} 합계</b>`,'',...Array(H).fill(''),`<b>${won(tot)}</b>`,`<b>${formatMoney(amt)}</b>`]);
+    rows.push([`<b>${esc(d.name)} 합계</b>`,'',...Array(H).fill(''),`<b>${won(tot)}</b>`,`<b>${formatMoney(amt)}</b>`,'']);
   });
-  box.innerHTML=`<div class="card-h"><div><h2>부서 × 직급 × 연도 인원 계획</h2><p>Y1은 기초 인원, Y2 이후는 <b>그 해 추가 채용 인원</b>. 임금테이블의 해당 연도 연봉·보험·복리후생으로 자동 계산되고 이후 연도에 누적됩니다. 금액: ${unitLabel()}</p></div><button class="btn sm" id="rpAddRank">직급 행 추가</button></div>
-  ${resultTable(['부서','직급',...Array.from({length:H},(_,y)=>'Y'+(y+1)),'Y'+(editYear+1)+' 인원','Y'+(editYear+1)+' 인건비 · '+unitLabel()],rows)}
-  <p class="help">직급을 고르면 행이 생깁니다. 인원을 0으로 비우면 그 해 채용이 취소됩니다. 이 표를 쓰기 시작한 부서는 기존 부서표의 인원·급여 대신 이 표를 기준으로 계산합니다.</p>`;
+  box.innerHTML=`<div class="card-h"><div><h2>부서 × 직급 × 연도 인원 계획</h2><p>Y1은 기초 인원, Y2 이후는 <b>그 해 추가 채용 인원</b>(월별 분할은 아래 월별 표에서 입력). 임금테이블의 해당 연도 연봉·보험·복리후생으로 자동 계산되고 이후 연도에 누적됩니다. 금액: ${unitLabel()}</p></div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><select id="rpDeptSel" class="mini-select">${S.payroll.departments.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select><button class="btn sm" id="rpAddRank">선택 부서에 직급 행 추가</button></div></div>
+  ${resultTable(['부서','직급',...Array.from({length:H},(_,y)=>'Y'+(y+1)),'Y'+(editYear+1)+' 인원','Y'+(editYear+1)+' 인건비 · '+unitLabel(),'삭제'],rows)}
+  <p class="help">부서를 선택한 뒤 <b>직급 행 추가</b>를 누르면 그 부서에 직급 행이 생깁니다. 직급 행 끝의 ✕로 삭제합니다. 인원을 0으로 비우면 그 해 채용이 취소됩니다. 이 표를 쓰기 시작한 부서는 기존 부서표의 인원·급여 대신 이 표를 기준으로 계산합니다.</p>`;
+  renderRankMonthly(box);
+}
+function renderRankMonthly(after){
+  let box=$('#rankMonthly');
+  if(!box){box=document.createElement('div');box.id='rankMonthly';box.className='card extended-card';
+    if(after&&after.parentNode)after.parentNode.insertBefore(box,after.nextSibling);else $('#view-cost').appendChild(box);}
+  const H=S.meta.years,y=editYear,ranks=S.payroll.ranks||[];
+  const addRows=[],cumRows=[],yrRows=[];
+  const MH=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  S.payroll.departments.forEach(d=>{
+    rpRankList(d).filter(rk=>rk).forEach(rk=>{
+      const rkObj=ranks.find(r=>r.id===rk),rname=rkObj?rkObj.name:'직급';
+      const arr=(d.hirePlanM&&d.hirePlanM[y]&&d.hirePlanM[y][rk])||Array(12).fill(0);
+      const sum=arr.reduce((a,b)=>a+Math.max(0,num(b)),0);
+      addRows.push([`${esc(d.name)} › ${esc(rname)}`,...Array.from({length:12},(_,m2)=>`<input class="cell" type="number" min="0" step="1" data-rpm-dept="${d.id}" data-rpm-rank="${rk}" data-rpm-month="${m2}" value="${Math.max(0,num(arr[m2]))}">`),`<b>${won(sum)}</b>`]);
+      const base=y>0?(deptRankHeads(d,y-1)[rk]||0):rpMix(d).reduce((a,m2)=>a+(m2.rankId===rk?Math.max(0,num(m2.heads)):0),0);
+      let acc=base;const cum=arr.map(v=>acc+=Math.max(0,num(v)));
+      cumRows.push([`${esc(d.name)} › ${esc(rname)}`,...cum.map(v=>`<b>${won(v)}</b>`),`<b>${won(acc)}</b>`]);
+      yrRows.push([`${esc(d.name)} › ${esc(rname)}`,...Array.from({length:H},(_,yy)=>won((deptRankHeads(d,yy)[rk])||0))]);
+    });
+  });
+  box.innerHTML=`<div class="card-h"><div><h2>월별 추가 인원 · 월별·연도별 인원</h2><p>선택연도 Y${y+1}의 월별 추가 채용 인원을 입력하면 위 표의 Y${y+1} 연간 채용 인원과 자동 합산됩니다. 월별 인원은 그 시점까지의 누적 인원입니다.</p></div></div>
+  <div class="sub-h" style="margin-top:10px">Y${y+1} 월별 추가 인원 (추가 채용)</div>
+  ${addRows.length?resultTable(['부서 › 직급',...MH,'연간 합계'],addRows):'<p class="help">위 표에서 부서에 직급 행을 추가하면 월별 입력이 활성화됩니다.</p>'}
+  <div class="sub-h" style="margin-top:14px">Y${y+1} 월별 인원 (누적)</div>
+  ${cumRows.length?resultTable(['부서 › 직급',...MH,'연말 인원'],cumRows):'<p class="help">—</p>'}
+  <div class="sub-h" style="margin-top:14px">연도별 인원 (누적)</div>
+  ${yrRows.length?resultTable(['부서 › 직급',...Array.from({length:H},(_,yy)=>'Y'+(yy+1))],yrRows):'<p class="help">—</p>'}
+  <p class="help">월별 추가 인원을 입력하면 연간 채용 인원이 자동 합산됩니다. 위 연도별 표에서 직접 입력하면 그 해의 월별 분해는 초기화되고 연간 값이 우선합니다.</p>`;
 }
 const renderExtBase=renderExtensions;
 renderExtensions=function(){renderExtBase();try{renderRankMatrix();}catch(e){console.error(e);}};
 document.addEventListener('change',e=>{
   const el=e.target;if(!Gate.approved||!canEdit())return;
+  if(el.dataset&&el.dataset.rpmDept){
+    const d=S.payroll.departments.find(x=>x.id===el.dataset.rpmDept),rk=el.dataset.rpmRank,mo=+el.dataset.rpmMonth;
+    if(d&&rk){
+      d.hirePlanM=d.hirePlanM||{};const yr=d.hirePlanM[editYear]=d.hirePlanM[editYear]||{};
+      const arr=yr[rk]=yr[rk]||Array(12).fill(0);
+      arr[mo]=Math.max(0,num(el.value));
+      d.hirePlan=d.hirePlan||{};d.hirePlan[editYear]=d.hirePlan[editYear]||{};
+      d.hirePlan[editYear][rk]=arr.reduce((a,b)=>a+Math.max(0,num(b)),0);
+      saveState();R=compute(S);renderRankMatrix();
+    }
+    return;
+  }
   if(el.dataset&&el.dataset.rpsel){
     const d=S.payroll.departments.find(x=>x.id===el.dataset.rpsel);if(!d)return;
     const oldRk=el.dataset.rpselold,nv=el.value;
@@ -3358,25 +3431,35 @@ document.addEventListener('change',e=>{
   }
 },true);
 document.addEventListener('click',e=>{
-  const b=e.target.closest('#rpAddRank');if(!b||!Gate.approved||!canEdit())return;
-  const d=S.payroll.departments[0];if(!d)return;
-  d.mix=Array.isArray(d.mix)&&d.mix.length?d.mix:[];
-  const used=new Set(d.mix.map(m=>m.rankId));
-  const nk=(S.payroll.ranks||[]).find(r=>!used.has(r.id));
-  if(!nk){toast('모든 직급이 이미 추가되었습니다');return;}
-  d.mix.push({rankId:nk.id,heads:0});saveState();R=compute(S);renderRankMatrix();
+  if(!Gate.approved||!canEdit())return;
+  const b=e.target.closest('#rpAddRank');
+  if(b){
+    const selId=$('#rpDeptSel')?.value;
+    const d=S.payroll.departments.find(x=>x.id===selId)||S.payroll.departments[0];if(!d)return;
+    d.mix=Array.isArray(d.mix)&&d.mix.length?d.mix:[];
+    const used=new Set(d.mix.map(m=>m.rankId));
+    const nk=(S.payroll.ranks||[]).find(r=>!used.has(r.id));
+    if(!nk){toast('해당 부서에 추가 가능한 직급이 없습니다');return;}
+    d.mix.push({rankId:nk.id,heads:0});saveState();R=compute(S);renderRankMatrix();
+    return;
+  }
+  const del=e.target.closest('[data-rpdel-dept]');
+  if(del){
+    const d=S.payroll.departments.find(x=>x.id===del.dataset.rpdelDept),rk=del.dataset.rpdelRank;
+    if(d&&rk){
+      d.mix=(d.mix||[]).filter(m=>m.rankId!==rk);
+      if(d.rankId===rk)d.rankId='';
+      Object.keys(d.hirePlan||{}).forEach(yy=>{if(d.hirePlan[yy][rk]!==undefined)delete d.hirePlan[yy][rk];if(!Object.keys(d.hirePlan[yy]).length)delete d.hirePlan[yy];});
+      if(d.hirePlanM)Object.keys(d.hirePlanM).forEach(yy=>{if(d.hirePlanM[yy][rk])delete d.hirePlanM[yy][rk];if(!Object.keys(d.hirePlanM[yy]).length)delete d.hirePlanM[yy];});
+      d.heads=(d.mix||[]).reduce((a,x)=>a+Math.max(0,num(x.heads)),0);
+      saveState();R=compute(S);renderRankMatrix();
+    }
+  }
 },true);
 
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 
