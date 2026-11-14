@@ -205,6 +205,8 @@ table.tbl.plain thead th{position:static}
 .t0ctl b{font-weight:700}
 .t0ctl select{padding:3px 6px;font-size:11px}
 input.cell.mo:disabled,input.cell:disabled{opacity:.45;background:#f3f5f8}
+td.dsel{outline:2px solid #2f7d8f;outline-offset:-2px;background:rgba(47,125,143,.08)}
+td.dsel input{background:rgba(47,125,143,.14)}
 .dsel{outline:2px solid #2f7d8f !important;outline-offset:-2px;background:rgba(47,125,143,.10)}
 .t0tag{display:inline-block;margin-left:4px;font-size:9.5px;color:#a33a2b;border:1px solid #e7c8c2;border-radius:3px;padding:0 4px;vertical-align:1px}
 .xlhint{font-size:11px;color:#5b6b7c;font-weight:500}
@@ -532,7 +534,7 @@ input.cell.mo:disabled,input.cell:disabled{opacity:.45;background:#f3f5f8}
           </div>
         </div>
         <div class="lvlegend" id="demandLevels"></div>
-        <div class="table-scroll-tools no-print"><b>21개 열 · 월별 수량은 좌우로 이동해 편집합니다</b><span class="xlhint">엑셀식 편집: 월 셀을 드래그해 범위 선택 → Ctrl+C 복사 · Ctrl+V 붙여넣기(한 값은 선택 전체 채우기) · Delete=0 · 수식 입력 지원(예: =3000*2)</span><button class="btn sm" data-demand-scroll="left">분류·단가로 ←</button><button class="btn sm" data-demand-scroll="right">월수량·연간합계로 →</button></div>
+        <div class="table-scroll-tools no-print"><b>21개 열 · 월별 수량은 좌우로 이동해 편집합니다</b><span class="xlhint">모든 표 공통 엑셀식 편집: 셀을 드래그해 범위 선택 → Ctrl+C 복사 · Ctrl+V 붙여넣기(한 값은 선택 전체 채우기) · Delete=비우기 · 수식 입력 지원(예: =3000*2)</span><button class="btn sm" data-demand-scroll="left">분류·단가로 ←</button><button class="btn sm" data-demand-scroll="right">월수량·연간합계로 →</button></div>
         <div class="tablewrap" id="demandScroll" tabindex="0" aria-label="판매수요 21열 가로 스크롤 영역" style="border:none;border-radius:0;max-height:none">
           <table class="tbl tree" id="demandTree"></table>
         </div>
@@ -1668,8 +1670,6 @@ const COLLAPSE_KEY='fp_collapsed_v4';
 function loadState(){
   if(typeof Gate==='undefined'||!Gate.approved)return null;
   try{
-    const active=localStorage.getItem('fp-active-local-v5'),projects=JSON.parse(localStorage.getItem('feasibility-projects-v5')||'{}');
-    if(active&&projects[active]?.owner)return defaultState();
     const raw=localStorage.getItem(APP_KEY);
     if(raw){ const o=JSON.parse(raw); if(o&&o.sales&&Array.isArray(o.sales.tree)) return ensureState(o); }
     const old=localStorage.getItem('feasibility_v3');
@@ -2683,17 +2683,15 @@ window.addEventListener('beforeunload',()=>{ try{ localStorage.setItem(COLLAPSE_
 'use strict';
 /* Annual editing, explicit project persistence and the original approved-user contract. */
 const Workspace={client:null,user:null,admin:false,checking:false,projects:[],docs:[],localId:null,dbId:null,legacy:false,isPublic:false,dbStatus:'미연결 · 로컬 작업',localStatus:'미저장',notice:'',revision:0,busy:false,sourceId:null};
-const LOCAL_PROJECTS='feasibility-projects-v5';
 const initialSaveState=saveState;
-function localIndex(){if(!Gate.approved||!Workspace.user)throw Error('로그인·승인 후 접근할 수 있습니다.');const q=JSON.parse(localStorage.getItem(LOCAL_PROJECTS+':'+Workspace.user.id)||'{}');if(!q||typeof q!=='object'||Array.isArray(q))throw Error('로컬 프로젝트 목록 형식 오류');return q;}
 function canEdit(){return typeof Gate!=='undefined'&&Gate.approved&&!Workspace.checking&&!!Workspace.user&&Workspace.admin;}
 function putAnnual(o,y,field,value){o.years=o.years||{};o.years[y]=o.years[y]||{};o.years[y][field]=clone(value);}
 saveState=function(){
   if(!canEdit())return;
   Workspace.revision++;
-  try{if(!Workspace.localId)Workspace.localId=uid('local_');const all=localIndex();all[Workspace.localId]={id:Workspace.localId,name:S.meta.name,inputs:clone(S),updated_at:new Date().toISOString(),dbId:Workspace.dbId,sourceId:Workspace.sourceId,legacy:Workspace.legacy,isPublic:Workspace.isPublic,owner:Workspace.user.id};localStorage.setItem(LOCAL_PROJECTS+':'+Workspace.user.id,JSON.stringify(all));localStorage.setItem('fp-active-local-v5:'+Workspace.user.id,Workspace.localId);Workspace.localStatus='로컬 저장됨 · '+new Date().toLocaleTimeString('ko-KR');}catch(e){Workspace.localStatus='로컬 저장 실패: '+e.message;}
-  if(Workspace.dbStatus.includes('저장 확인')||Workspace.dbStatus.includes('불러옴'))Workspace.dbStatus='변경됨 · DB 미저장';
-  const el=$('#saveState');if(el)el.textContent=Workspace.localStatus;
+  Workspace.localId=null;Workspace.localStatus='로컬 보관 없음 · DB 전용';
+  if(Workspace.dbStatus.includes('저장 확인')||Workspace.dbStatus.includes('불러옴')||Workspace.dbStatus.includes('DB 저장'))Workspace.dbStatus='변경됨 · 「DB 저장」 필요';
+  const el=$('#saveState');if(el)el.textContent=Workspace.dbStatus;
   updateStatuses();
 };
 /* ---------- 자동저장 · 저장하기 ---------- */
@@ -2740,9 +2738,9 @@ try{saveBadge();}catch(e){}
 function shiftProduct(s,field,ratio){flattenProducts(s).forEach(p=>{for(let y=0;y<s.meta.years;y++){const py=productYear(p,y);putAnnual(p.node,y,field,field==='months'?py.months.map(v=>Math.round(v*ratio)):py[field]*ratio);}});}
 function shiftDiscount(s,delta){const rr=compute(s);for(let y=0;y<s.meta.years;y++){putAnnual(s.assume,y,'waccMode','manual');putAnnual(s.assume,y,'wacc',Math.max(0,rr.waccYears[y]*100+delta));}}
 function updateStatuses(){
-  if($('#localStatus'))$('#localStatus').textContent=Workspace.localStatus;
+  if($('#localStatus'))$('#localStatus').textContent=Workspace.localStatus||'';
   if($('#dbStatus')){$('#dbStatus').textContent=Workspace.dbStatus;$('#dbStatus').classList.toggle('neg',/실패|오류|차단/.test(Workspace.dbStatus));}
-  if($('#projectOrigin'))$('#projectOrigin').textContent=(Workspace.legacy?'변환 초안 · 원본 덮어쓰기 차단':Workspace.dbId?'DB 프로젝트 · 변경은 명시적 저장 필요':'로컬 프로젝트 · DB 자료 아님')+' / '+S.meta.name;
+  if($('#projectOrigin'))$('#projectOrigin').textContent=(Workspace.legacy?'변환 초안 · 원본 덮어쓰기 차단':Workspace.dbId?'DB 프로젝트 · 변경은 명시적 저장 필요':'새 프로젝트 · DB 미저장')+' / '+S.meta.name;
   if($('#authState'))$('#authState').textContent=Workspace.checking?'승인 확인 중':Workspace.user?(Workspace.admin?'관리자 · 편집 가능':'승인된 뷰어 · 읽기 전용'):'미로그인 · 로컬 전용';
   if($('#legacyNotice')){$('#legacyNotice').textContent=Workspace.notice;$('#legacyNotice').hidden=!Workspace.notice;}
 }
@@ -2752,7 +2750,7 @@ function enforceReadonly(){
   if(!ro&&$('#waccInput'))$('#waccInput').disabled=assumeYear(S,editYear).waccMode!=='manual';
   $$('.company-input,[data-write],#copyPrevious').forEach(el=>el.disabled=ro||Workspace.busy);
   $$('#view-company [data-db-write]').forEach(el=>el.disabled=!Workspace.user||!Workspace.admin||Workspace.busy);
-  $$('#localProjects,#dbProjects,#newProject,#localDuplicate,#dbLogout,#dbList,#listDocuments').forEach(el=>el.disabled=Workspace.busy||(el.id==='localProjects'&&!canEdit()));
+  $$('#dbProjects,#newProject,#dbLogout,#dbList,#listDocuments').forEach(el=>el.disabled=Workspace.busy);
 }
 function refreshAnnualUI(){
   editYear=Math.min(editYear,S.meta.years-1);
@@ -2793,15 +2791,8 @@ function copyPrevious(){
   syncInputs();paint();toast('선택연도에 복사했습니다. DB는 별도 저장하세요.');
 }
 function freshState(name){const s=defaultState();s.meta.name=name||'새 프로젝트';s.sales.tree=[];s.inv.byProduct={};s.payroll.departments=[];Object.keys(s.sga).forEach(k=>s.sga[k]=[]);Object.keys(s.nonop).forEach(k=>s.nonop[k]=[]);Object.keys(s.invest).filter(k=>typeof s.invest[k]==='number'&&!/Life/.test(k)).forEach(k=>s.invest[k]=0);s.company={};return ensureState(s);}
-function activateLocal(id){
-  const row=localIndex()[id];if(!row)throw Error('로컬 프로젝트가 없습니다.');
-  if(row.owner&&row.owner!==Workspace.user?.id)throw Error('이 로컬 프로젝트를 저장한 계정으로 로그인하세요.');
-  if(!canEdit())throw Error('뷰어는 로컬 프로젝트를 편집할 수 없습니다.');
-  S=ensureState(clone(row.inputs));Workspace.localId=id;Workspace.dbId=row.dbId||null;Workspace.sourceId=row.sourceId||null;Workspace.legacy=!!row.legacy;Workspace.isPublic=!!row.isPublic;Workspace.notice=Workspace.legacy?(S.migration?.warnings||[]).join('\n'):'';Workspace.dbStatus='로컬 복구본 · DB 동기화 미확인';resetView();saveState();
-}
 function resetView(){editYear=0;R=compute(S);syncInputs();$('#projName').value=S.meta.name;window.__S=S;switchView(currentView);}
-function newProject(){if(Workspace.busy||!canEdit()||!confirm('현재 프로젝트는 보관하고 새 빈 프로젝트를 만들까요?'))return;saveState(true);Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.notice='';Workspace.docs=[];Workspace.dbStatus='새 로컬 프로젝트 · DB 미저장';S=freshState();saveState();resetView();renderWorkspace();}
-function duplicateLocal(){if(!canEdit())return;const name=prompt('새 프로젝트 이름',S.meta.name+' 복사');if(!name?.trim())return;saveState(true);S=clone(S);S.meta.name=name.trim();Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.dbStatus='다른 이름의 로컬 프로젝트 · DB 미저장';saveState();resetView();renderWorkspace();}
+function newProject(){if(Workspace.busy||!canEdit()||!confirm('새 빈 프로젝트를 만들까요? 현재 변경사항은 DB에 저장되지 않은 채 사라집니다. 먼저 「DB 저장」하세요.'))return;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.notice='';Workspace.docs=[];Workspace.dbStatus='새 프로젝트 · DB 미저장';S=freshState();resetView();renderWorkspace();}
 function safeMessage(e){return String(e?.message||e||'알 수 없는 오류').replace(/eyJ[A-Za-z0-9_.-]+/g,'[보안값 숨김]').replace(/https:\/\/[^\s]+/g,'[주소 숨김]');}
 function requireDB(write=false){if(!Workspace.client)throw Error('DB 연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하세요.');if(!Gate.approved||!Workspace.user||Workspace.checking)throw Error('로그인과 승인이 필요합니다.');if(write&&!Workspace.admin)throw Error('뷰어는 읽기 전용입니다.');}
 async function approveUser(user){
@@ -2810,7 +2801,7 @@ async function approveUser(user){
     const {data,error}=await Workspace.client.from('user_profiles').select('is_approved').eq('id',user.id);if(error)throw error;
     const email=(user.email||'').toLowerCase(),superAdmin=email==='ceo@hyminternational.com',admin=superAdmin||email.includes('admin');
     if(!superAdmin&&!admin&&!data?.some(r=>r.is_approved===true)){await Workspace.client.auth.signOut();throw Error('관리자 승인 대기 중입니다.');}
-    Workspace.user=user;Workspace.admin=admin;Workspace.dbStatus='로그인·승인 확인 · 목록을 불러오세요.';
+    Workspace.user=user;Workspace.admin=admin;Workspace.dbStatus='로그인·승인 확인 · DB 목록 조회 중';
     // Do not retain the previous account's data in an approved viewer session.
     if(!admin){S=freshState('프로젝트를 선택하세요');Workspace.dbId=null;Workspace.localId=null;Workspace.docs=[];Workspace.notice='승인된 뷰어는 DB에서 허용된 프로젝트만 읽을 수 있습니다.';resetView();switchView('company');}
     renderWorkspace();
@@ -2830,9 +2821,9 @@ async function listDB(){
 }
 function activateDB(id){
   requireDB();const row=Workspace.projects.find(p=>p.id===id);if(!row)throw Error('허용된 DB 목록에서 프로젝트를 선택하세요.');
-  if(canEdit())saveState();const converted=convertProject(row.inputs);S=converted.state;S.meta.name=row.name;
+  const converted=convertProject(row.inputs);S=converted.state;S.meta.name=row.name;
   Workspace.dbId=row.id;Workspace.sourceId=row.id;Workspace.legacy=converted.legacy;Workspace.localId=null;Workspace.isPublic=!!row.is_public;Workspace.docs=[];Workspace.notice=converted.warnings.join('\n');Workspace.dbStatus=converted.legacy?'기존 프로젝트 변환 초안 · 별도 저장만 허용':'DB 프로젝트 불러옴 · 변경사항 없음';
-  if(canEdit())saveState();Workspace.dbStatus=converted.legacy?'기존 프로젝트 변환 초안 · 별도 저장만 허용':'DB 프로젝트 불러옴 · 변경사항 없음';resetView();renderWorkspace();
+  Workspace.dbStatus=converted.legacy?'기존 프로젝트 변환 초안 · 별도 저장만 허용':'DB 프로젝트 불러옴 · 변경사항 없음';resetView();renderWorkspace();
 }
 async function saveDB(asNew=false){
   let snapshot,rev;
@@ -2877,12 +2868,10 @@ async function uploadDocument(){
 }
 function renderWorkspace(){
   const box=$('#workspaceBody');if(!box)return;
-  let local=[];try{local=Object.values(localIndex()).filter(p=>!p.owner||p.owner===Workspace.user?.id);}catch(e){Workspace.localStatus=safeMessage(e);}
   const company=S.company||{};
-  box.innerHTML=`<div class="workspace-grid"><div class="card"><div class="card-h"><div><h2>프로젝트 보관함</h2><p>로컬 자동보관과 DB 명시적 저장은 서로 별개입니다.</p></div></div>
-    <div class="workspace-actions"><button class="btn" id="newProject" data-write>새 빈 프로젝트</button><button class="btn" id="localDuplicate" data-write>로컬 다른 이름 저장</button></div>
-    <label class="field"><span class="lb">로컬 프로젝트</span><select id="localProjects"><option value="">선택하세요 · ${local.length}개</option>${local.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.localId?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
-    <p id="localStatus" class="status-line"></p><div class="divider"></div>
+  box.innerHTML=`<div class="workspace-grid"><div class="card"><div class="card-h"><div><h2>프로젝트 보관함</h2><p>프로젝트는 DB에서만 불러오고 DB에만 저장합니다. 로컬 보관은 없습니다.</p></div></div>
+    <div class="workspace-actions"><button class="btn" id="newProject" data-write>새 빈 프로젝트</button></div>
+    <p class="status-line">변경사항은 입력 즉시 표시되며, <b>「DB 명시적 저장」</b> 또는 <b>「DB 다른 이름 저장」</b>으로만 서버에 기록됩니다.</p><div class="divider"></div>
     <div class="workspace-actions"><button class="btn" id="dbList">DB 목록 불러오기</button><button class="btn dark" id="dbSave" data-db-write>DB 명시적 저장</button><button class="btn teal" id="dbSaveAs" data-db-write>DB 다른 이름 저장</button></div>
     <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>
     <label class="check"><input id="projectPublic" type="checkbox" data-db-write ${Workspace.isPublic?'checked':''}>승인된 뷰어에게 공개</label><p id="dbStatus" class="status-line" role="status"></p>
@@ -2917,23 +2906,21 @@ function annualInputCapture(e){
 }
 document.addEventListener('input',annualInputCapture,true);
 document.addEventListener('click',e=>{if(!canEdit()&&e.target.closest('[data-add],[data-delnode],[data-deldept],[data-delsga],[data-delno],[data-addsga],[data-addno],#btnSample,#btnAddRoot,#btnAddPayroll')){e.stopImmediatePropagation();return;}
-  if(e.target.id==='btnSample'){e.stopImmediatePropagation();if(!canEdit()||!confirm('현재 프로젝트를 보관하고 별도 예시 프로젝트를 열까요?'))return;saveState();Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.notice='예시 데이터 · 실제 DB 또는 기업자료가 아닙니다.';S=defaultState();S.meta.name='예시 · '+S.meta.name;saveState();resetView();return;}
+  if(e.target.id==='btnSample'){e.stopImmediatePropagation();if(!canEdit()||!confirm('예시 프로젝트를 열까요? 현재 변경사항은 DB에 저장되지 않은 채 사라집니다.'))return;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.notice='예시 데이터 · 실제 DB 또는 기업자료가 아닙니다.';S=defaultState();S.meta.name='예시 · '+S.meta.name;resetView();return;}
 },true);
 document.addEventListener('change',e=>{
-  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(!t0Sel)editYear=+e.target.value;orderYear=editYear;syncInputs();renderExtensions();switchView(currentView);}if(e.target.id==='localProjects'&&e.target.value)activateLocal(e.target.value);if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
+  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(!t0Sel)editYear=+e.target.value;orderYear=editYear;syncInputs();renderExtensions();switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
   catch(err){Workspace.dbStatus='프로젝트 전환 실패: '+safeMessage(err);updateStatuses();}
 });
 document.addEventListener('click',async e=>{const id=e.target.closest('button')?.id;
   if(e.target.closest('[data-demand-scroll]')){const direction=e.target.closest('[data-demand-scroll]').dataset.demandScroll;$('#demandScroll').scrollTo({left:direction==='left'?0:$('#demandScroll').scrollWidth,behavior:'smooth'});}
-  if(id==='copyPrevious')copyPrevious();if(id==='newProject')newProject();if(id==='localDuplicate')duplicateLocal();if(id==='dbList')await listDB();if(id==='dbSave')await saveDB();if(id==='dbSaveAs')await saveDB(true);if(id==='listDocuments')await listDocuments();if(id==='uploadDocument')await uploadDocument();
+  if(id==='copyPrevious')copyPrevious();if(id==='newProject')newProject();if(id==='dbList')await listDB();if(id==='dbSave')await saveDB();if(id==='dbSaveAs')await saveDB(true);if(id==='listDocuments')await listDocuments();if(id==='uploadDocument')await uploadDocument();
   if(id==='loginToggle')$('#loginForm').hidden=!$('#loginForm').hidden;
-  if(id==='dbLogout'){try{if(canEdit())saveState();if(Workspace.client){const {error}=await Workspace.client.auth.signOut();if(error)throw error;}Workspace.user=null;Workspace.admin=false;Workspace.projects=[];Workspace.docs=[];Workspace.dbId=null;Workspace.localId=null;Workspace.notice='';S=freshState();Workspace.dbStatus='로그아웃 · DB 접근 없음';resetView();renderWorkspace();}catch(err){Workspace.dbStatus='로그아웃 실패: '+safeMessage(err);updateStatuses();}}
+  if(id==='dbLogout'){try{if(Workspace.client){const {error}=await Workspace.client.auth.signOut();if(error)throw error;}Workspace.user=null;Workspace.admin=false;Workspace.projects=[];Workspace.docs=[];Workspace.dbId=null;Workspace.localId=null;Workspace.notice='';S=freshState();Workspace.dbStatus='로그아웃 · DB 접근 없음';resetView();renderWorkspace();}catch(err){Workspace.dbStatus='로그아웃 실패: '+safeMessage(err);updateStatuses();}}
 });
 document.addEventListener('submit',async e=>{if(e.target.id!=='loginForm')return;e.preventDefault();const p=$('#loginPassword'),email=$('#loginEmail').value,password=p.value;p.value='';try{if(!Workspace.client)throw Error('DB 연결 모듈 로드 실패');Workspace.dbStatus='로그인·승인 확인 중';updateStatuses();const {data,error}=await Workspace.client.auth.signInWithPassword({email,password});if(error)throw error;await approveUser(data?.user);$('#loginForm').hidden=true;}catch(err){Workspace.dbStatus='로그인 실패: '+safeMessage(err);updateStatuses();}finally{p.value='';}});
 function initWorkspace(){
-  try{const id=localStorage.getItem('fp-active-local-v5'),row=id&&localIndex()[id];if(row&&!row.owner){Workspace.localId=id;Workspace.dbId=row.dbId||null;Workspace.sourceId=row.sourceId||null;Workspace.legacy=!!row.legacy;S=ensureState(clone(row.inputs));}else if(row?.owner){S=freshState();Workspace.notice='계정별 로컬 프로젝트는 로그인 후 보관함에서 선택하세요.';}
-  }catch(e){Workspace.localStatus='로컬 복구 실패: '+safeMessage(e);}
-  if(!Workspace.localId&&!localStorage.getItem(APP_KEY)){S=freshState();}
+  S=freshState('프로젝트를 선택하세요');Workspace.localId=null;Workspace.localStatus='로컬 보관 없음 · DB 전용';
   renderWorkspace();resetView();connectDB();
 }
 // The authentication gate owns startup; no anonymous recovery or rendering.
@@ -3062,7 +3049,7 @@ function mountApproved(user,admin,session){
   Workspace.user=user;Workspace.admin=admin;Workspace.checking=false;Workspace.client=scopedClient(Gate.client,Gate.epoch,user.id);Workspace.dbStatus='로그인·승인 확인 · DB 미조회';
   const host=document.getElementById('appHost');host.replaceChildren(document.getElementById('appTemplate').content.cloneNode(true));
   S=freshState(admin?'새 프로젝트':'프로젝트를 선택하세요');
-  if(admin){try{const id=localStorage.getItem('fp-active-local-v5:'+user.id),row=id&&localIndex()[id];if(row&&row.owner===user.id){S=ensureState(clone(row.inputs));Workspace.localId=id;Workspace.dbId=row.dbId||null;Workspace.sourceId=row.sourceId||null;Workspace.legacy=!!row.legacy;Workspace.isPublic=!!row.isPublic;Workspace.notice=Workspace.legacy?(S.migration?.warnings||[]).join('\n'):'';}}catch(e){Workspace.localStatus='계정별 로컬 복구 실패: '+safeMessage(e);}}
+  if(admin){Workspace.localStatus='로컬 보관 없음 · DB 전용';listDB().catch(()=>{});}
   try{DetailState=JSON.parse(localStorage.getItem(DETAIL_KEY+':'+user.id)||'{}');}catch(_){DetailState={};}
   R=compute(S);window.__S=S;window.__R=R;editYear=0;currentView=admin?'assume':'company';
   init();renderWorkspace();
@@ -3139,16 +3126,6 @@ function installAuthenticatedTools(){
   const account=$('#authState');if(account){const policy=document.createElement('p');policy.className='help';policy.textContent='승인 세션으로 접근 중입니다. 로그아웃하면 활성 자료와 화면이 즉시 제거됩니다. 비밀번호·토큰은 로컬에 저장하지 않습니다.';account.after(policy);}
   const oldForm=$('#loginForm');if(oldForm)oldForm.remove();if($('#loginToggle'))$('#loginToggle').remove();
   if(!Workspace.admin)return;
-  const importable=legacyBrowserRows();if(importable.length){const btn=document.createElement('button');btn.id='importLegacyBrowser';btn.className='btn';btn.textContent='기존 브라우저 자료 가져오기 ('+importable.length+'개)';$('#localProjects').closest('.field').after(btn);}
-}
-function legacyBrowserRows(){
-  if(!Gate.approved||!Workspace.admin)return [];
-  const rows=[];try{const old=JSON.parse(localStorage.getItem(LOCAL_PROJECTS)||'{}'),oldRows=Object.values(old);oldRows.forEach(r=>{if(!r.owner&&r.inputs)rows.push(r);});const plain=localStorage.getItem(APP_KEY);if(plain&&!rows.length&&!oldRows.some(r=>r.owner))rows.push({name:'기존 브라우저 계획',inputs:JSON.parse(plain)});}catch(e){Workspace.localStatus='기존 브라우저 자료 확인 실패: '+safeMessage(e);}return rows;
-}
-function importLegacyBrowser(){
-  if(!canEdit())return;const rows=legacyBrowserRows();if(!rows.length)return;
-  if(!confirm('기존 익명 브라우저 자료 '+rows.length+'개를 현재 승인 계정의 별도 로컬 복제본으로 가져올까요? 원본은 삭제하지 않고 DB 연결은 해제합니다. 본인 자료인지 확인하세요.'))return;
-  try{const all=localIndex();rows.forEach(row=>{const converted=convertProject(row.inputs),id=uid('import_');all[id]={id,name:row.name||converted.state.meta.name,inputs:converted.state,owner:Workspace.user.id,dbId:null,sourceId:null,legacy:converted.legacy,isPublic:false,updated_at:new Date().toISOString()};});localStorage.setItem(LOCAL_PROJECTS+':'+Workspace.user.id,JSON.stringify(all));Workspace.localStatus='기존 자료를 계정별 로컬 복제본으로 가져왔습니다. 원본 유지 · DB 미저장';renderWorkspace();}catch(e){Workspace.localStatus='가져오기 실패: '+safeMessage(e);updateStatuses();}
 }
 // Existing entry points now delegate to the gate instead of anonymous initialization.
 connectDB=gateConnect;
@@ -3160,7 +3137,7 @@ detailStore=function(){if(!Gate.approved||!Workspace.user)return;try{localStorag
 function guardRoute(fn){return function(...args){if(!Gate.approved||!Workspace.user||Workspace.checking)return;return fn.apply(this,args);};}
 compute=(()=>{const original=compute;return function(...args){if(!Gate.approved)throw Error('로그인·승인 전 계산 접근 차단');return original(...args);};})();
 renderWorkspace=(()=>{const original=renderWorkspace;return guardRoute(function(){original();installAuthenticatedTools();});})();
-for(const name of ['init','paint','switchView','resetView','activateLocal','activateDB','newProject','duplicateLocal','renderFinance','renderValue','renderAssume','renderInvest','renderDemand','renderTree','renderInventory','renderInvSettings','renderCost','demandCsv','orderCsv','download','copyPrevious','setAccountDepth','renderDetailedCF','renderDetailedFCFF','renderWCInputs','renderLinkedAnalysis','refreshFinanceDetails','refreshAnnualUI','syncInputs','drawInvChart','drawCashChart','drawNpvChart','listDocuments','openDocument','uploadDocument','listDB']){
+for(const name of ['init','paint','switchView','resetView','activateDB','newProject','renderFinance','renderValue','renderAssume','renderInvest','renderDemand','renderTree','renderInventory','renderInvSettings','renderCost','demandCsv','orderCsv','download','copyPrevious','setAccountDepth','renderDetailedCF','renderDetailedFCFF','renderWCInputs','renderLinkedAnalysis','refreshFinanceDetails','refreshAnnualUI','syncInputs','drawInvChart','drawCashChart','drawNpvChart','listDocuments','openDocument','uploadDocument','listDB']){
   const fn=eval(name);eval(name+' = guardRoute(fn)');
 }
 function bindGate(){
@@ -3526,76 +3503,106 @@ enforceReadonly=function(){erExtBase();const cp=$('#copyPrevious');if(cp&&typeof
 const renderExtBase2=renderExtensions;
 renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){console.error(e);}try{injectT0Controls();}catch(e){}};
 
-/* ===== 판매수요 엑셀식 편집: 범위선택 · 복사 · 붙여넣기 · 수식 ===== */
-(function demandExcel(){
-  let anchor=null,drag=false,sel=null;
+/* ===== 전체 표 엑셀식 편집: 범위선택 · 복사 · 붙여넣기 · 삭제 · 수식 (모든 .tbl) ===== */
+(function tableExcel(){
+  let anchor=null,drag=false,sel=null; // sel={tbl,r0,c0,r1,c1}
   const clipHost=()=>{let t2=document.getElementById('xlsClip');if(!t2){t2=document.createElement('textarea');t2.id='xlsClip';t2.setAttribute('aria-hidden','true');t2.style.cssText='position:fixed;left:-9999px;top:0';document.body.appendChild(t2);}return t2;};
-  const mois=()=>Array.from(document.querySelectorAll('#demandTree input[data-nm]'));
-  const rowsArr=()=>Array.from(document.querySelectorAll('#demandTree tbody tr'));
-  const cellRC=el=>{const tr=el.closest&&el.closest('tr');if(!tr)return null;const r=rowsArr().indexOf(tr);return r>=0?{r,c:+el.dataset.nm}:null;};
-  const inRect=rc=>!!(rc&&sel&&rc.r>=Math.min(sel.r0,sel.r1)&&rc.r<=Math.max(sel.r0,sel.r1)&&rc.c>=Math.min(sel.c0,sel.c1)&&rc.c<=Math.max(sel.c0,sel.c1));
-  const selInputs=()=>mois().filter(el=>inRect(cellRC(el)));
-  function paintSel(){mois().forEach(el=>{el.classList.toggle('dsel',inRect(cellRC(el)));});}
+  const rowsOf=tbl=>[...tbl.querySelectorAll('tbody tr')];
+  const grid=tbl=>rowsOf(tbl).map(tr=>[...tr.children]);
+  function cellAt(tbl,td){const g=grid(tbl);for(let r=0;r<g.length;r++){const c=g[r].indexOf(td);if(c>=0)return{r,c};}return null;}
+  const editableIn=td=>td?td.querySelector('input:not([disabled]):not([type=checkbox]):not([type=button]):not([type=submit])'):null;
+  function inRect(rc){return !!(sel&&rc&&rc.r>=Math.min(sel.r0,sel.r1)&&rc.r<=Math.max(sel.r0,sel.r1)&&rc.c>=Math.min(sel.c0,sel.c1)&&rc.c<=Math.max(sel.c0,sel.c1));}
+  function paint(){
+    document.querySelectorAll('td.dsel').forEach(td=>td.classList.remove('dsel'));
+    if(!sel)return;
+    const g=grid(sel.tbl),r0=Math.min(sel.r0,sel.r1),r1=Math.max(sel.r0,sel.r1),c0=Math.min(sel.c0,sel.c1),c1=Math.max(sel.c0,sel.c1);
+    for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++){const td=g[r]&&g[r][c];if(td)td.classList.add('dsel');}
+  }
+  function selInputs(){
+    if(!sel)return[];
+    const g=grid(sel.tbl),out=[];
+    for(let r=Math.min(sel.r0,sel.r1);r<=Math.max(sel.r0,sel.r1);r++)
+      for(let c=Math.min(sel.c0,sel.c1);c<=Math.max(sel.c0,sel.c1);c++){
+        const td=g[r]&&g[r][c];if(!td)continue;
+        const el=editableIn(td);if(el)out.push({el,td,numric:/number|decimal|numeric/.test(el.getAttribute('inputmode')||el.type||'')});
+      }
+    return out;
+  }
+  function cellValue(td){const el=editableIn(td);return el?String(el.value):(td.textContent||'').trim();}
   function copyText(txt){const t2=clipHost();t2.value=txt;t2.focus();t2.select();let ok=false;try{ok=document.execCommand('copy');}catch(e){}if(!ok&&navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).catch(()=>{});}
+  function commit(){try{if(typeof commitStable==='function')commitStable();}catch(e){}}
   document.addEventListener('mousedown',e=>{
-    const el=e.target.closest&&e.target.closest('#demandTree input[data-nm]');
-    if(!el||e.button!==0||el.disabled)return;
-    const rc=cellRC(el);if(!rc)return;
-    anchor=rc;drag=false;sel=null;paintSel();
+    const td=e.target.closest&&e.target.closest('#appHost .tbl tbody td');
+    if(!td){ if(sel){sel=null;paint();} return; }
+    if(e.button!==0)return;
+    if(e.target.closest('button,select,a,input[type=checkbox],.detail-toggle'))return;
+    const tbl=td.closest('table.tbl');if(!tbl)return;
+    const rc=cellAt(tbl,td);if(!rc)return;
+    if(!e.target.matches('input'))e.preventDefault();
+    anchor={tbl,r:rc.r,c:rc.c};drag=false;sel=null;paint();
   },true);
   document.addEventListener('mousemove',e=>{
     if(!anchor)return;
-    const el=e.target.closest&&e.target.closest('#demandTree input[data-nm]');
-    if(!el||el.disabled)return;
-    const rc=cellRC(el);if(!rc)return;
-    if(rc.r!==anchor.r||rc.c!==anchor.c){drag=true;sel={r0:anchor.r,c0:anchor.c,r1:rc.r,c1:rc.c};paintSel();}
+    const td=e.target.closest&&e.target.closest('#appHost .tbl tbody td');
+    if(!td||td.closest('table.tbl')!==anchor.tbl)return;
+    const rc=cellAt(anchor.tbl,td);if(!rc)return;
+    if(rc.r!==anchor.r||rc.c!==anchor.c){drag=true;sel={tbl:anchor.tbl,r0:anchor.r,c0:anchor.c,r1:rc.r,c1:rc.c};paint();}
   },true);
-  document.addEventListener('mouseup',()=>{
+  document.addEventListener('mouseup',e=>{
     if(!anchor)return;
-    if(drag&&sel){clipHost().focus();}
+    if(!drag&&!e.target.matches('input')){sel={tbl:anchor.tbl,r0:anchor.r,c0:anchor.c,r1:anchor.r,c1:anchor.c};paint();}
+    if(sel)clipHost().focus();
     anchor=null;drag=false;
   },true);
   document.addEventListener('keydown',e=>{
-    if(!Gate.approved)return;
+    if(e.key==='Escape'&&sel){sel=null;paint();return;}
     if((e.ctrlKey||e.metaKey)&&(e.key==='c'||e.key==='C')){
-      if(sel&&selInputs().length>1){
+      if(!sel)return;
+      const area=(Math.abs(sel.r1-sel.r0)+1)*(Math.abs(sel.c1-sel.c0)+1);
+      const activeInput=e.target.matches&&e.target.matches('input');
+      if(area>1||!activeInput){
         e.preventDefault();
-        const r0=Math.min(sel.r0,sel.r1),r1=Math.max(sel.r0,sel.r1),c0=Math.min(sel.c0,sel.c1),c1=Math.max(sel.c0,sel.c1);
-        const idx={};mois().forEach(el=>{const rc=cellRC(el);if(rc)idx[rc.r+':'+rc.c]=el;});
-        const grid=[];for(let r=r0;r<=r1;r++){const row=[];for(let c=c0;c<=c1;c++){const el=idx[r+':'+c];row.push(el?el.value:'');}grid.push(row);}
-        copyText(grid.map(r=>r.join('\t')).join('\n'));toast('선택 영역을 복사했습니다');
-      }else if(e.target.matches&&e.target.matches('#demandTree input[data-nm]')){copyText(e.target.value);}
+        const g=grid(sel.tbl),r0=Math.min(sel.r0,sel.r1),r1=Math.max(sel.r0,sel.r1),c0=Math.min(sel.c0,sel.c1),c1=Math.max(sel.c0,sel.c1);
+        const lines=[];for(let r=r0;r<=r1;r++){const row=[];for(let c=c0;c<=c1;c++){const td=g[r]&&g[r][c];row.push(td?cellValue(td):'');}lines.push(row.join('\t'));}
+        copyText(lines.join('\n'));toast('선택 영역 '+area+'개 셀을 복사했습니다');
+      }
       return;
     }
-    if((e.key==='Delete'||e.key==='Backspace')&&sel&&selInputs().length>1){
-      e.preventDefault();
-      selInputs().forEach(el=>{if(!el.disabled){el.value='0';el.dispatchEvent(new Event('input',{bubbles:true}));}});
-      inputDirty=true;commitStable();toast('선택 영역을 0으로 비웠습니다');
+    if((e.key==='Delete'||e.key==='Backspace')&&sel){
+      const targets=selInputs();
+      if(targets.length>1||(targets.length===1&&!e.target.matches('input'))){
+        e.preventDefault();
+        targets.forEach(({el,numric})=>{el.value=numric?'0':'';el.dispatchEvent(new Event('input',{bubbles:true}));});
+        commit();toast(targets.length+'개 셀을 비웠습니다');
+      }
       return;
     }
-    if(e.key==='Escape'&&sel){sel=null;paintSel();}
   },true);
   document.addEventListener('paste',e=>{
-    if(!sel||!Gate.approved)return;
+    if(typeof canEdit==='function'&&!canEdit())return;
     const txt=e.clipboardData&&e.clipboardData.getData('text/plain');
     if(txt==null||txt==='')return;
+    const active=e.target.closest&&e.target.closest('#appHost .tbl tbody td');
+    let targets=null;
+    if(sel){const t2=selInputs();if(t2.length)targets=t2;}
+    else if(active){const el=editableIn(active);if(el&&document.activeElement===el)targets=[{el,numric:/number|decimal|numeric/.test(el.getAttribute('inputmode')||el.type||'')}];}
+    if(!targets)return;
     e.preventDefault();
     const cells=txt.replace(/\r/g,'').split('\n').filter(x=>x!=='').map(r=>r.split('\t'));
-    const r0=Math.min(sel.r0,sel.r1),c0=Math.min(sel.c0,sel.c1);
     const writes=[];
-    if(cells.length===1&&cells[0].length===1){selInputs().forEach(el=>{if(!el.disabled)writes.push([el,cells[0][0]]);});}
-    else{
-      const idx={};mois().forEach(el=>{const rc=cellRC(el);if(rc)idx[rc.r+':'+rc.c]=el;});
+    if(cells.length===1&&cells[0].length===1){
+      targets.forEach(({el})=>writes.push([el,cells[0][0]]));
+    }else if(sel){
+      const g=grid(sel.tbl),r0=Math.min(sel.r0,sel.r1),c0=Math.min(sel.c0,sel.c1);
       for(let i=0;i<cells.length;i++)for(let j=0;j<cells[i].length;j++){
-        const c=c0+j;if(c>11)continue;
-        const el=idx[(r0+i)+':'+c];
-        if(el&&!el.disabled)writes.push([el,cells[i][j]]);
+        const td=g[r0+i]&&g[r0+i][c0+j];if(!td)continue;
+        const el=editableIn(td);if(el)writes.push([el,cells[i][j]]);
       }
-    }
+    }else{targets.forEach(({el})=>writes.push([el,cells.map(r=>r.join(' ')).join(' ')]));}
     writes.forEach(([el,v])=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));});
-    inputDirty=true;commitStable();
-    toast(writes.length+'개 셀에 붙여넣었습니다');
+    commit();toast(writes.length+'개 셀에 붙여넣었습니다');
   },true);
+  // 수식(=1+2) 입력 표시값 확정
   window.addEventListener('focusout',e=>{
     const el=e.target;
     if(el&&el.dataset&&el.dataset.evalFrom!==undefined){const v=cellNum(el.dataset.evalFrom);el.value=String(Math.round(v*100)/100);delete el.dataset.evalFrom;}
@@ -3605,6 +3612,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
