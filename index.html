@@ -2017,13 +2017,14 @@ function renderTree(){
   const totalQ=R.products.reduce((a,p)=>a+prodQty(p),0);
    const totalR=R.products.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px"><col style="width:52px">${Array.from({length:12},()=>'<col style="width:52px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
-    <thead><tr><th class="l sticky">분류 / 제품</th><th>Y${editYear+1} 수량<span class="u">개</span></th><th>Y${editYear+1} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
+    <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
     ${Array.from({length:12},(_,i)=>`<th>${fyMonth(i)}월</th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="4"></td>
      ${Array.from({length:12},(_,i)=>`<td>${won(t0Sel&&(i+1)<smOf(S)?0:R.products.reduce((a,p)=>a+(productYear(p,editYear).months[i]||0)*cntM(p.id,i),0))}</td>`).join('')}
     <td>${won(totalQ)}</td><td>${man(totalR)}</td><td></td></tr></tfoot>`;
   const lv=$('#demandLevels');
+  const bg=$('#view-demand h2 .badge');if(bg)bg.textContent=t0Sel?'T0 · 개시 시점 월별 직접입력':`Y${editYear+1} 월별 직접입력`;
   if(lv) lv.innerHTML=LEVELS.map((n,i)=>`<span class="lvpill" data-expand-level="${i+1}" role="button" tabindex="0" title="${i+1}단계(${n})까지만 펼치기" style="cursor:pointer"><b>${i+1}</b>${n}</span>`).join('<span class="lvarrow">›</span>')+'<span class="sub" style="margin-left:8px">단계를 누르면 해당 단계까지만 펼쳐집니다</span>';
 }
 
@@ -2783,7 +2784,7 @@ function refreshAnnualUI(){
   if($('#copyPrevious'))$('#copyPrevious').disabled=t0Sel||!editYear||!canEdit();
   if(currentView==='demand'){
     $$('#view-demand .kpi .k').forEach(el=>{el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1));});
-    const badge=$('#view-demand h2 .badge');if(badge)badge.textContent=`Y${editYear+1} 월별 직접입력`;
+    const badge=$('#view-demand h2 .badge');if(badge)badge.textContent=t0Sel?'T0 · 개시 시점 월별 직접입력':`Y${editYear+1} 월별 직접입력`;
   }
   if(currentView==='inventory'){renderInvSettings();const headers=$$('#invSettings th');if(headers[1])headers[1].innerHTML=editYear?'이월재고<span class="u">개 · 읽기 전용</span>':'초기재고 t0<span class="u">개</span>';if(headers[8])headers[8].innerHTML='최초 발주일';$$('#invSettings .sub').forEach(el=>el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1)));}
   if(currentView==='cost')decorateCost();
@@ -2979,7 +2980,7 @@ document.addEventListener('click',e=>{if(!canEdit()&&e.target.closest('[data-add
   
 },true);
 document.addEventListener('change',e=>{
-  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(!t0Sel){editYear=+e.target.value;if(autoSeedDemandYear(editYear))toast(fyShort(editYear)+' 판매 수요를 이전연도 입력값으로 초기화했습니다');}orderYear=editYear;syncInputs();renderExtensions();if(currentView==='demand'){try{renderDemand();}catch(_){}}switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
+  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(t0Sel){editYear=0;}else{editYear=+e.target.value;if(autoSeedDemandYear(editYear))toast(fyShort(editYear)+' 판매 수요를 이전연도 입력값으로 초기화했습니다');}orderYear=editYear;syncInputs();renderExtensions();if(currentView==='demand'){try{renderDemand();}catch(_){}}switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
   catch(err){Workspace.dbStatus='프로젝트 전환 실패: '+safeMessage(err);updateStatuses();}
 });
 document.addEventListener('click',async e=>{const id=e.target.closest('button')?.id;
@@ -3766,6 +3767,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
