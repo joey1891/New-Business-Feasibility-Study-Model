@@ -537,8 +537,6 @@ td.dsel input{background:rgba(47,125,143,.14)}
 
     <!-- ========== 03 판매 수요 ========== -->
     <section class="view" id="view-demand">
-      <div class="kpis" id="demandKpis"></div>
-      <div style="height:14px"></div>
       <div class="card flush">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">
           <div>
@@ -2007,16 +2005,7 @@ function renderTree(){
 
 function renderDemand(){
   renderTree();
-   const y1=R.pl[editYear]||{rev:0,cogs:0};
-  const qty=R.products.reduce((a,p)=>a+prodQty(p),0);
-  const margin=y1.rev?(y1.rev-y1.cogs)/y1.rev:0;
-  $('#demandKpis').innerHTML=
-    kpi('Y1 판매수량',won(qty),'개','재고 부족분 제외 전 수요')+
-    kpi('Y1 매출',shortWon(y1.rev),'원',`${S.clients?S.clients.length:''}${R.products.length}개 제품 · 9단계 트리`)+
-    kpi('Y1 매출총이익률',pct(margin*100),'',`매출총이익 ${shortWon(y1.rev-y1.cogs)}`,margin<0?'red':'green')+
-    kpi('제품 수',R.products.length,'개',`${countGroups()}개 그룹 노드`);
-  $('#demandFootNote').textContent=`${R.products.length}개 제품 · 수익모델 ${S.sales.tree.length}개`;
-
+ 
   const yt=$('#demandYears');
    yt.innerHTML=`<thead><tr><th class="l">연도</th><th>수요<span class="u">개</span></th><th>판매<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th>성장률</th></tr></thead><tbody>`+
     (t0MonthsOf(S)?[(()=>{const b=t0MonthsOf(S);const dem=R.products.reduce((x,pr)=>x+pr.dem.slice(0,b).reduce((u,v)=>u+v,0),0),sold=R.products.reduce((x,pr)=>x+pr.rows.slice(0,b).reduce((u,r)=>u+r.sold,0),0);return `<tr><td class="l">T0 · ${t0Label(S)}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(R.t0?R.t0.rev:0)}</td><td>—</td></tr>`;})()]:[]).concat(
@@ -3745,6 +3734,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
