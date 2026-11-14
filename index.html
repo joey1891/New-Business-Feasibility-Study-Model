@@ -406,6 +406,8 @@ td.dsel input{background:rgba(47,125,143,.14)}
 #demandTree thead th{position:sticky;top:0;z-index:4;background:#f3f6f9}
 #demandTree thead th.sticky{z-index:5}
 input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:center}
+button.mv{border:1px solid var(--line2);background:#fff;border-radius:4px;font-size:9px;line-height:1;padding:2px 4px;cursor:pointer;color:#5a6b7d;margin-left:3px}
+button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
 .dnd{cursor:grab;color:#8aa0b4;font-size:12px;padding:0 4px;user-select:none}
 #demandTree tr.trdrop td{background:#e6f3f1!important}
 .fixedcell{background:#eef3f8}
@@ -1963,7 +1965,7 @@ function demandRowHtml(n,depth,idx){
     const q=prods.reduce((a,p)=>a+prodQty(p),0);
     const rev=prods.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
     return `<tr class="trow grp" data-row="${n.id}">
-      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
       <td class="num strong">${won(q)}</td>
       <td class="num strong">${man(rev)}</td>
       <td class="bulkcell"><input class="cell bulk" type="text" inputmode="numeric" data-nid="${n.id}" data-gbulk="1" placeholder="일괄" aria-label="${LEVELS[depth-1]} 하위 ${prods.length}개 제품 월수량 일괄 입력" title="이 ${LEVELS[depth-1]} 아래 모든 제품의 1~12월 수량을 한 번에 채웁니다"></td>
@@ -1973,7 +1975,7 @@ function demandRowHtml(n,depth,idx){
   const q=prodQty(n);
   const base=n;n={...n,...productYear(n,editYear),growth:base.growth};
   return `<tr class="trow item" data-row="${n.id}">
-    <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${depth>=9?'제품명':LEVELS[depth-1]+'명'}">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}${depth<9?`<button class="add" data-add="${n.id}" title="하위 ${LEVELS[depth]} 추가">+</button>`:''}<button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+    <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${depth>=9?'제품명':LEVELS[depth-1]+'명'}">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}${depth<9?`<button class="add" data-add="${n.id}" title="하위 ${LEVELS[depth]} 추가">+</button>`:''}<button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
     <td>${won(q)}</td><td>${man(q*n.price)}</td><td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="price" value="${n.price}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="cost" value="${n.cost}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
@@ -2687,7 +2689,7 @@ function bindStatic(){
     const t=e.target;
     if(t.dataset.toggle){ const id=t.dataset.toggle; COLLAPSED.has(id)?COLLAPSED.delete(id):COLLAPSED.add(id); renderTree(); paint(); return; }
     if(t.dataset.add){ addChild(t.dataset.add); return; }
-    if(t.dataset.delnode){ delNode(t.dataset.delnode); return; }
+    if(t.dataset.mvup||t.dataset.mvdown){const dir=t.dataset.mvup?-1:1;const id=t.dataset.mvup||t.dataset.mvdown;const arr=sibArrayOf(id);const ix=arr.findIndex(x=>x.id===id);const to=ix+dir;if(arr&&ix>=0&&to>=0&&to<arr.length){const mv=arr.splice(ix,1)[0];arr.splice(to,0,mv);saveState();R=compute(S);renderTree();paint();}return;}if(t.dataset.delnode){ delNode(t.dataset.delnode); return; }
     if(t.dataset.deldept){ S.payroll.departments=S.payroll.departments.filter(d=>d.id!==t.dataset.deldept); saveState(); renderCost(); paint(); return; }
     if(t.dataset.delsga){ const [k,id]=t.dataset.delsga.split(':'); S.sga[k]=S.sga[k].filter(x=>x.id!==id); saveState(); renderCost(); paint(); return; }
     if(t.dataset.delno){ const [k,id]=t.dataset.delno.split(':'); S.nonop[k]=S.nonop[k].filter(x=>x.id!==id); saveState(); renderCost(); paint(); return; }
@@ -3638,7 +3640,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
     const td=e.target.closest&&e.target.closest('#appHost .tbl tbody td');
     if(!td){ if(sel){sel=null;paint();} return; }
     if(e.button!==0)return;
-    if(e.target.closest('button,select,a,input[type=checkbox],.detail-toggle'))return;
+    if(e.target.closest('button,select,a,input[type=checkbox],.detail-toggle,.dnd,[data-drag]'))return;
     const tbl=td.closest('table.tbl');if(!tbl)return;
     const rc=cellAt(tbl,td);if(!rc)return;
     if(!e.target.matches('input'))e.preventDefault();
@@ -3715,6 +3717,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
