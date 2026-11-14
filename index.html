@@ -406,6 +406,10 @@ td.dsel input{background:rgba(47,125,143,.14)}
 #demandTree thead th{position:sticky;top:0;z-index:4;background:#f3f6f9}
 #demandTree thead th.sticky{z-index:5}
 input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:center}
+.dnd{cursor:grab;color:#8aa0b4;font-size:12px;padding:0 4px;user-select:none}
+#demandTree tr.trdrop td{background:#e6f3f1!important}
+.fixedcell{background:#eef3f8}
+.tbl td.fx{background:#eef3f8}
 </style>
 </head>
 
@@ -557,7 +561,7 @@ input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:cente
         </div>
         <div class="lvlegend" id="demandLevels"></div>
         <div class="table-scroll-tools no-print"><b>21개 열 · 월별 수량은 좌우로 이동해 편집합니다</b><span class="xlhint">모든 표 공통 엑셀식 편집: 셀을 드래그해 범위 선택 → Ctrl+C 복사 · Ctrl+V 붙여넣기(한 값은 선택 전체 채우기) · Delete=비우기 · 수식 입력 지원(예: =3000*2)</span><button class="btn sm" data-demand-scroll="left">분류·단가로 ←</button><button class="btn sm" data-demand-scroll="right">월수량·연간합계로 →</button></div>
-        <div class="tablewrap" id="demandScroll" tabindex="0" aria-label="판매수요 21열 가로 스크롤 영역" style="border:none;border-radius:0;max-height:none">
+        <div class="tablewrap" id="demandScroll" tabindex="0" aria-label="판매수요 21열 가로 스크롤 영역" style="border:none;border-radius:0;max-height:calc(100vh - 260px);overflow-y:auto">
           <table class="tbl tree" id="demandTree"></table>
         </div>
         <div style="padding:10px 16px 14px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut)">
@@ -1959,7 +1963,7 @@ function demandRowHtml(n,depth,idx){
     const q=prods.reduce((a,p)=>a+prodQty(p),0);
     const rev=prods.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
     return `<tr class="trow grp" data-row="${n.id}">
-      <td class="l treecell sticky">${box}<button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
       <td class="num strong">${won(q)}</td>
       <td class="num strong">${man(rev)}</td>
       <td class="bulkcell"><input class="cell bulk" type="text" inputmode="numeric" data-nid="${n.id}" data-gbulk="1" placeholder="일괄" aria-label="${LEVELS[depth-1]} 하위 ${prods.length}개 제품 월수량 일괄 입력" title="이 ${LEVELS[depth-1]} 아래 모든 제품의 1~12월 수량을 한 번에 채웁니다"></td>
@@ -1969,7 +1973,7 @@ function demandRowHtml(n,depth,idx){
   const q=prodQty(n);
   const base=n;n={...n,...productYear(n,editYear),growth:base.growth};
   return `<tr class="trow item" data-row="${n.id}">
-    <td class="l treecell sticky">${box}<span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${depth>=9?'제품명':LEVELS[depth-1]+'명'}">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}${depth<9?`<button class="add" data-add="${n.id}" title="하위 ${LEVELS[depth]} 추가">+</button>`:''}<button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+    <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${depth>=9?'제품명':LEVELS[depth-1]+'명'}">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}${depth<9?`<button class="add" data-add="${n.id}" title="하위 ${LEVELS[depth]} 추가">+</button>`:''}<button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
     <td>${won(q)}</td><td>${man(q*n.price)}</td><td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="price" value="${n.price}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="cost" value="${n.cost}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
@@ -2078,19 +2082,25 @@ function renderInvSettings(){
   const opt=$('#invStockOpt');
   if(opt) opt.innerHTML=`<span class="sub">재고와 발주는 <b>거래처와 무관하게 제품 단위로 통합</b>됩니다. 같은 제품이 여러 거래처에 있어도 재고는 하나의 풀로 관리되고, 최소 발주량은 <b>3,000개</b>입니다.</span>`;
   const groups=R.invGroups||[];
-  const rows=groups.map(g=>{
+  const byName=new Map();
+  groups.forEach(g=>{ if(!byName.has(g.name)) byName.set(g.name,[]); byName.get(g.name).push(g); });
+  const rows=[...byName.values()].map(gs=>{
+    const g=gs[0];
     const c=invYear(S,g.id,editYear),py=productYear(g.members[0],editYear);
-    const y1=g.dem.slice(editYear*12,editYear*12+12).reduce((a,b)=>a+b,0);
-    const first=g.rows[editYear*12]||{openingValue:0,openingQty:0};
-    const ids=g.memberIds.join('|');
+    const y1=gs.reduce((a,gg)=>a+gg.dem.slice(editYear*12,editYear*12+12).reduce((x,y2)=>x+y2,0),0);
+    const first=gs.reduce((a,gg)=>{const r=gg.rows[editYear*12]||{openingValue:0,openingQty:0};return {openingValue:a.openingValue+r.openingValue,openingQty:a.openingQty+r.openingQty};},{openingValue:0,openingQty:0});
+    const ids=gs.flatMap(gg=>gg.memberIds).join('|');
+    const stockDisp=gs.reduce((a,gg)=>a+Math.max(0,num(invCfg(S,gg.id).stock,0)),0);
+    const dup=gs.length>1?` · 경로 ${gs.length}개 통합`:'';
+    const mrg=g.members.length>1?` · 거래처 ${g.members.length}곳 통합`:'';
     return `<tr>
-      <td class="l"><b>${esc(g.name)}</b><div class="sub">${esc(g.parentLabel||'—')}${g.members.length>1?` · 거래처 ${g.members.length}곳 통합`:''} · Y${editYear+1} ${won(y1)}개</div></td>
-      <td>${editYear?`<b>${won(first.openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="stock" value="${c.stock}">${g.members.length>1?`<div class="sub">거래처 ${g.members.length}곳 합산</div>`:''}`}</td>
+      <td class="l"><b>${esc(g.name)}</b><div class="sub">${esc(g.parentLabel||'—')}${dup}${mrg} · Y${editYear+1} ${won(y1)}개</div></td>
+      <td>${editYear?`<b>${won(first.openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="stock" value="${stockDisp}">${gs.length>1||g.members.length>1?`<div class="sub">품목 통합 합산</div>`:''}`}</td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="lead" value="${c.lead}"></td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="safety" value="${c.safety}"></td>
       <td><input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="moq" value="${c.moq}"></td>
       <td><input class="cell" type="number" min="1" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="lot" value="${c.lot}"></td>
-      <td>${won(py.cost)}</td><td>${won(py.price)}</td><td>${man(first.openingValue)}</td>
+      <td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.cost)}</td><td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.price)}</td><td class="fixedcell" title="적정재고 산출 연동 · 고정">${man(first.openingValue)}</td>
     </tr>`;
   }).join('');
   t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
@@ -2111,15 +2121,21 @@ function renderInventory(){
 
   const bench=document.getElementById('invBench');
   if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>일평균<span class="u">개</span></th><th>안전재고<span class="u">개</span></th><th>발주점<span class="u">개</span></th><th>목표재고<span class="u">개</span></th><th>권장 1회<span class="u">개</span></th></tr></thead><tbody>`+
-    (R.invGroups||[]).map(p=>{
-      const c=invYear(S,p.id,editYear),first=p.rows[editYear*12],y1=p.dem.slice(editYear*12,editYear*12+12).reduce((a,b)=>a+b,0);
-      const daily=(p.dem[editYear*12]||0)/(R.months[editYear*12].days||30);
+    (()=>{const bn=new Map();(R.invGroups||[]).forEach(p=>{if(!bn.has(p.name))bn.set(p.name,[]);bn.get(p.name).push(p);});
+    return [...bn.values()].map(gs=>{
+      const p=gs[0];
+      const c=invYear(S,p.id,editYear);
+      const y1=gs.reduce((a,gg)=>a+gg.dem.slice(editYear*12,editYear*12+12).reduce((x,y2)=>x+y2,0),0);
+      const firstOp=gs.reduce((a,gg)=>a+((gg.rows[editYear*12]||{}).openingQty||0),0);
+      const days=R.months[editYear*12].days||30;
+      const daily=gs.reduce((a,gg)=>a+((gg.dem[editYear*12]||0)/days),0);
       const ss=(y1/365)*(c.safety||0);
       const rop=Math.round(daily*(c.lead+30)+ss);
       const target=Math.round(daily*(c.lead+60)+ss);
-      const lot=Math.max(c.moq||0,Math.ceil(Math.max(0,target-first.openingQty)/(c.lot||1))*(c.lot||1));
-      return `<tr><td class="l">${esc(p.name)}</td><td>${(y1/365).toFixed(1)}</td><td>${won(ss)}</td><td>${won(rop)}</td><td>${won(target)}</td><td>${won(lot)}</td></tr>`;
-    }).join('')+`</tbody>`;
+      const lot=Math.max(c.moq||0,Math.ceil(Math.max(0,target-firstOp)/(c.lot||1))*(c.lot||1));
+      const ft=' title="적정재고 산출 · 자동 고정"';
+      return `<tr><td class="l">${esc(p.name)}</td><td class="fx"${ft}>${(y1/365).toFixed(1)}</td><td class="fx"${ft}>${won(ss)}</td><td class="fx"${ft}>${won(rop)}</td><td class="fx"${ft}>${won(target)}</td><td class="fx"${ft}>${won(lot)}</td></tr>`;
+    }).join('');})()+`</tbody>`;
 
 
   const sel=document.getElementById('chartProduct');
@@ -3213,6 +3229,16 @@ renderWorkspace=(()=>{const original=renderWorkspace;return guardRoute(function(
 for(const name of ['init','paint','switchView','resetView','activateDB','newProject','renderFinance','renderValue','renderAssume','renderInvest','renderDemand','renderTree','renderInventory','renderInvSettings','renderCost','demandCsv','download','copyPrevious','setAccountDepth','renderDetailedCF','renderDetailedFCFF','renderWCInputs','renderLinkedAnalysis','refreshFinanceDetails','refreshAnnualUI','syncInputs','drawInvChart','drawCashChart','drawNpvChart','listDocuments','openDocument','uploadDocument','listDB']){
   const fn=eval(name);eval(name+' = guardRoute(fn)');
 }
+let _dragId=null;
+function sibArrayOf(id){
+  let found=null;
+  (function w(list){(list||[]).forEach(n=>{if(n.id===id)found=list;if(n.children&&n.children.length)w(n.children);});})(S.sales.tree);
+  return found;
+}
+document.addEventListener('dragstart',e=>{const h=e.target.closest?e.target.closest('[data-drag]'):null;if(!h)return;_dragId=h.dataset.drag;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',_dragId);}catch(_){}});
+document.addEventListener('dragover',e=>{if(!_dragId)return;const tr=e.target.closest?e.target.closest('#demandTree tr[data-row]'):null;if(!tr)return;const a=sibArrayOf(_dragId),b=sibArrayOf(tr.dataset.row);if(!a||a!==b)return;e.preventDefault();e.dataTransfer.dropEffect='move';$$('.trdrop').forEach(x=>x.classList.remove('trdrop'));tr.classList.add('trdrop');});
+document.addEventListener('drop',e=>{if(!_dragId)return;const tr=e.target.closest?e.target.closest('#demandTree tr[data-row]'):null;$$('.trdrop').forEach(x=>x.classList.remove('trdrop'));if(!tr)return;e.preventDefault();const a=sibArrayOf(_dragId),b=sibArrayOf(tr.dataset.row);if(!a||a!==b){_dragId=null;return;}const from=a.findIndex(x=>x.id===_dragId),to=a.findIndex(x=>x.id===tr.dataset.row);if(from<0||to<0||from===to){_dragId=null;return;}const mv=a.splice(from,1)[0];a.splice(to,0,mv);_dragId=null;saveState();R=compute(S);renderTree();paint();});
+document.addEventListener('dragend',()=>{_dragId=null;$$('.trdrop').forEach(x=>x.classList.remove('trdrop'));});
 function bindGate(){
   document.getElementById('gateForm').addEventListener('submit',gateLogin);
   document.getElementById('gateRetry').addEventListener('click',()=>{if(!window.supabase?.createClient){const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';script.onload=gateConnect;script.onerror=()=>gateLock('로그인 연결 모듈 로드 실패 · 인터넷 연결을 확인하고 재시도하세요.');document.head.append(script);}else gateConnect();});
@@ -3541,21 +3567,6 @@ function renderT0Banner(){
 }
 
 /* ===== T0 판매수요 · T0 채용 표 ===== */
-function renderDemandT0(){
-  const off=t0MonthsOf(S);
-  let host=document.getElementById('demandT0wrap');
-  if(host){host.remove();host=null;}
-  if(!off||currentView!=='demand')return;
-  host=document.createElement('div');host.id='demandT0wrap';host.className='card';
-  const yr2=document.querySelector('#view-demand .card.flush');
-  if(yr2&&yr2.parentNode)yr2.parentNode.insertBefore(host,yr2);else $('#view-demand').appendChild(host);
-  const leaves=[];(function w(a,path){(a||[]).forEach(n=>{const p2=path.concat(n.name);if(n.children&&n.children.length)w(n.children,p2);else leaves.push({n,path:p2});});})(S.sales.tree,[]);
-  const sy=Math.round(num(S.meta.startYear)),sm=smOf(S);
-  const val=(n,i)=>{const a=n.t0months;return Math.max(0,num(a&&a[i]!=null?a[i]:(productYear(n,0).months[sm-1+i]||0)));};
-  const heads=Array.from({length:off},(_,i)=>`<th>T0 ${String(sy).slice(2)}.${sm+i}<span class="u">개</span></th>`).join('');
-  const rows=leaves.map(({n,path})=>`<tr><td class="l">${esc(path.join(' › '))}</td>${Array.from({length:off},(_,i)=>`<td><input class="cell" type="text" inputmode="numeric" data-nt0="${n.id}" data-t0m="${i}" value="${val(n,i)}" aria-label="T0 ${sm+i}월"></td>`).join('')}<td>${won(Array.from({length:off},(_,i)=>val(n,i)*cntM(n.id,smOf(S)+i-1)).reduce((a,b)=>a+b,0))}</td></tr>`).join('');
-  host.innerHTML=`<div class="card-h"><div><h2>T=0 운영 기간 판매수요 · ${t0Label(S)}</h2><p>사업 시작(${sy}.${sm}월)부터 연말까지 ${off}개월. 미입력 시 Y1 같은 달 값을 기본으로 사용합니다.</p></div></div><div class="tablewrap"><table class="tbl" id="demandT0"><thead><tr><th class="l">제품 전체경로</th>${heads}<th>T0 합계<span class="u">개</span></th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
 function renderRankT0(){
   const off=t0MonthsOf(S);
   let host=document.getElementById('rankT0');
@@ -3593,7 +3604,7 @@ document.addEventListener('change',e=>{
 const erExtBase=enforceReadonly;
 enforceReadonly=function(){erExtBase();const cp=$('#copyPrevious');if(cp&&typeof t0Sel!=='undefined'&&t0Sel)cp.disabled=true;};
 const renderExtBase2=renderExtensions;
-renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){console.error(e);}try{renderDemandT0();}catch(e){console.error(e);}try{renderRankT0();}catch(e){console.error(e);}try{injectT0Controls();}catch(e){}};
+renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){console.error(e);}try{renderRankT0();}catch(e){console.error(e);}try{injectT0Controls();}catch(e){}};
 
 /* ===== 전체 표 엑셀식 편집: 범위선택 · 복사 · 붙여넣기 · 삭제 · 수식 (모든 .tbl) ===== */
 (function tableExcel(){
@@ -3704,6 +3715,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
