@@ -2879,12 +2879,14 @@ async function listDB(){
 function activateDB(id){
   requireDB();const row=Workspace.projects.find(p=>p.id===id);if(!row)throw Error('허용된 DB 목록에서 프로젝트를 선택하세요.');
   const converted=convertProject(row.inputs);S=converted.state;S.meta.name=row.name;
-  Workspace.dbId=row.id;Workspace.sourceId=row.id;Workspace.legacy=converted.legacy;Workspace.localId=null;Workspace.isPublic=!!row.is_public;Workspace.docs=[];Workspace.notice=converted.warnings.join('\n');Workspace.dbStatus=converted.legacy?'기존 프로젝트 변환 초안 · 별도 저장만 허용':'DB 프로젝트 불러옴 · 변경사항 없음';
-  Workspace.dbStatus=converted.legacy?'기존 프로젝트 변환 초안 · 별도 저장만 허용':'DB 프로젝트 불러옴 · 변경사항 없음';resetView();saveState();renderWorkspace();
+  Workspace.dbId=row.id;Workspace.sourceId=row.id;Workspace.legacy=converted.legacy;Workspace.localId=null;Workspace.isPublic=!!row.is_public;Workspace.docs=[];Workspace.notice=converted.warnings.join('\n');Workspace.dbStatus=converted.legacy?'기존 구조 변환본 · 저장 시 확인창 후 새 형식으로 이 행 갱신':'DB 프로젝트 불러옴 · 변경사항 없음';
+  Workspace.dbStatus=converted.legacy?'기존 구조 변환본 · 저장 시 확인창 후 새 형식으로 이 행 갱신':'DB 프로젝트 불러옴 · 변경사항 없음';resetView();saveState();renderWorkspace();
 }
 async function saveDB(asNew=false){
   let snapshot,rev;
-  try{requireDB(true);if(Workspace.busy)throw Error('다른 DB 작업이 진행 중입니다.');if(Workspace.legacy&&!asNew)throw Error('기존 구조 원본 덮어쓰기는 차단됩니다. 「DB 다른 이름 저장」을 사용하세요.');
+  try{requireDB(true);if(Workspace.busy)throw Error('다른 DB 작업이 진행 중입니다.');if(Workspace.legacy&&!asNew){
+      if(!confirm('이 프로젝트는 기존(옛) 구조 변환본입니다. 변환된 새 형식으로 이 DB 프로젝트 행을 갱신할까요?\n· 확인 = 변환 형식으로 원본 행 갱신 (옛 원본은 변환본 내부 migration.source에 그대로 보존)\n· 취소 = 저장 중단 · 「DB 다른 이름 저장」으로 새 행을 만드세요'))throw Error('기존 구조 원본 갱신이 취소되었습니다. 저장이 필요하면 「DB 다른 이름 저장」을 사용하세요.');
+    }
     let name=S.meta.name;if(asNew){name=prompt('DB에 새로 저장할 프로젝트 이름',name+' 복사');if(!name?.trim())return;name=name.trim();}
     if(!confirm((asNew||!Workspace.dbId?'새 DB 프로젝트를 생성':'현재 DB 프로젝트를 갱신')+'할까요?'))return;
     Workspace.busy=true;Workspace.dbStatus='DB 저장 중 · 응답 대기';enforceReadonly();updateStatuses();snapshot=ensureState(clone(S));snapshot.meta.name=name;rev=Workspace.revision;
@@ -3714,6 +3716,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
