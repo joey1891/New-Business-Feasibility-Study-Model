@@ -2015,14 +2015,15 @@ function renderTree(){
   })(S.sales.tree,1);
   if(!rows) rows=`<tr><td colspan="21"><div class="empty"><b>매출트리가 비어 있습니다</b>+ 최상위로 수익모델을 추가하세요.</div></td></tr>`;
   const totalQ=R.products.reduce((a,p)=>a+prodQty(p),0);
-   const totalR=R.products.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
+   const totalR=t0Sel?(R.t0?R.t0.rev:0):((R.pl[editYear]||{}).rev||0);
+   const totalRSrc='실제판매 기준(재고 부족분 제외) — 연도별 예상·공통 원장과 동일';
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px"><col style="width:52px">${Array.from({length:12},()=>'<col style="width:52px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
     <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
-    ${Array.from({length:12},(_,i)=>`<th title="입력값은 거래처 1곳당 월 판매 수량 · 연간·매출 열에는 거래처 수 배수가 적용됩니다">${fyMonth(i)}월<span class="u">거래처당</span></th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
+    ${Array.from({length:12},(_,i)=>`<th title="입력값은 거래처 1곳당 월 판매 수량 · 연간·매출 열에는 거래처 수 배수가 적용됩니다">${fyMonth(i)}월<span class="u">거래처당</span></th>`).join('')}<th>연간<span class="u">개</span></th><th title="실제판매 기준 매출 — 재고 부족분은 제외">매출·실제판매<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="4"></td>
      ${Array.from({length:12},(_,i)=>`<td>${won(t0Sel&&(i+1)<smOf(S)?0:R.products.reduce((a,p)=>a+(productYear(p,editYear).months[i]||0)*cntM(p.id,i),0))}</td>`).join('')}
-    <td>${won(totalQ)}</td><td>${man(totalR)}</td><td></td></tr></tfoot>`;
+    <td>${won(totalQ)}</td><td title="${totalRSrc}">${man(totalR)}</td><td></td></tr></tfoot>`;
   const lv=$('#demandLevels');
   const bg=$('#view-demand h2 .badge');if(bg)bg.textContent=t0Sel?'T0 · 개시 시점 월별 직접입력':`Y${editYear+1} 월별 직접입력`;
   if(lv) lv.innerHTML=LEVELS.map((n,i)=>`<span class="lvpill" data-expand-level="${i+1}" role="button" tabindex="0" title="${i+1}단계(${n})까지만 펼치기" style="cursor:pointer"><b>${i+1}</b>${n}</span>`).join('<span class="lvarrow">›</span>')+'<span class="sub" style="margin-left:8px">단계를 누르면 해당 단계까지만 펼쳐집니다</span>';
@@ -3382,7 +3383,7 @@ function renderPeriodResults(){
   const view=$('#view-'+currentView);if(!view)return;let box=$('#periodResults');if(box)box.remove();
   if(!['demand','inventory','cost','finance','value'].includes(currentView))return;
   box=document.createElement('div');box.id='periodResults';box.className='card extended-card';
-  const rows=periodMode==='monthly'?selectedMonthly():R.annualDetail,fields=currentView==='demand'?[['qty','실제판매 · 개',false],['rev','매출 공급가액',true],['salesVAT','매출 부가세',true],['grossBill','총청구액',true]]:currentView==='inventory'?[['ordered','발주 · 개',false],['arrived','입고 · 개',false],['stockQty','기말재고 · 개',false],['inv','기말재고금액',true]]:currentView==='cost'?[...PAY_COMPONENTS.map(([k,n])=>['pay_'+k,n,true]),['payTotal','인건비 합계',true],['sga','판관비·급여제외',true]]:currentView==='finance'?finTab==='cf'?[['ni','당기순이익',true],['dep','상각',true],['cfo','영업현금',true],['cfi','투자현금',true],['cff','재무현금',true],['net','현금증감',true],['begin','기초현금',true],['cash','기말현금',true],['vatPaid','VAT 납부',true],['vatRefund','VAT 환급',true]]:finTab==='bs'?[['cash','현금',true],['ar','AR 세금포함',true],['inv','재고',true],['vatCredit','대급금',true],['ap','AP 세금포함',true],['vatDue','예수금',true],['assets','자산',true],['liab','부채',true],['equity','자본',true],['check','BS검증',true]]:finTab==='mgmt'?[['rev','매출 공급가액',true],['variable','변동비',true],['cm','공헌이익',true],['fixed','고정비',true],['ebit','영업이익',true]]:[['rev','매출 공급가액',true],['salesVAT','매출부가세 (수익아님)',true],['grossBill','총청구액',true],['cogs','매출원가',true],['gp','매출총이익',true],['sga','판관비·급여제외',true],['ebit','영업이익',true],['tax','손익 법인세',true],['ni','당기순이익',true]]:[['nopat','NOPAT',true],['fcff','영업FCFF (TV 제외)',true],['tv','TV 최종기간',true],['flow','FCFF+TV',true],['pv','PV 연말기준 할인',true]];
+  const rows=periodMode==='monthly'?selectedMonthly():R.annualDetail,fields=currentView==='demand'?[['qty','실제판매 · 개',false],['rev','매출액 (부가세 불포함)',true]]:currentView==='inventory'?[['ordered','발주 · 개',false],['arrived','입고 · 개',false],['stockQty','기말재고 · 개',false],['inv','기말재고금액',true]]:currentView==='cost'?[...PAY_COMPONENTS.map(([k,n])=>['pay_'+k,n,true]),['payTotal','인건비 합계',true],['sga','판관비·급여제외',true]]:currentView==='finance'?finTab==='cf'?[['ni','당기순이익',true],['dep','상각',true],['cfo','영업현금',true],['cfi','투자현금',true],['cff','재무현금',true],['net','현금증감',true],['begin','기초현금',true],['cash','기말현금',true],['vatPaid','VAT 납부',true],['vatRefund','VAT 환급',true]]:finTab==='bs'?[['cash','현금',true],['ar','AR 세금포함',true],['inv','재고',true],['vatCredit','대급금',true],['ap','AP 세금포함',true],['vatDue','예수금',true],['assets','자산',true],['liab','부채',true],['equity','자본',true],['check','BS검증',true]]:finTab==='mgmt'?[['rev','매출 공급가액',true],['variable','변동비',true],['cm','공헌이익',true],['fixed','고정비',true],['ebit','영업이익',true]]:[['rev','매출 공급가액',true],['salesVAT','매출부가세 (수익아님)',true],['grossBill','총청구액',true],['cogs','매출원가',true],['gp','매출총이익',true],['sga','판관비·급여제외',true],['ebit','영업이익',true],['tax','손익 법인세',true],['ni','당기순이익',true]]:[['nopat','NOPAT',true],['fcff','영업FCFF (TV 제외)',true],['tv','TV 최종기간',true],['flow','FCFF+TV',true],['pv','PV 연말기준 할인',true]];
   box.innerHTML=`<div class="card-h"><div><h2>${periodMode==='monthly'?'Y'+(editYear+1)+' 선택연도 월별':'전체 사업기간 연도별'} · 공통 원장 보기</h2><p>흐름은 합계, 잔액은 마지막 잔액. 단가 집계는 판매수량 가중평균. 금액: ${unitLabel()} / 입력 원 유지. 월별 FCFF는 연말 할인계수를 동일 적용하므로 월 PV 합계=연간 PV. 월 IRR은 표시하지 않습니다.</p></div><button class="btn sm" id="exportPeriod">현재표 CSV</button></div>`+resultTable(['계정',...rows.map(r=>r.label)],fields.map(([k,n,money])=>[n,...rows.map(r=>money?(r[k]===null?'계산불가':formatMoney(r[k])):won(r[k]))]));
   view.prepend(box);
   box._export={head:['계정',...rows.map(r=>r.label)],rows:fields.map(([k,n,money])=>[n+(money?' ('+unitLabel()+')':''),...rows.map(r=>r[k]===null?'계산불가':money?num(r[k])/MoneyUnits[unitKey()].factor:r[k])])};
@@ -3774,6 +3775,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
