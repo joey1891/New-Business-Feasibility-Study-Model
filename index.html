@@ -454,10 +454,730 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
       <div class="actions no-print">
         <label class="check autosave" title="입력할 때마다 자동 저장합니다"><input type="checkbox" id="autoSaveToggle" checked><span>자동저장</span></label>
         <button class="btn teal" id="btnSaveNow" title="지금 저장합니다 (Ctrl+S)">저장하기</button>
-        <button class="btn ghost" id="btnSample" title="예시 데이터로 되돌립니다">예시 불러오기</button>
-        <button class="btn ghost" id="btnSave" title="JSON 파일로 저장">JSON 저장</button>
-        <label class="btn ghost" for="fileImport" style="margin:0">JSON 열기</label>
-        <input type="file" id="fileImport" accept="application/json,.json" hidden>
+        <button class="btn dark" id="btnPrint">인쇄 / PDF</button>
+      </div>
+    </header>
+    <div class="yearbar no-print"><label for="planYear">선택연도</label><select id="planYear"></select><button class="btn sm" id="copyPrevious">이전연도 입력 복사</button><span id="yearContext"></span></div>
+    <p class="origin-line" id="projectOrigin"></p>
+    <section class="view" id="view-company"><div id="workspaceBody"></div></section>
+
+    <!-- ========== 01 기본 가정 ========== -->
+    <section class="view on" id="view-assume">
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>계획의 뼈대</h2><p>분석 기간과 사업 시작 시점. 사업 시작(예: 2026.11)에서 12월까지가 <b>T0 부분기간</b>이고, <b>이듬해 1월 1일부터 Y1(2027년)·Y2(2028년)… 달력연도</b>로 이어집니다. 판매수요·인원채용·재고는 T0부터 연속 입력됩니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">사업명</span><span class="inp"><input type="text" data-bind="meta.name" placeholder="예: 2027 프리미엄 리빙 사업"></span></label>
+              <label class="field"><span class="lb">사업 시작 연도 (T=0)</span><span class="inp"><input type="number" data-bind="meta.startYear" min="2020" max="2100" step="1"><i>년</i></span><span class="help">이 연도·월부터 Y1(첫 12개월)이 시작됩니다</span></label>
+              <label class="field"><span class="lb">사업 시작 월 (T=0)</span><select data-bind="meta.startMonth" data-num="1"><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select><span class="help">예: 2026년 11월 시작 → T0=2026.11~12월, 이듬해 1월부터 Y1(2027년)</span></label>
+              <label class="field"><span class="lb">분석 기간</span><select data-bind="meta.years" data-num="1"><option value="3">3년</option><option value="4">4년</option><option value="5">5년</option><option value="6">6년</option><option value="7">7년</option></select></label>
+              <label class="field"><span class="lb">금액 표시 단위</span><select disabled><option>상단 결과 단위 선택</option></select><span class="help">입력은 원, 결과는 상단에서 원·백만원·억원 선택</span></label>
+            </div>
+            <div class="divider"></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">법인세율</span><span class="inp"><input type="number" data-bind="assume.taxRate" min="0" max="50" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">자기자본비용 (Ke)</span><span class="inp"><input type="number" data-bind="assume.ke" min="0" max="60" step="0.1"><i>%</i></span><span class="help">주주가 요구하는 최소 수익률</span></label>
+              <label class="field"><span class="lb">할인율 (WACC)</span><select data-bind="assume.waccMode"><option value="auto">자동 — 자본구조에서 계산</option><option value="manual">직접 입력</option></select></label>
+              <label class="field"><span class="lb">직접 입력 WACC</span><span class="inp"><input type="number" data-bind="assume.wacc" min="0" max="60" step="0.1" id="waccInput"><i>%</i></span><span class="help" id="waccHelp">자동 모드 계산값</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>운전자본</h2><p>매출채권 회수·매입채무 지급·재고자산 회전 조건과 최소 운영현금. 인건비·판관비는 05번에서 입력합니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">매출채권 회수기간</span><span class="inp"><input type="number" data-bind="assume.arDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">매입채무 지급기간</span><span class="inp"><input type="number" data-bind="assume.apDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">재고자산 회전기간</span><span class="inp"><input type="text" id="invDaysView" readonly><i>일</i></span><span class="help">04번 재고·발주 계획 기준 자동계산 (평균재고 ÷ 매출원가 × 365)</span></label>
+              <label class="field"><span class="lb">초기 보유현금</span><span class="inp"><input type="text" class="comma" data-bind="assume.openingCash" inputmode="numeric"><i>원</i></span><span class="help">기존 법인 통장 잔액</span></label>
+              <label class="field"><span class="lb">최소 운영현금</span><span class="inp"><input type="number" data-bind="assume.minCashMonths" step="1" min="0"><i>개월치 인건비</i></span><span class="help">현금 고갈 판정 기준</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>잔존가치</h2><p>사업성 TV는 최종 계획연도 값을 사용합니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">잔존가치 방식 · 선택연도 가정</span><select data-bind="assume.tvMode"><option value="none">미포함(0)</option><option value="nav">순자산가치 방식</option><option value="gordon">영구성장모형 방식</option></select><span class="help">사업성 TV는 최종 계획연도 값을 사용합니다.</span></label>
+              <label class="field"><span class="lb">영구성장률 (고든)</span><span class="inp"><input type="number" data-bind="assume.g" step="0.1"><i>%</i></span><span class="help">영구성장 모형 선택 시에만 사용</span></label>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+
+    <!-- ========== 02 초기 투자 ========== -->
+    <section class="view" id="view-invest">
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>t = 0에 나가는 돈</h2><p>영업을 시작하기 전에 집행하는 자금. 사업성 분석의 <b>초기투자액</b>이 바로 이 금액입니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">유형자산 투자 (CAPEX)</span><span class="inp"><input type="text" class="comma" data-bind="invest.capex" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.capexLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
+              <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">04번 현재재고 × 원가 자동계산</span></label>
+              <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">01번 최소 운영현금 개월수 기준</span></label>
+            </div>
+            <div class="divider"></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">자기자본 (자본금)</span><span class="inp"><input type="text" class="comma" data-bind="invest.equity" inputmode="numeric"><i>원</i></span><span class="help">주주가 납입하는 돈</span></label>
+              <label class="field"><span class="lb">타인자본 (차입)</span><span class="inp"><input type="text" class="comma" data-bind="invest.debt" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">차입 금리</span><span class="inp"><input type="number" data-bind="invest.rate" step="0.1" min="0"><i>%</i></span></label>
+              <label class="field"><span class="lb">상환 방식</span><select data-bind="invest.repay"><option value="bullet">만기일시상환 (마지막 연도)</option><option value="equal">원금균등분할</option></select></label>
+            </div>
+            <div class="cap">위 입력은 <b>Y1 첫날(t=0)</b>에 한 번만 반영됩니다. 감가상각은 Y1부터 내용연수 동안 정액으로 계상하고, 차입 이자는 입력 금리를 기준으로 월할 계산합니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>개시 재무상태표</h2><p>조달한 돈이 어디로 갔는지. 자산과 부채·자본이 일치해야 합니다.</p></div><span class="badge ok" id="openingBalBadge">균형</span></div>
+            <div class="tablewrap"><table class="tbl plain" id="openingBS"></table></div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+
+    <!-- ========== 03 판매 수요 ========== -->
+    <section class="view" id="view-demand">
+      <div class="card flush">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">
+          <div>
+            <h2 style="font-size:14px;font-weight:800;letter-spacing:-.02em">9단계 거래처별 제품 판매 수요 <span class="badge teal" style="margin-left:6px">Y1 월별</span></h2>
+            <p style="font-size:11.5px;color:var(--mut);margin-top:2px">수익모델 → 국가 → 브랜드 → 사업영역 → 판매형태 → 채널 → 거래처 → 품목군 → 제품. 9단계 제품의 수량이 04번 재고·발주에 그대로 연결됩니다. 시작월~12월은 <b>T0 전용 표</b>에 입력하고, <b>이듬해 1월부터가 Y1(달력연도)</b>입니다.</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sm" id="btnAddRoot">+ 최상위</button>
+            <button class="btn sm ghost" id="btnAddPayroll" style="display:none">+ 부서</button>
+            <button class="btn sm ghost" id="btnToggleAll">전체 접기</button>
+            <button class="btn sm ghost" id="btnDemandCsv">CSV</button>
+          </div>
+        </div>
+        <div class="lvlegend" id="demandLevels"></div>
+        <div class="table-scroll-tools no-print"><b>21개 열 · 월별 수량은 좌우로 이동해 편집합니다</b><span class="xlhint">모든 표 공통 엑셀식 편집: 셀을 드래그해 범위 선택 → Ctrl+C 복사 · Ctrl+V 붙여넣기(한 값은 선택 전체 채우기) · Delete=비우기 · 수식 입력 지원(예: =3000*2)</span><button class="btn sm" data-demand-scroll="left">분류·단가로 ←</button><button class="btn sm" data-demand-scroll="right">월수량·연간합계로 →</button></div>
+        <div class="tablewrap" id="demandScroll" tabindex="0" aria-label="판매수요 21열 가로 스크롤 영역" style="border:none;border-radius:0;max-height:calc(100vh - 260px);overflow-y:auto">
+          <table class="tbl tree" id="demandTree"></table>
+        </div>
+        <div style="padding:10px 16px 14px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut)">
+          <span>그룹 행의 <b>+</b>는 하위 단계 추가, <b>✕</b>는 가지 전체 삭제입니다. 표는 좌우로 스크롤됩니다. 단가·원가는 <b>원/개</b>, 수량은 <b>개</b>.</span>
+          <span id="demandFootNote"></span>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="card flush">
+        <div style="padding:14px 16px"><div class="card-h" style="padding:0"><div><h2>연도별 예상</h2><p>수요 × 성장률. 재고 부족으로 못 판 수량은 실제 판매에서 제외됩니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ========== 04 재고·발주 ========== -->
+    <section class="view" id="view-inventory">
+      <div class="note green no-print" style="margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+        <div><span class="t">판매 수요와 자동 연동 중</span><span id="invLinkNote">03번 9단계 트리의 판매 수요를 그대로 읽습니다.</span></div>
+        <button class="btn sm teal" data-goto="demand">수요 수정하기</button>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h2><span class="no">01</span>제품별 발주 조건 · 통합 재고</h2><p>리드타임·안전재고·최소발주량만 정하면 발주 시점과 수량이 자동 확정됩니다. 거래처가 여러 곳이어도 재고는 하나로 통합해 계산합니다.</p></div></div>
+        <div id="invStockOpt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 10px"></div>
+        <div class="tablewrap"><table class="tbl" id="invSettings"></table></div>
+        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. 표의 <b>원가·판가</b>는 부가세를 제외한 공급가액입니다(입력 단가는 VAT 포함). <b>현재재고</b>는 t=0 매입액에 포함됩니다. 재고·발주는 <b>거래처와 무관하게 제품 단위로 통합</b>되며, 최소 발주량은 <b>3,000개</b>입니다. 같은 제품을 거래처별로 나눠 입력했다면 초기재고는 합산되어 하나의 재고로 관리됩니다.</div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="two-panel">
+        <div class="card">
+          <div class="card-h"><div><h2>재고 추이와 발주 시점</h2><p>재고가 발주점 아래로 내려가면 그 달에 발주합니다.</p></div>
+            <div class="chart-tools"><select id="chartProduct" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select></div>
+          </div>
+          <div class="chartbox" id="invChart"></div>
+          <div class="legend"><span><i style="background:#12283f"></i>기말 재고</span><span><i style="background:#a33a2b;border-radius:50%"></i>발주</span><span><i style="background:#a9781f"></i>안전재고</span></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h2>월말 현금 vs 최소 운영현금</h2><p>매출채권 회수 지연과 발주 대금이 겹치는 구간을 봅니다.</p></div></div>
+          <div class="chartbox" id="cashChart"></div>
+          <div class="legend"><span><i style="background:#12283f"></i>월말 현금</span><span><i style="background:#a33a2b"></i>최소선 미달</span><span><i style="background:#a9781f"></i>최소 운영현금</span></div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+
+
+      <div class="card">
+        <div class="card-h"><div><h2><span class="no">02</span>월별 재고 원장</h2><p>연도를 고르면 <b>기초재고 · 당기입고 · 당기출고 · 당기재고(증감) · 기말재고 · 발주수량</b>이 즉시 다시 계산됩니다. 거래처와 무관한 통합 재고 기준입니다.</p></div>
+          <div class="chart-tools"><select id="ledgerYear" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select><select id="ledgerGroup" class="sm" style="width:auto;padding:5px 8px;font-size:11px;max-width:190px"></select><button class="btn sm ghost" id="btnLedgerCsv">CSV</button></div>
+        </div>
+        <div class="tablewrap" style="max-height:560px"><table class="tbl" id="invLedger"></table></div>
+        <div class="cap">기말재고 = 기초재고 + 당기입고 − 당기출고. 당기재고는 월중 순증감(당기입고 − 당기출고)입니다. 발주수량은 발주점(일평균×(리드타임+30일)+안전재고)을 밑돌 때 자동 확정된 수량이며, 실제 입고는 리드타임 개월 수만큼 뒤에 반영됩니다.</div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="two-panel">
+        <div class="card"><div class="card-h"><div><h2>적정재고 기준</h2><p>발주점과 1회 발주량의 근거.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
+        <div class="card" id="invDiag"></div>
+      </div>
+    </section>
+
+    <!-- ========== 05 인건비·판관비 ========== -->
+    <section class="view" id="view-cost">
+      <div class="kpis" id="costKpis"></div>
+      <div style="height:14px"></div>
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>부서별 인력 · 인건비 계획</h2><p>부서·인원·급여를 입력하면 4대보험·퇴직충당까지 자동으로 더해집니다. 제조인력은 매출원가로, 나머지는 판관비로 분류됩니다.</p></div>
+              <label class="check side-act" style="white-space:nowrap"><input type="checkbox" data-bind="payroll.enabled">인건비 반영</label>
+            </div>
+            <div class="fgrid" style="margin-bottom:12px">
+              <label class="field"><span class="lb">4대보험률 (사업주)</span><span class="inp"><input type="number" data-bind="payroll.insurance" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">퇴직급여충당률</span><span class="inp"><input type="number" data-bind="payroll.retirement" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">미입력 연도 기본 급여인상률</span><span class="inp"><input type="number" data-bind="payroll.raise" step="0.1"><i>%</i></span><span class="help">직접 입력한 연도는 유지됩니다.</span></label>
+            </div>
+            <div class="tablewrap"><table class="tbl" id="payrollTable"></table></div>
+            <div class="cap">선택연도 인원 × 월급여 × 12 × (1 + 선택연도 보험·퇴직률). <b>매년 증감·급여인상률은 미입력 연도의 기본값</b>이며, 직접 입력한 연도는 바뀌지 않습니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>인건비성 경비</h2><p>급여·4대보험·<b>퇴직금</b>·복리후생 등 인건비성 경비를 판매비와 관리비와 별도 계정으로 분리해 관리합니다. 금액은 부서·직급표(01번)에서 입력합니다.</p></div></div>
+            <div class="tablewrap"><table class="tbl" id="laborCostTable"></table></div>
+            <div class="cap">퇴직급여충당(퇴직금)이 포함됩니다. 제조 인력은 매출원가로, 판매·관리 인력은 판관비로 분류됩니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>판매비와 관리비</h2><p>변동비 · 고정비 · 준변동비 순으로 구분합니다. 여비교통비·수도광열비·통신비는 고정비에 포함됩니다. 변동비는 매출에 비례하고, 나머지는 인상률만큼 오릅니다.</p></div></div>
+            <div class="sub-h">변동비 (매출 대비)</div>
+            <div style="margin:-4px 0 6px;font-size:10.5px;color:#8a99ab">매출%로 입력하면 매출에 비례해 자동 계산됩니다.</div>
+            <div class="tablewrap"><table class="tbl" id="sgaVar"></table></div>
+            <div class="sub-h" style="margin-top:14px">고정비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaFixed"></table></div>
+            <div class="sub-h" style="margin-top:14px">준변동비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaSemi"></table></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">04</span>영업외 수익 · 비용</h2><p>이자비용은 02번 차입에서 자동 계산되므로 여기에 넣지 마세요. 비현금 항목은 현금흐름표에서 조정됩니다.</p></div></div>
+            <div class="two-panel">
+              <div><div class="sub-h">영업외 수익</div><div class="tablewrap"><table class="tbl" id="nonopInc"></table></div></div>
+              <div><div class="sub-h">영업외 비용</div><div class="tablewrap"><table class="tbl" id="nonopExp"></table></div></div>
+            </div>
+            <div class="two-panel" style="margin-top:14px"><div><div class="sub-h">비현금 수익</div><div class="tablewrap"><table class="tbl" id="nonopIncNC"></table></div></div><div><div class="sub-h">비현금 비용</div><div class="tablewrap"><table class="tbl" id="nonopExpNC"></table></div></div></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== 06 재무제표 ========== -->
+    <section class="view" id="view-finance">
+      <div class="card flush">
+        <div class="ftabs" id="finTabs">
+          <button class="ftab on" data-stmt="pl">손익계산서</button>
+          <button class="ftab" data-stmt="mgmt">관리회계 손익</button>
+          <button class="ftab" data-stmt="cf">현금흐름표</button>
+          <button class="ftab" data-stmt="bs">재무상태표</button>
+          <button class="ftab" data-stmt="ratio">재무비율</button>
+        </div>
+        <div style="padding:16px 18px 6px" class="stmt-head">
+          <div><h3 id="stmtTitle">손익계산서</h3><p id="stmtDesc">발생주의 기준.</p></div>
+          <div class="badge neutral" id="stmtUnit">상단 선택 단위</div>
+        </div>
+        <div class="tablewrap" style="border:none;border-radius:0;border-top:1px solid var(--line2)">
+          <table class="tbl" id="stmtTable"></table>
+        </div>
+        <div style="padding:12px 18px 16px"><div class="note" id="stmtNote"></div></div>
+      </div>
+    </section>
+
+    <!-- ========== 07 사업성 ========== -->
+    <section class="view" id="view-value">
+      <div id="valVerdict" style="margin-bottom:14px"></div>
+      <div class="hero-val">
+        <div class="hero-left">
+          <p class="eyebrow">PROJECT NPV</p>
+          <div class="big" id="npvBig">—<small>원</small></div>
+          <p class="cap2" id="npvCap">t=0 초기투자액을 반영한 순현재가치</p>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap" id="npvBadges"></div>
+          <div class="npv-break" id="npvBreak"></div>
+        </div>
+        <div class="hero-right" id="valCells"></div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2>투자 현금흐름</h2><p>t=0 초기투자 → 매년 FCFF → 잔존가치. 할인 후 누적이 0을 넘는 시점이 회수기간입니다.</p></div></div>
+            <div class="chartbox" id="npvChart"></div>
+            <div class="legend"><span><i style="background:#12283f"></i>FCFF</span><span><i style="background:#0e6e63"></i>누적 PV</span></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>연도별 타당성 원장</h2><p>FCFF = NOPAT + 감가상각 − CAPEX − 순운전자본 증가.</p></div></div>
+            <div class="tablewrap"><table class="tbl plain" id="fcfTable"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>세그먼트별 수익성</h2><p>9단계 트리의 상위 분류별 매출·매출총이익·비중.</p></div>
+              <div class="chart-tools"><select id="segSelect" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select></div>
+            </div>
+            <div class="tablewrap"><table class="tbl plain" id="segTable"></table></div>
+          </div>
+        </div>
+        <aside class="rail">
+          <div class="card">
+            <div class="card-h"><div><h2>민감도</h2><p>단가·수량·원가·할인율이 흔들릴 때 NPV와 IRR.</p></div></div>
+            <div class="tablewrap"><table class="tbl plain" id="sensTable"></table></div>
+            <div class="cap">기준 대비 하나씩만 변화시킨 단일 변수 분석입니다.</div>
+          </div>
+          <div class="card" id="bepBox"></div>
+          <div class="card" id="valDiag"></div>
+          <div class="note amber" id="valFixNote">
+            <span class="t">초기투자 반영 방식</span>
+            t=0 행에 <b>CAPEX + 무형자산 + 초기재고</b>를 한 번에 넣고, 자본금·차입은 <b>재무활동</b>으로만 표시합니다. 그래서 NPV가 부풀지 않고, 현금흐름표에서도 초기 투자금이 보입니다.
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status"></div>
+</template><div id="appHost" hidden></div>
+
+<script></script>
+
+<style>
+/* ===== 보고서 규격 · 전 섹션 표 크기 통일 ===== */
+.tbl thead th{height:36px;padding:8px 10px;font-size:12px;line-height:1.2;white-space:nowrap}
+.tbl tbody td{height:34px;padding:7px 10px;font-size:12px;line-height:1.25}
+.tbl tbody td input.cell{height:28px;padding:4px 6px;font-size:12px}
+.tbl tbody td input.cell.dim,.cell.dim{background:var(--tealSoft);color:var(--mut)}
+.extended-result thead th{height:36px;padding:8px 10px;font-size:12px}
+.extended-result tbody td{height:34px;padding:7px 10px;font-size:12px}
+#periodResults .extended-result td{height:34px}
+.card-h h2{font-size:14px;line-height:1.3}
+.card-h p{font-size:11.5px;line-height:1.45}
+.kv{padding:6px 0;font-size:12.5px}
+.t0note{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 14px;font-size:12.5px}
+.t0note .t{font-weight:700;white-space:nowrap}
+.t0note .kvs{display:flex;flex-wrap:wrap;gap:6px 12px}
+.t0note .kv2{white-space:nowrap;color:var(--mut);font-size:12px}
+.t0note .kv2 b{color:var(--ink);margin-left:4px}
+</style>
+<style>
+#demandTree thead th{position:sticky;top:0;z-index:4;background:#f3f6f9}
+#demandTree thead th.sticky{z-index:5}
+input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:center}
+button.mv{border:1px solid var(--line2);background:#fff;border-radius:4px;font-size:9px;line-height:1;padding:2px 4px;cursor:pointer;color:#5a6b7d;margin-left:3px}
+button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
+.tsum{font-size:10px;font-weight:700;color:#0f6f66;background:#e6f3f1;padding:1px 5px;border-radius:3px;margin-left:4px;white-space:nowrap}
+.dnd{cursor:grab;color:#8aa0b4;font-size:12px;padding:0 4px;user-select:none}
+#demandTree tr.trdrop td{background:#e6f3f1!important}
+.fixedcell{background:#eef3f8}
+.tbl td.fx{background:#eef3f8}
+#minCashView,#invDaysView{background:#faf3dc!important;border-color:#e3d6a8}
+</style>
+</head>
+
+<body>
+<section id="authGate" class="auth-gate" aria-label="로그인 및 승인 확인"><div class="gate-card"><span class="gate-mark">사업타당성 플래너</span><h1>로그인 후 시작하세요</h1><p>승인된 계정만 프로젝트와 기업자료에 접근할 수 있습니다.</p><p id="gateStatus" class="gate-status" role="status" aria-live="polite">세션 복원 중 · 승인 확인 전까지 자료가 잠겨 있습니다.</p><form id="gateForm" autocomplete="off"><label>이메일<input id="gateEmail" type="email" required autocomplete="off"></label><label>비밀번호<input id="gatePassword" type="password" required autocomplete="off"></label><button class="btn dark" type="submit">로그인 및 승인 확인</button></form><button id="gateRetry" class="btn">연결·세션 다시 확인</button><p class="gate-security">이 화면은 앱의 접근 절차입니다. 정적 HTML의 소스·개발도구까지 차단하는 보안 경계가 아닙니다. 비공개 DB·파일의 실제 보호는 서버 RLS·Storage 정책에 달려 있습니다.</p></div></section>
+<template id="appTemplate"><div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#eaf6f4" stroke-width="1.7"><path d="M4 19V7l5-3 5 3v12"/><path d="M14 19V9l6 3v7"/><path d="M2 19h20"/><path d="M8 9v2M8 13v2"/></svg></span>
+      <div><b>사업타당성 플래너</b><small>DEMAND → STOCK → CASH</small></div>
+    </div>
+    <div class="projbox">
+      <span class="cap">PROJECT</span>
+      <input id="projName" type="text" value="" placeholder="사업명" aria-label="사업명">
+    </div>
+    <nav id="nav" aria-label="단계 이동">
+      <button class="navbtn" data-view="company"><span class="n">P</span><span><span class="t">프로젝트 · 기업자료</span><span class="d">로컬 · DB · 문서 연결</span></span></button>
+      <button class="navbtn on" data-view="assume"><span class="n">01</span><span><span class="t">기본 가정</span><span class="d">기간 · 할인율 · 운전자본</span></span></button>
+      <button class="navbtn" data-view="invest"><span class="n">02</span><span><span class="t">초기 투자</span><span class="d">자본금 · 차입 · CAPEX</span></span></button>
+      <button class="navbtn" data-view="demand"><span class="n">03</span><span><span class="t">판매 수요</span><span class="d">9단계 매출트리</span></span></button>
+      <button class="navbtn" data-view="inventory"><span class="n">04</span><span><span class="t">재고 · 발주</span><span class="d">수요 연동 자동 발주</span></span></button>
+      <button class="navbtn" data-view="cost"><span class="n">05</span><span><span class="t">인건비 · 판관비</span><span class="d">부서 · 고정 · 변동 · 영업외</span></span></button>
+      <button class="navbtn" data-view="finance"><span class="n">06</span><span><span class="t">재무제표</span><span class="d">손익 · 관리회계 · 현금 · 재무상태</span></span></button>
+      <button class="navbtn" data-view="value"><span class="n">07</span><span><span class="t">사업성 분석</span><span class="d">NPV · IRR · 세그먼트</span></span></button>
+    </nav>
+    <div class="side-note">
+      <b>계산 순서</b>
+      9단계 판매 수요 → 재고·발주 → 인건비·판관비 → 손익 → 현금 → NPV. 모든 화면이 같은 원장을 읽습니다.
+    </div>
+    <div class="sidefoot"><span class="dot"></span><span id="saveState">로컬 미저장</span><br>DB는 작업영역에서 명시적 저장</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="eyebrow">01 / 07</p>
+        <h1 id="pageTitle">기본 가정</h1>
+        <p class="desc" id="pageDesc"></p>
+      </div>
+      <div class="actions no-print">
+        <label class="check autosave" title="입력할 때마다 자동 저장합니다"><input type="checkbox" id="autoSaveToggle" checked><span>자동저장</span></label>
+        <button class="btn teal" id="btnSaveNow" title="지금 저장합니다 (Ctrl+S)">저장하기</button>
+        <button class="btn dark" id="btnPrint">인쇄 / PDF</button>
+      </div>
+    </header>
+    <div class="yearbar no-print"><label for="planYear">선택연도</label><select id="planYear"></select><button class="btn sm" id="copyPrevious">이전연도 입력 복사</button><span id="yearContext"></span></div>
+    <p class="origin-line" id="projectOrigin"></p>
+    <section class="view" id="view-company"><div id="workspaceBody"></div></section>
+
+    <!-- ========== 01 기본 가정 ========== -->
+    <section class="view on" id="view-assume">
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>계획의 뼈대</h2><p>분석 기간과 사업 시작 시점. 사업 시작(예: 2026.11)에서 12월까지가 <b>T0 부분기간</b>이고, <b>이듬해 1월 1일부터 Y1(2027년)·Y2(2028년)… 달력연도</b>로 이어집니다. 판매수요·인원채용·재고는 T0부터 연속 입력됩니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">사업명</span><span class="inp"><input type="text" data-bind="meta.name" placeholder="예: 2027 프리미엄 리빙 사업"></span></label>
+              <label class="field"><span class="lb">사업 시작 연도 (T=0)</span><span class="inp"><input type="number" data-bind="meta.startYear" min="2020" max="2100" step="1"><i>년</i></span><span class="help">이 연도·월부터 Y1(첫 12개월)이 시작됩니다</span></label>
+              <label class="field"><span class="lb">사업 시작 월 (T=0)</span><select data-bind="meta.startMonth" data-num="1"><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select><span class="help">예: 2026년 11월 시작 → T0=2026.11~12월, 이듬해 1월부터 Y1(2027년)</span></label>
+              <label class="field"><span class="lb">분석 기간</span><select data-bind="meta.years" data-num="1"><option value="3">3년</option><option value="4">4년</option><option value="5">5년</option><option value="6">6년</option><option value="7">7년</option></select></label>
+              <label class="field"><span class="lb">금액 표시 단위</span><select disabled><option>상단 결과 단위 선택</option></select><span class="help">입력은 원, 결과는 상단에서 원·백만원·억원 선택</span></label>
+            </div>
+            <div class="divider"></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">법인세율</span><span class="inp"><input type="number" data-bind="assume.taxRate" min="0" max="50" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">자기자본비용 (Ke)</span><span class="inp"><input type="number" data-bind="assume.ke" min="0" max="60" step="0.1"><i>%</i></span><span class="help">주주가 요구하는 최소 수익률</span></label>
+              <label class="field"><span class="lb">할인율 (WACC)</span><select data-bind="assume.waccMode"><option value="auto">자동 — 자본구조에서 계산</option><option value="manual">직접 입력</option></select></label>
+              <label class="field"><span class="lb">직접 입력 WACC</span><span class="inp"><input type="number" data-bind="assume.wacc" min="0" max="60" step="0.1" id="waccInput"><i>%</i></span><span class="help" id="waccHelp">자동 모드 계산값</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>운전자본</h2><p>매출채권 회수·매입채무 지급·재고자산 회전 조건과 최소 운영현금. 인건비·판관비는 05번에서 입력합니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">매출채권 회수기간</span><span class="inp"><input type="number" data-bind="assume.arDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">매입채무 지급기간</span><span class="inp"><input type="number" data-bind="assume.apDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">재고자산 회전기간</span><span class="inp"><input type="text" id="invDaysView" readonly><i>일</i></span><span class="help">04번 재고·발주 계획 기준 자동계산 (평균재고 ÷ 매출원가 × 365)</span></label>
+              <label class="field"><span class="lb">초기 보유현금</span><span class="inp"><input type="text" class="comma" data-bind="assume.openingCash" inputmode="numeric"><i>원</i></span><span class="help">기존 법인 통장 잔액</span></label>
+              <label class="field"><span class="lb">최소 운영현금</span><span class="inp"><input type="number" data-bind="assume.minCashMonths" step="1" min="0"><i>개월치 인건비</i></span><span class="help">현금 고갈 판정 기준</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>잔존가치</h2><p>사업성 TV는 최종 계획연도 값을 사용합니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">잔존가치 방식 · 선택연도 가정</span><select data-bind="assume.tvMode"><option value="none">미포함(0)</option><option value="nav">순자산가치 방식</option><option value="gordon">영구성장모형 방식</option></select><span class="help">사업성 TV는 최종 계획연도 값을 사용합니다.</span></label>
+              <label class="field"><span class="lb">영구성장률 (고든)</span><span class="inp"><input type="number" data-bind="assume.g" step="0.1"><i>%</i></span><span class="help">영구성장 모형 선택 시에만 사용</span></label>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+
+    <!-- ========== 02 초기 투자 ========== -->
+    <section class="view" id="view-invest">
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>t = 0에 나가는 돈</h2><p>영업을 시작하기 전에 집행하는 자금. 사업성 분석의 <b>초기투자액</b>이 바로 이 금액입니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">유형자산 투자 (CAPEX)</span><span class="inp"><input type="text" class="comma" data-bind="invest.capex" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.capexLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
+              <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">04번 현재재고 × 원가 자동계산</span></label>
+              <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">01번 최소 운영현금 개월수 기준</span></label>
+            </div>
+            <div class="divider"></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">자기자본 (자본금)</span><span class="inp"><input type="text" class="comma" data-bind="invest.equity" inputmode="numeric"><i>원</i></span><span class="help">주주가 납입하는 돈</span></label>
+              <label class="field"><span class="lb">타인자본 (차입)</span><span class="inp"><input type="text" class="comma" data-bind="invest.debt" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">차입 금리</span><span class="inp"><input type="number" data-bind="invest.rate" step="0.1" min="0"><i>%</i></span></label>
+              <label class="field"><span class="lb">상환 방식</span><select data-bind="invest.repay"><option value="bullet">만기일시상환 (마지막 연도)</option><option value="equal">원금균등분할</option></select></label>
+            </div>
+            <div class="cap">위 입력은 <b>Y1 첫날(t=0)</b>에 한 번만 반영됩니다. 감가상각은 Y1부터 내용연수 동안 정액으로 계상하고, 차입 이자는 입력 금리를 기준으로 월할 계산합니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>개시 재무상태표</h2><p>조달한 돈이 어디로 갔는지. 자산과 부채·자본이 일치해야 합니다.</p></div><span class="badge ok" id="openingBalBadge">균형</span></div>
+            <div class="tablewrap"><table class="tbl plain" id="openingBS"></table></div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+
+    <!-- ========== 03 판매 수요 ========== -->
+    <section class="view" id="view-demand">
+      <div class="card flush">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">
+          <div>
+            <h2 style="font-size:14px;font-weight:800;letter-spacing:-.02em">9단계 거래처별 제품 판매 수요 <span class="badge teal" style="margin-left:6px">Y1 월별</span></h2>
+            <p style="font-size:11.5px;color:var(--mut);margin-top:2px">수익모델 → 국가 → 브랜드 → 사업영역 → 판매형태 → 채널 → 거래처 → 품목군 → 제품. 9단계 제품의 수량이 04번 재고·발주에 그대로 연결됩니다. 시작월~12월은 <b>T0 전용 표</b>에 입력하고, <b>이듬해 1월부터가 Y1(달력연도)</b>입니다.</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sm" id="btnAddRoot">+ 최상위</button>
+            <button class="btn sm ghost" id="btnAddPayroll" style="display:none">+ 부서</button>
+            <button class="btn sm ghost" id="btnToggleAll">전체 접기</button>
+            <button class="btn sm ghost" id="btnDemandCsv">CSV</button>
+          </div>
+        </div>
+        <div class="lvlegend" id="demandLevels"></div>
+        <div class="table-scroll-tools no-print"><b>21개 열 · 월별 수량은 좌우로 이동해 편집합니다</b><span class="xlhint">모든 표 공통 엑셀식 편집: 셀을 드래그해 범위 선택 → Ctrl+C 복사 · Ctrl+V 붙여넣기(한 값은 선택 전체 채우기) · Delete=비우기 · 수식 입력 지원(예: =3000*2)</span><button class="btn sm" data-demand-scroll="left">분류·단가로 ←</button><button class="btn sm" data-demand-scroll="right">월수량·연간합계로 →</button></div>
+        <div class="tablewrap" id="demandScroll" tabindex="0" aria-label="판매수요 21열 가로 스크롤 영역" style="border:none;border-radius:0;max-height:calc(100vh - 260px);overflow-y:auto">
+          <table class="tbl tree" id="demandTree"></table>
+        </div>
+        <div style="padding:10px 16px 14px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut)">
+          <span>그룹 행의 <b>+</b>는 하위 단계 추가, <b>✕</b>는 가지 전체 삭제입니다. 표는 좌우로 스크롤됩니다. 단가·원가는 <b>원/개</b>, 수량은 <b>개</b>.</span>
+          <span id="demandFootNote"></span>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="card flush">
+        <div style="padding:14px 16px"><div class="card-h" style="padding:0"><div><h2>연도별 예상</h2><p>수요 × 성장률. 재고 부족으로 못 판 수량은 실제 판매에서 제외됩니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ========== 04 재고·발주 ========== -->
+    <section class="view" id="view-inventory">
+      <div class="note green no-print" style="margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+        <div><span class="t">판매 수요와 자동 연동 중</span><span id="invLinkNote">03번 9단계 트리의 판매 수요를 그대로 읽습니다.</span></div>
+        <button class="btn sm teal" data-goto="demand">수요 수정하기</button>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h2><span class="no">01</span>제품별 발주 조건 · 통합 재고</h2><p>리드타임·안전재고·최소발주량만 정하면 발주 시점과 수량이 자동 확정됩니다. 거래처가 여러 곳이어도 재고는 하나로 통합해 계산합니다.</p></div></div>
+        <div id="invStockOpt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 10px"></div>
+        <div class="tablewrap"><table class="tbl" id="invSettings"></table></div>
+        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. 표의 <b>원가·판가</b>는 부가세를 제외한 공급가액입니다(입력 단가는 VAT 포함). <b>현재재고</b>는 t=0 매입액에 포함됩니다. 재고·발주는 <b>거래처와 무관하게 제품 단위로 통합</b>되며, 최소 발주량은 <b>3,000개</b>입니다. 같은 제품을 거래처별로 나눠 입력했다면 초기재고는 합산되어 하나의 재고로 관리됩니다.</div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="two-panel">
+        <div class="card">
+          <div class="card-h"><div><h2>재고 추이와 발주 시점</h2><p>재고가 발주점 아래로 내려가면 그 달에 발주합니다.</p></div>
+            <div class="chart-tools"><select id="chartProduct" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select></div>
+          </div>
+          <div class="chartbox" id="invChart"></div>
+          <div class="legend"><span><i style="background:#12283f"></i>기말 재고</span><span><i style="background:#a33a2b;border-radius:50%"></i>발주</span><span><i style="background:#a9781f"></i>안전재고</span></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h2>월말 현금 vs 최소 운영현금</h2><p>매출채권 회수 지연과 발주 대금이 겹치는 구간을 봅니다.</p></div></div>
+          <div class="chartbox" id="cashChart"></div>
+          <div class="legend"><span><i style="background:#12283f"></i>월말 현금</span><span><i style="background:#a33a2b"></i>최소선 미달</span><span><i style="background:#a9781f"></i>최소 운영현금</span></div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+
+
+      <div class="card">
+        <div class="card-h"><div><h2><span class="no">02</span>월별 재고 원장</h2><p>연도를 고르면 <b>기초재고 · 당기입고 · 당기출고 · 당기재고(증감) · 기말재고 · 발주수량</b>이 즉시 다시 계산됩니다. 거래처와 무관한 통합 재고 기준입니다.</p></div>
+          <div class="chart-tools"><select id="ledgerYear" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select><select id="ledgerGroup" class="sm" style="width:auto;padding:5px 8px;font-size:11px;max-width:190px"></select><button class="btn sm ghost" id="btnLedgerCsv">CSV</button></div>
+        </div>
+        <div class="tablewrap" style="max-height:560px"><table class="tbl" id="invLedger"></table></div>
+        <div class="cap">기말재고 = 기초재고 + 당기입고 − 당기출고. 당기재고는 월중 순증감(당기입고 − 당기출고)입니다. 발주수량은 발주점(일평균×(리드타임+30일)+안전재고)을 밑돌 때 자동 확정된 수량이며, 실제 입고는 리드타임 개월 수만큼 뒤에 반영됩니다.</div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="two-panel">
+        <div class="card"><div class="card-h"><div><h2>적정재고 기준</h2><p>발주점과 1회 발주량의 근거.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
+        <div class="card" id="invDiag"></div>
+      </div>
+    </section>
+
+    <!-- ========== 05 인건비·판관비 ========== -->
+    <section class="view" id="view-cost">
+      <div class="kpis" id="costKpis"></div>
+      <div style="height:14px"></div>
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>부서별 인력 · 인건비 계획</h2><p>부서·인원·급여를 입력하면 4대보험·퇴직충당까지 자동으로 더해집니다. 제조인력은 매출원가로, 나머지는 판관비로 분류됩니다.</p></div>
+              <label class="check side-act" style="white-space:nowrap"><input type="checkbox" data-bind="payroll.enabled">인건비 반영</label>
+            </div>
+            <div class="fgrid" style="margin-bottom:12px">
+              <label class="field"><span class="lb">4대보험률 (사업주)</span><span class="inp"><input type="number" data-bind="payroll.insurance" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">퇴직급여충당률</span><span class="inp"><input type="number" data-bind="payroll.retirement" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">미입력 연도 기본 급여인상률</span><span class="inp"><input type="number" data-bind="payroll.raise" step="0.1"><i>%</i></span><span class="help">직접 입력한 연도는 유지됩니다.</span></label>
+            </div>
+            <div class="tablewrap"><table class="tbl" id="payrollTable"></table></div>
+            <div class="cap">선택연도 인원 × 월급여 × 12 × (1 + 선택연도 보험·퇴직률). <b>매년 증감·급여인상률은 미입력 연도의 기본값</b>이며, 직접 입력한 연도는 바뀌지 않습니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>인건비성 경비</h2><p>급여·4대보험·<b>퇴직금</b>·복리후생 등 인건비성 경비를 판매비와 관리비와 별도 계정으로 분리해 관리합니다. 금액은 부서·직급표(01번)에서 입력합니다.</p></div></div>
+            <div class="tablewrap"><table class="tbl" id="laborCostTable"></table></div>
+            <div class="cap">퇴직급여충당(퇴직금)이 포함됩니다. 제조 인력은 매출원가로, 판매·관리 인력은 판관비로 분류됩니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>판매비와 관리비</h2><p>변동비 · 고정비 · 준변동비 순으로 구분합니다. 여비교통비·수도광열비·통신비는 고정비에 포함됩니다. 변동비는 매출에 비례하고, 나머지는 인상률만큼 오릅니다.</p></div></div>
+            <div class="sub-h">변동비 (매출 대비)</div>
+            <div style="margin:-4px 0 6px;font-size:10.5px;color:#8a99ab">매출%로 입력하면 매출에 비례해 자동 계산됩니다.</div>
+            <div class="tablewrap"><table class="tbl" id="sgaVar"></table></div>
+            <div class="sub-h" style="margin-top:14px">고정비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaFixed"></table></div>
+            <div class="sub-h" style="margin-top:14px">준변동비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaSemi"></table></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">04</span>영업외 수익 · 비용</h2><p>이자비용은 02번 차입에서 자동 계산되므로 여기에 넣지 마세요. 비현금 항목은 현금흐름표에서 조정됩니다.</p></div></div>
+            <div class="two-panel">
+              <div><div class="sub-h">영업외 수익</div><div class="tablewrap"><table class="tbl" id="nonopInc"></table></div></div>
+              <div><div class="sub-h">영업외 비용</div><div class="tablewrap"><table class="tbl" id="nonopExp"></table></div></div>
+            </div>
+            <div class="two-panel" style="margin-top:14px"><div><div class="sub-h">비현금 수익</div><div class="tablewrap"><table class="tbl" id="nonopIncNC"></table></div></div><div><div class="sub-h">비현금 비용</div><div class="tablewrap"><table class="tbl" id="nonopExpNC"></table></div></div></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== 06 재무제표 ========== -->
+    <section class="view" id="view-finance">
+      <div class="card flush">
+        <div class="ftabs" id="finTabs">
+          <button class="ftab on" data-stmt="pl">손익계산서</button>
+          <button class="ftab" data-stmt="mgmt">관리회계 손익</button>
+          <button class="ftab" data-stmt="cf">현금흐름표</button>
+          <button class="ftab" data-stmt="bs">재무상태표</button>
+          <button class="ftab" data-stmt="ratio">재무비율</button>
+        </div>
+        <div style="padding:16px 18px 6px" class="stmt-head">
+          <div><h3 id="stmtTitle">손익계산서</h3><p id="stmtDesc">발생주의 기준.</p></div>
+          <div class="badge neutral" id="stmtUnit">상단 선택 단위</div>
+        </div>
+        <div class="tablewrap" style="border:none;border-radius:0;border-top:1px solid var(--line2)">
+          <table class="tbl" id="stmtTable"></table>
+        </div>
+        <div style="padding:12px 18px 16px"><div class="note" id="stmtNote"></div></div>
+      </div>
+    </section>
+
+    <!-- ========== 07 사업성 ========== -->
+    <section class="view" id="view-value">
+      <div id="valVerdict" style="margin-bottom:14px"></div>
+      <div class="hero-val">
+        <div class="hero-left">
+          <p class="eyebrow">PROJECT NPV</p>
+          <div class="big" id="npvBig">—<small>원</small></div>
+          <p class="cap2" id="npvCap">t=0 초기투자액을 반영한 순현재가치</p>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap" id="npvBadges"></div>
+          <div class="npv-break" id="npvBreak"></div>
+        </div>
+        <div class="hero-right" id="valCells"></div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2>투자 현금흐름</h2><p>t=0 초기투자 → 매년 FCFF → 잔존가치. 할인 후 누적이 0을 넘는 시점이 회수기간입니다.</p></div></div>
+            <div class="chartbox" id="npvChart"></div>
+            <div class="legend"><span><i style="background:#12283f"></i>FCFF</span><span><i style="background:#0e6e63"></i>누적 PV</span></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>연도별 타당성 원장</h2><p>FCFF = NOPAT + 감가상각 − CAPEX − 순운전자본 증가.</p></div></div>
+            <div class="tablewrap"><table class="tbl plain" id="fcfTable"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>세그먼트별 수익성</h2><p>9단계 트리의 상위 분류별 매출·매출총이익·비중.</p></div>
+              <div class="chart-tools"><select id="segSelect" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select></div>
+            </div>
+            <div class="tablewrap"><table class="tbl plain" id="segTable"></table></div>
+          </div>
+        </div>
+        <aside class="rail">
+          <div class="card">
+            <div class="card-h"><div><h2>민감도</h2><p>단가·수량·원가·할인율이 흔들릴 때 NPV와 IRR.</p></div></div>
+            <div class="tablewrap"><table class="tbl plain" id="sensTable"></table></div>
+            <div class="cap">기준 대비 하나씩만 변화시킨 단일 변수 분석입니다.</div>
+          </div>
+          <div class="card" id="bepBox"></div>
+          <div class="card" id="valDiag"></div>
+          <div class="note amber" id="valFixNote">
+            <span class="t">초기투자 반영 방식</span>
+            t=0 행에 <b>CAPEX + 무형자산 + 초기재고</b>를 한 번에 넣고, 자본금·차입은 <b>재무활동</b>으로만 표시합니다. 그래서 NPV가 부풀지 않고, 현금흐름표에서도 초기 투자금이 보입니다.
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status"></div>
+</template><div id="appHost" hidden></div>
+
+<script></script>
+
+<style>
+/* ===== 보고서 규격 · 전 섹션 표 크기 통일 ===== */
+.tbl thead th{height:36px;padding:8px 10px;font-size:12px;line-height:1.2;white-space:nowrap}
+.tbl tbody td{height:34px;padding:7px 10px;font-size:12px;line-height:1.25}
+.tbl tbody td input.cell{height:28px;padding:4px 6px;font-size:12px}
+.tbl tbody td input.cell.dim,.cell.dim{background:var(--tealSoft);color:var(--mut)}
+.extended-result thead th{height:36px;padding:8px 10px;font-size:12px}
+.extended-result tbody td{height:34px;padding:7px 10px;font-size:12px}
+#periodResults .extended-result td{height:34px}
+.card-h h2{font-size:14px;line-height:1.3}
+.card-h p{font-size:11.5px;line-height:1.45}
+.kv{padding:6px 0;font-size:12.5px}
+.t0note{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 14px;font-size:12.5px}
+.t0note .t{font-weight:700;white-space:nowrap}
+.t0note .kvs{display:flex;flex-wrap:wrap;gap:6px 12px}
+.t0note .kv2{white-space:nowrap;color:var(--mut);font-size:12px}
+.t0note .kv2 b{color:var(--ink);margin-left:4px}
+</style>
+<style>
+#demandTree thead th{position:sticky;top:0;z-index:4;background:#f3f6f9}
+#demandTree thead th.sticky{z-index:5}
+input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:center}
+button.mv{border:1px solid var(--line2);background:#fff;border-radius:4px;font-size:9px;line-height:1;padding:2px 4px;cursor:pointer;color:#5a6b7d;margin-left:3px}
+button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
+.tsum{font-size:10px;font-weight:700;color:#0f6f66;background:#e6f3f1;padding:1px 5px;border-radius:3px;margin-left:4px;white-space:nowrap}
+.dnd{cursor:grab;color:#8aa0b4;font-size:12px;padding:0 4px;user-select:none}
+#demandTree tr.trdrop td{background:#e6f3f1!important}
+.fixedcell{background:#eef3f8}
+.tbl td.fx{background:#eef3f8}
+#minCashView,#invDaysView{background:#faf3dc!important;border-color:#e3d6a8}
+</style>
+</head>
+
+<body>
+<section id="authGate" class="auth-gate" aria-label="로그인 및 승인 확인"><div class="gate-card"><span class="gate-mark">사업타당성 플래너</span><h1>로그인 후 시작하세요</h1><p>승인된 계정만 프로젝트와 기업자료에 접근할 수 있습니다.</p><p id="gateStatus" class="gate-status" role="status" aria-live="polite">세션 복원 중 · 승인 확인 전까지 자료가 잠겨 있습니다.</p><form id="gateForm" autocomplete="off"><label>이메일<input id="gateEmail" type="email" required autocomplete="off"></label><label>비밀번호<input id="gatePassword" type="password" required autocomplete="off"></label><button class="btn dark" type="submit">로그인 및 승인 확인</button></form><button id="gateRetry" class="btn">연결·세션 다시 확인</button><p class="gate-security">이 화면은 앱의 접근 절차입니다. 정적 HTML의 소스·개발도구까지 차단하는 보안 경계가 아닙니다. 비공개 DB·파일의 실제 보호는 서버 RLS·Storage 정책에 달려 있습니다.</p></div></section>
+<template id="appTemplate"><div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#eaf6f4" stroke-width="1.7"><path d="M4 19V7l5-3 5 3v12"/><path d="M14 19V9l6 3v7"/><path d="M2 19h20"/><path d="M8 9v2M8 13v2"/></svg></span>
+      <div><b>사업타당성 플래너</b><small>DEMAND → STOCK → CASH</small></div>
+    </div>
+    <div class="projbox">
+      <span class="cap">PROJECT</span>
+      <input id="projName" type="text" value="" placeholder="사업명" aria-label="사업명">
+    </div>
+    <nav id="nav" aria-label="단계 이동">
+      <button class="navbtn" data-view="company"><span class="n">P</span><span><span class="t">프로젝트 · 기업자료</span><span class="d">로컬 · DB · 문서 연결</span></span></button>
+      <button class="navbtn on" data-view="assume"><span class="n">01</span><span><span class="t">기본 가정</span><span class="d">기간 · 할인율 · 운전자본</span></span></button>
+      <button class="navbtn" data-view="invest"><span class="n">02</span><span><span class="t">초기 투자</span><span class="d">자본금 · 차입 · CAPEX</span></span></button>
+      <button class="navbtn" data-view="demand"><span class="n">03</span><span><span class="t">판매 수요</span><span class="d">9단계 매출트리</span></span></button>
+      <button class="navbtn" data-view="inventory"><span class="n">04</span><span><span class="t">재고 · 발주</span><span class="d">수요 연동 자동 발주</span></span></button>
+      <button class="navbtn" data-view="cost"><span class="n">05</span><span><span class="t">인건비 · 판관비</span><span class="d">부서 · 고정 · 변동 · 영업외</span></span></button>
+      <button class="navbtn" data-view="finance"><span class="n">06</span><span><span class="t">재무제표</span><span class="d">손익 · 관리회계 · 현금 · 재무상태</span></span></button>
+      <button class="navbtn" data-view="value"><span class="n">07</span><span><span class="t">사업성 분석</span><span class="d">NPV · IRR · 세그먼트</span></span></button>
+    </nav>
+    <div class="side-note">
+      <b>계산 순서</b>
+      9단계 판매 수요 → 재고·발주 → 인건비·판관비 → 손익 → 현금 → NPV. 모든 화면이 같은 원장을 읽습니다.
+    </div>
+    <div class="sidefoot"><span class="dot"></span><span id="saveState">로컬 미저장</span><br>DB는 작업영역에서 명시적 저장</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="eyebrow">01 / 07</p>
+        <h1 id="pageTitle">기본 가정</h1>
+        <p class="desc" id="pageDesc"></p>
+      </div>
+      <div class="actions no-print">
+        <label class="check autosave" title="입력할 때마다 자동 저장합니다"><input type="checkbox" id="autoSaveToggle" checked><span>자동저장</span></label>
+        <button class="btn teal" id="btnSaveNow" title="지금 저장합니다 (Ctrl+S)">저장하기</button>
         <button class="btn dark" id="btnPrint">인쇄 / PDF</button>
       </div>
     </header>
@@ -1089,7 +1809,8 @@ function simulateProduct(p,cfg,months,H,s){
     const avail=stock+onOrder;
     let ordered=0;
     const forceFirst=cfg.firstOrder!=null&&i===cfg.firstOrder;
-    if((d>0||forceFirst)&&(forceFirst||avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
+    const beforeFirst=cfg.firstOrder!=null&&i<cfg.firstOrder;
+    if(!beforeFirst&&(d>0||forceFirst)&&(forceFirst||avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
       let q=Math.max(moq,target-avail); q=Math.ceil(q/lot)*lot;
       if(Number.isFinite(q)&&q>0){ ordered=q; onOrder+=q; arrivals[i+L]=(arrivals[i+L]||0)+q;arrivalValues[i+L]=(arrivalValues[i+L]||0)+q*py.cost;
         arrivalTax[i+L]+=q*(py._purchaseTax||0);arrivalDeduct[i+L]+=q*(py._purchaseDeduct||0);
@@ -2082,7 +2803,7 @@ function demandCsv(){
 function renderInvSettings(){
   const t=$('#invSettings'); if(!t) return;
   const opt=$('#invStockOpt');
-  if(opt) opt.innerHTML=`<span class="sub">재고와 발주는 <b>거래처와 무관하게 제품 단위로 통합</b>됩니다. 같은 제품이 여러 거래처에 있어도 재고는 하나의 풀로 관리되고, 최소 발주량은 <b>3,000개</b>입니다.</span>`;
+  if(opt) opt.innerHTML=`<span class="sub">재고와 발주는 <b>거래처와 무관하게 제품 단위로 통합</b>됩니다. 같은 제품이 여러 거래처에 있어도 재고는 하나의 풀로 관리되고, 최소 발주량은 <b>3,000개</b>입니다. <b>최초 발주월은 아래 표의 「최초 발주월」 열(발주단위 옆)에서 지정</b>합니다 — 미지정 시 발주점 도달 시점에 자동 발주합니다.</span>`;
   const groups=R.invGroups||[];
   const byName=new Map();
   groups.forEach(g=>{ if(!byName.has(g.name)) byName.set(g.name,[]); byName.get(g.name).push(g); });
@@ -2701,95 +3422,31 @@ function bindStatic(){
       S.payroll.departments.push({id:uid('d'),name:'새 부서',heads:1,salary:3000000,headAdd:0,mfg:false});
       saveState(); renderCost(); paint(); return;
     }
-    if(t.id==='btnSave'){ download('사업계획_'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(S,null,2),'application/json'); toast('JSON 파일로 저장했습니다'); return; }
     if(t.id==='btnPrint'){ window.print(); return; }
-    if(t.id==='btnSample'){ if(!confirm('현재 입력을 지우고 예시 데이터로 되돌릴까요?')) return; S=defaultState(); syncInputs(); renderDemand(); renderInvSettings(); renderCost(); paint(); toast('예시 데이터를 불러왔습니다'); return; }
   });
-  $('#fileImport').addEventListener('change',e=>{
-    const f=e.target.files&&e.target.files[0]; if(!f) return;
-    const rd=new FileReader();
-    const readEpoch=Gate.epoch;
-    rd.onload=()=>{if(!Gate.approved||readEpoch!==Gate.epoch)return;try{if(!canEdit())throw Error('읽기 전용입니다.');const imported=convertProject(JSON.parse(String(rd.result)));saveState(true);S=imported.state;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=imported.legacy;Workspace.notice=imported.warnings.join('\n');Workspace.dbStatus='JSON 로컬 가져오기 · DB 미저장';syncInputs();renderDemand();renderInvSettings();renderCost();paint();$('#projName').value=S.meta.name;toast('별도 로컬 프로젝트로 가져왔습니다');}catch(err){toast('JSON 가져오기 실패: '+safeMessage(err));}};
-    rd.readAsText(f); e.target.value='';
-  });
-  const cp=$('#chartProduct');
-  if(cp) cp.addEventListener('change',e=>drawInvChart(e.target.value));
-  window.addEventListener('beforeunload',()=>saveState(true));
 }
-function init(){
-  try{ const c=JSON.parse(localStorage.getItem(COLLAPSE_KEY)||'[]'); COLLAPSED=new Set(Array.isArray(c)?c:[]); }catch(e){}
-  bindStatic(); syncInputs();
-  $('#projName').value=S.meta.name||'';
-  renderDemand(); renderInvSettings(); renderCost();
-  if(typeof saveBadge==='function')saveBadge();
-  const h=(location.hash||'').replace('#','');
-  switchView(VIEW_META[h]?h:'assume');
-}
-// init runs only after approved authentication.
-window.addEventListener('beforeunload',()=>{ try{ localStorage.setItem(COLLAPSE_KEY,JSON.stringify([...COLLAPSED])); }catch(e){} });
-
-'use strict';
-/* Annual editing, explicit project persistence and the original approved-user contract. */
-const Workspace={client:null,user:null,admin:false,checking:false,projects:[],docs:[],localId:null,dbId:null,legacy:false,isPublic:false,dbStatus:'미연결 · 로컬 작업',localStatus:'미저장',notice:'',revision:0,busy:false,sourceId:null};
-const initialSaveState=saveState;
-function canEdit(){return typeof Gate!=='undefined'&&Gate.approved&&!Workspace.checking&&!!Workspace.user&&Workspace.admin;}
-function putAnnual(o,y,field,value){o.years=o.years||{};o.years[y]=o.years[y]||{};o.years[y][field]=clone(value);}
-saveState=function(){
-  if(!canEdit())return;
-  Workspace.revision++;
-  Workspace.localId=null;Workspace.localStatus='로컬 보관 없음 · DB 전용';
-  if(Workspace.dbStatus.includes('저장 확인')||Workspace.dbStatus.includes('불러옴')||Workspace.dbStatus.includes('DB 저장'))Workspace.dbStatus='변경됨 · 「DB 저장」 필요';
-  const el=$('#saveState');if(el)el.textContent=Workspace.dbStatus;
-  updateStatuses();
-};
-/* ---------- 자동저장 · 저장하기 ---------- */
-const AUTOSAVE_KEY='fp-autosave-v1';
-let autoSaveOn=(function(){try{return localStorage.getItem(AUTOSAVE_KEY)!=='off';}catch(e){return true;}})();
-let pendingDirty=false,lastSavedAt=null;
-const persistProject=saveState;
-function saveBadge(){
-  const lab=document.querySelector('.autosave'),tg=document.getElementById('autoSaveToggle'),btn=document.getElementById('btnSaveNow');
-  if(tg)tg.checked=autoSaveOn;
-  if(lab)lab.classList.toggle('on',autoSaveOn);
-  const el=document.getElementById('saveState');
-  const t=lastSavedAt?lastSavedAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):null;
-  if(el)el.textContent=autoSaveOn?(pendingDirty?'로컬 대기 · 변경됨 · DB 저장 아님':(t?'로컬 임시 저장 · '+t:'로컬 자동저장 켜짐')):'로컬 자동저장 꺼짐 · '+(pendingDirty?'저장 필요':'변경 없음');
-  if(btn){btn.classList.toggle('saved',!pendingDirty&&!!t);btn.textContent=pendingDirty?'저장하기':'저장됨';}
-}
-function markDirty(){pendingDirty=true;const el=document.getElementById('saveState');if(el)el.textContent=autoSaveOn?'변경됨 · 로컬 대기 · DB 저장 아님':'변경됨 · 저장 필요';const b=document.getElementById('btnSaveNow');if(b){b.classList.remove('saved');b.textContent='저장하기';}}
-saveState=function(force){
-  if(!canEdit())return;
-  if(!autoSaveOn&&!force){markDirty();return saveBadge();}
-  persistProject();pendingDirty=false;lastSavedAt=new Date();saveBadge();
-};
-function manualSave(){
-  if(!canEdit()){toast('읽기 전용 · 저장 권한이 없습니다');return;}
-  saveState(true);
-  // 상단 「저장하기」는 로컬 저장 후 가능하면 DB 저장까지 진행한다 — 과거에는 로컬만 저장하고
-  // '저장했습니다' 토스트를 띄워 DB 저장을 한 것으로 오해시켰다(저장 실패 신고의 근본 원인).
-  if(Workspace.client&&Workspace.user&&Workspace.admin&&typeof saveDB==='function'&&!Workspace.busy){
-    toast('로컬 저장 완료 · DB 저장을 진행합니다');
-    saveDB(false);
-  }else{
-    toast('⚠ 로컬에만 저장했습니다 · DB 저장은 기업자료 탭의 「DB 명시적 저장」으로 하세요');
+  function manualSave(){
+    saveState(true);
+    // 상단 「저장하기」는 로컬 저장 후 가능하면 DB 저장까지 진행한다.
+    if(Workspace.client&&Workspace.user&&Workspace.admin&&typeof saveDB==='function'&&!Workspace.busy){
+      toast('로컬 저장 완료 · DB 저장을 진행합니다');
+      saveDB(false);
+    }else{
+      toast('⚠ 로컬에만 저장했습니다 · DB 저장은 기업자료 탭의 「DB 명시적 저장」으로 하세요');
+    }
   }
-}
+
 function setAutoSave(on){
   autoSaveOn=!!on;try{localStorage.setItem(AUTOSAVE_KEY,autoSaveOn?'on':'off');}catch(e){}
   if(autoSaveOn){saveState(true);toast('자동저장을 켰습니다 · 입력 즉시 저장');}
   else{toast('자동저장을 껐습니다 · 「저장하기」로 저장하세요');saveBadge();}
 }
-document.addEventListener('click',e=>{
-  if(e.target.closest('#btnSaveNow')){e.preventDefault();manualSave();}
-});
-document.addEventListener('change',e=>{
-  if(e.target.id==='autoSaveToggle')setAutoSave(e.target.checked);
-});
-document.addEventListener('keydown',e=>{
-  if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();manualSave();}
-});
-window.addEventListener('beforeunload',e=>{if(pendingDirty&&!autoSaveOn){e.preventDefault();e.returnValue='저장하지 않은 변경이 있습니다.';return e.returnValue;}});
+document.addEventListener('click',e=>{if(e.target.closest('#btnSaveNow')){e.preventDefault();manualSave();}});
+document.addEventListener('change',e=>{if(e.target.id==='autoSaveToggle')setAutoSave(e.target.checked);});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='s'||e.key==='S')){e.preventDefault();manualSave();}});
+window.addEventListener('beforeunload',e=>{if(typeof pendingDirty!=='undefined'&&pendingDirty&&!autoSaveOn){e.preventDefault();e.returnValue='저장하지 않은 변경이 있습니다.';return e.returnValue;}});
 try{saveBadge();}catch(e){}
+function shiftProduct(s,field,ratio){flattenProducts(s).forEach(p=>{for(let y=0;y<s.meta.years;y++){const py=productYear(p,y);putAnnual(p.node,y,field,field==='months'?py.months.map(v=>Math.round(v*ratio)):py[field]*ratio);}});}
 function shiftProduct(s,field,ratio){flattenProducts(s).forEach(p=>{for(let y=0;y<s.meta.years;y++){const py=productYear(p,y);putAnnual(p.node,y,field,field==='months'?py.months.map(v=>Math.round(v*ratio)):py[field]*ratio);}});}
 function shiftDiscount(s,delta){const rr=compute(s);for(let y=0;y<s.meta.years;y++){putAnnual(s.assume,y,'waccMode','manual');putAnnual(s.assume,y,'wacc',Math.max(0,rr.waccYears[y]*100+delta));}}
 function updateStatuses(){
@@ -2801,7 +3458,7 @@ function updateStatuses(){
 }
 function enforceReadonly(){
   const ro=!canEdit()||Workspace.busy;document.body.classList.toggle('readonly',!canEdit());
-  $$('.view:not(#view-company) input,.view:not(#view-company) select,.view:not(#view-company) textarea,.view:not(#view-company) button,#projName,#btnSample,#fileImport').forEach(el=>{if(!el.dataset.readonlySkip){el.disabled=ro;}});
+  $$('.view:not(#view-company) input,.view:not(#view-company) select,.view:not(#view-company) textarea,.view:not(#view-company) button,#projName').forEach(el=>{if(!el.dataset.readonlySkip){el.disabled=ro;}});
   if(!ro&&$('#waccInput'))$('#waccInput').disabled=assumeYear(S,editYear).waccMode!=='manual';
   $$('.company-input,[data-write],#copyPrevious').forEach(el=>el.disabled=ro||Workspace.busy);
   $$('#view-company [data-db-write]').forEach(el=>el.disabled=!Workspace.user||!Workspace.admin||Workspace.busy);
@@ -2952,6 +3609,7 @@ function renderWorkspace(){
   const company=S.company||{};
   box.innerHTML=`<div class="workspace-grid"><div class="card"><div class="card-h"><div><h2>프로젝트 보관함</h2><p>프로젝트는 DB에서만 불러오고 DB에만 저장합니다. 로컬 보관은 없습니다.</p></div></div>
     <div class="workspace-actions"><button class="btn" id="newProject" data-write>새 빈 프로젝트</button></div>
+    <p class="help" style="font-size:11px;color:var(--mut)">신규 프로젝트는 빈 데이터로 시작합니다. 저장된 프로젝트는 DB 목록에서 불러옵니다.</p>
     <p class="status-line">변경사항은 입력 즉시 표시되며, <b>「DB 명시적 저장」</b> 또는 <b>「DB 다른 이름 저장」</b>으로만 서버에 기록됩니다.</p><div class="divider"></div>
     <div class="workspace-actions"><button class="btn" id="dbList">DB 목록 불러오기</button><button class="btn dark" id="dbSave" data-db-write>DB 명시적 저장</button><button class="btn teal" id="dbSaveAs" data-db-write>DB 다른 이름 저장</button><button class="btn" id="dbDelete" style="color:#b33;border-color:#b33">선택 프로젝트 삭제</button></div><p class="help" style="font-size:11px;color:var(--mut)">삭제는 본인 소유 프로젝트만 가능하며 되돌릴 수 없습니다. 서버에서 행이 완전히 제거됩니다.</p>
     <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)} · ${p.updated_at?new Date(p.updated_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'시각없음'}${p.is_public?' · 공개':''}</option>`).join('')}</select></label>
@@ -2961,7 +3619,6 @@ function renderWorkspace(){
     <p id="authState" class="status-line"></p><p class="help">로그인은 Supabase에서 처리하며 이 파일은 비밀번호·세션 토큰을 로컬 저장하지 않습니다.</p>
     <button class="btn dark" id="loginToggle">로그인 화면 열기</button><button class="btn" id="dbLogout">로그아웃</button>
     <form id="loginForm" hidden autocomplete="off"><label class="field"><span class="lb">이메일</span><input id="loginEmail" type="email" required autocomplete="off"></label><label class="field"><span class="lb">비밀번호</span><input id="loginPassword" type="password" required autocomplete="off"></label><button class="btn dark" type="submit">로그인 및 승인 확인</button></form>
-    <div class="divider"></div><div class="note">신규 프로젝트는 빈 데이터입니다. 예시는 「예시 불러오기」로만 열리며 실제 DB 자료로 표시되지 않습니다.</div>
   </div></div>
   <div class="card" style="margin-top:16px"><div class="card-h"><div><h2>기업자료 · 현재 프로젝트</h2><p>실제 값을 직접 입력하세요. 본문과 자료 연결은 이 프로젝트의 inputs에 함께 보관됩니다.</p></div></div>
     <div class="fgrid">${[['name','기업명'],['representative','대표'],['overview','사업개요'],['mission','미션'],['vision','비전'],['roadmap','로드맵'],['ir','IR 요약']].map(([k,label])=>`<label class="field"><span class="lb">${label}</span>${['name','representative'].includes(k)?`<input class="company-input" data-company="${k}" value="${esc(company[k]||'')}" placeholder="실제 ${label} 입력">`:`<textarea rows="3" class="company-input" data-company="${k}" placeholder="실제 ${label} 입력">${esc(company[k]||'')}</textarea>`}</label>`).join('')}</div>
@@ -2987,8 +3644,8 @@ function annualInputCapture(e){
   if(handled){e.stopImmediatePropagation();if(el.dataset.company){saveState();return;}const key=el.dataset.k;paint();if(key){const replacement=$$('[data-k]').find(x=>x.dataset.k===key);if(replacement)replacement.focus();}}
 }
 document.addEventListener('input',annualInputCapture,true);
-document.addEventListener('click',e=>{if(!canEdit()&&e.target.closest('[data-add],[data-delnode],[data-deldept],[data-delsga],[data-delno],[data-addsga],[data-addno],#btnSample,#btnAddRoot,#btnAddPayroll')){e.stopImmediatePropagation();return;}
-  if(e.target.id==='btnSample'){e.stopImmediatePropagation();if(!canEdit()||!confirm('예시 프로젝트를 열까요? 현재 변경사항은 DB에 저장되지 않은 채 사라집니다.'))return;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.notice='예시 데이터 · 실제 DB 또는 기업자료가 아닙니다.';S=defaultState();S.meta.name='예시 · '+S.meta.name;resetView();return;}
+document.addEventListener('click',e=>{if(!canEdit()&&e.target.closest('[data-add],[data-delnode],[data-deldept],[data-delsga],[data-delno],[data-addsga],[data-addno],#btnAddRoot,#btnAddPayroll')){e.stopImmediatePropagation();return;}
+  
 },true);
 document.addEventListener('change',e=>{
   try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(!t0Sel)editYear=+e.target.value;orderYear=editYear;syncInputs();renderExtensions();switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
@@ -3116,7 +3773,7 @@ document.addEventListener('DOMContentLoaded',()=>{$$('.ftab').forEach(el=>el.dat
 
 'use strict';
 /* Authentication is a startup prerequisite, never an anonymous recovery view. */
-const Gate={approved:false,epoch:0,userId:null,subscription:null,session:null,checking:false,client:null,watchdog:null,loginPending:false};
+var Gate=window.Gate={approved:false,epoch:0,userId:null,subscription:null,session:null,checking:false,client:null,watchdog:null,loginPending:false};
 function gateMessage(text){const el=document.getElementById('gateStatus');if(el)el.textContent=text;}
 function gateLock(reason='로그인이 필요합니다.'){
   Gate.epoch++;Gate.approved=false;Gate.userId=null;Gate.session=null;Gate.checking=false;
@@ -3130,6 +3787,15 @@ function gateLock(reason='로그인이 필요합니다.'){
   gateMessage(reason);
 }
 function gateCheckCurrent(epoch,userId){return epoch===Gate.epoch&&(!userId||Gate.userId===userId);}
+function init(){
+  try{ const c=JSON.parse(localStorage.getItem(COLLAPSE_KEY)||'[]'); COLLAPSED=new Set(Array.isArray(c)?c:[]); }catch(e){}
+  bindStatic(); syncInputs();
+  $('#projName').value=S.meta.name||'';
+  renderDemand(); renderInvSettings(); renderCost();
+  if(typeof saveBadge==='function')saveBadge();
+  const h=(location.hash||'').replace('#','');
+  switchView(VIEW_META[h]?h:'assume');
+}
 function mountApproved(user,admin,session){
   Gate.approved=true;Gate.userId=user.id;Gate.session=session;Gate.checking=false;
   Workspace.user=user;Workspace.admin=admin;Workspace.checking=false;Workspace.client=scopedClient(Gate.client,Gate.epoch,user.id);Workspace.dbStatus='로그인·승인 확인 · DB 미조회';
@@ -3250,11 +3916,12 @@ const bindStaticOriginal=bindStatic;let staticBound=false;
 bindStatic=function(){if(!staticBound){bindStaticOriginal();staticBound=true;return;}
   $$('.navbtn').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
   if($('#chartProduct'))$('#chartProduct').onchange=e=>drawInvChart(e.target.value);
-  const file=$('#fileImport');if(file)file.onchange=e=>{const f=e.target.files?.[0];if(!f||!canEdit())return;const epoch=Gate.epoch,reader=new FileReader();reader.onload=()=>{if(!Gate.approved||epoch!==Gate.epoch)return;try{const imported=convertProject(JSON.parse(String(reader.result)));S=imported.state;Workspace.localId=null;Workspace.dbId=null;Workspace.legacy=imported.legacy;Workspace.notice=imported.warnings.join('\n');saveState();resetView();}catch(err){toast('JSON 가져오기 실패: '+safeMessage(err));}};reader.readAsText(f);};
-};
+}
 
+const Workspace={client:null,user:null,admin:false,checking:false,projects:[],docs:[],localId:null,dbId:null,legacy:false,isPublic:false,dbStatus:'미연결 · 로컬 작업',localStatus:'미저장',notice:'',revision:0,busy:false,sourceId:null};
+function canEdit(){return typeof Gate!=='undefined'&&Gate.approved&&!Workspace.checking&&!!Workspace.user&&Workspace.admin;}
 'use strict';
-const MoneyUnits={won:{label:'원',factor:1},million:{label:'백만원',factor:1e6},eok:{label:'억원',factor:1e8}};
+var MoneyUnits=window.MoneyUnits={won:{label:'원',factor:1},million:{label:'백만원',factor:1e6},eok:{label:'억원',factor:1e8}};
 function unitKey(){return S?.meta?.displayUnit&&MoneyUnits[S.meta.displayUnit]?S.meta.displayUnit:'won';}
 function unitLabel(){return MoneyUnits[unitKey()].label;}
 function formatMoney(v){if(v===null)return '계산불가';const value=num(v)/MoneyUnits[unitKey()].factor,d=moneyDigits();return value.toLocaleString('ko-KR',{minimumFractionDigits:0,maximumFractionDigits:d});}
@@ -3709,9 +4376,375 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
   },true);
 })();
 
+;;
 </script>
+
+<style>
+/* ===== 보고서 규격 · 전 섹션 표 크기 통일 ===== */
+.tbl thead th{height:36px;padding:8px 10px;font-size:12px;line-height:1.2;white-space:nowrap}
+.tbl tbody td{height:34px;padding:7px 10px;font-size:12px;line-height:1.25}
+.tbl tbody td input.cell{height:28px;padding:4px 6px;font-size:12px}
+.tbl tbody td input.cell.dim,.cell.dim{background:var(--tealSoft);color:var(--mut)}
+.extended-result thead th{height:36px;padding:8px 10px;font-size:12px}
+.extended-result tbody td{height:34px;padding:7px 10px;font-size:12px}
+#periodResults .extended-result td{height:34px}
+.card-h h2{font-size:14px;line-height:1.3}
+.card-h p{font-size:11.5px;line-height:1.45}
+.kv{padding:6px 0;font-size:12.5px}
+.t0note{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:10px 14px;font-size:12.5px}
+.t0note .t{font-weight:700;white-space:nowrap}
+.t0note .kvs{display:flex;flex-wrap:wrap;gap:6px 12px}
+.t0note .kv2{white-space:nowrap;color:var(--mut);font-size:12px}
+.t0note .kv2 b{color:var(--ink);margin-left:4px}
+</style>
+<style>
+#demandTree thead th{position:sticky;top:0;z-index:4;background:#f3f6f9}
+#demandTree thead th.sticky{z-index:5}
+input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:center}
+button.mv{border:1px solid var(--line2);background:#fff;border-radius:4px;font-size:9px;line-height:1;padding:2px 4px;cursor:pointer;color:#5a6b7d;margin-left:3px}
+button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
+.tsum{font-size:10px;font-weight:700;color:#0f6f66;background:#e6f3f1;padding:1px 5px;border-radius:3px;margin-left:4px;white-space:nowrap}
+.dnd{cursor:grab;color:#8aa0b4;font-size:12px;padding:0 4px;user-select:none}
+#demandTree tr.trdrop td{background:#e6f3f1!important}
+.fixedcell{background:#eef3f8}
+.tbl td.fx{background:#eef3f8}
+#minCashView,#invDaysView{background:#faf3dc!important;border-color:#e3d6a8}
+</style>
+</head>
+
+<body>
+<section id="authGate" class="auth-gate" aria-label="로그인 및 승인 확인"><div class="gate-card"><span class="gate-mark">사업타당성 플래너</span><h1>로그인 후 시작하세요</h1><p>승인된 계정만 프로젝트와 기업자료에 접근할 수 있습니다.</p><p id="gateStatus" class="gate-status" role="status" aria-live="polite">세션 복원 중 · 승인 확인 전까지 자료가 잠겨 있습니다.</p><form id="gateForm" autocomplete="off"><label>이메일<input id="gateEmail" type="email" required autocomplete="off"></label><label>비밀번호<input id="gatePassword" type="password" required autocomplete="off"></label><button class="btn dark" type="submit">로그인 및 승인 확인</button></form><button id="gateRetry" class="btn">연결·세션 다시 확인</button><p class="gate-security">이 화면은 앱의 접근 절차입니다. 정적 HTML의 소스·개발도구까지 차단하는 보안 경계가 아닙니다. 비공개 DB·파일의 실제 보호는 서버 RLS·Storage 정책에 달려 있습니다.</p></div></section>
+<template id="appTemplate"><div class="app">
+  <aside class="side">
+    <div class="brand">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#eaf6f4" stroke-width="1.7"><path d="M4 19V7l5-3 5 3v12"/><path d="M14 19V9l6 3v7"/><path d="M2 19h20"/><path d="M8 9v2M8 13v2"/></svg></span>
+      <div><b>사업타당성 플래너</b><small>DEMAND → STOCK → CASH</small></div>
+    </div>
+    <div class="projbox">
+      <span class="cap">PROJECT</span>
+      <input id="projName" type="text" value="" placeholder="사업명" aria-label="사업명">
+    </div>
+    <nav id="nav" aria-label="단계 이동">
+      <button class="navbtn" data-view="company"><span class="n">P</span><span><span class="t">프로젝트 · 기업자료</span><span class="d">로컬 · DB · 문서 연결</span></span></button>
+      <button class="navbtn on" data-view="assume"><span class="n">01</span><span><span class="t">기본 가정</span><span class="d">기간 · 할인율 · 운전자본</span></span></button>
+      <button class="navbtn" data-view="invest"><span class="n">02</span><span><span class="t">초기 투자</span><span class="d">자본금 · 차입 · CAPEX</span></span></button>
+      <button class="navbtn" data-view="demand"><span class="n">03</span><span><span class="t">판매 수요</span><span class="d">9단계 매출트리</span></span></button>
+      <button class="navbtn" data-view="inventory"><span class="n">04</span><span><span class="t">재고 · 발주</span><span class="d">수요 연동 자동 발주</span></span></button>
+      <button class="navbtn" data-view="cost"><span class="n">05</span><span><span class="t">인건비 · 판관비</span><span class="d">부서 · 고정 · 변동 · 영업외</span></span></button>
+      <button class="navbtn" data-view="finance"><span class="n">06</span><span><span class="t">재무제표</span><span class="d">손익 · 관리회계 · 현금 · 재무상태</span></span></button>
+      <button class="navbtn" data-view="value"><span class="n">07</span><span><span class="t">사업성 분석</span><span class="d">NPV · IRR · 세그먼트</span></span></button>
+    </nav>
+    <div class="side-note">
+      <b>계산 순서</b>
+      9단계 판매 수요 → 재고·발주 → 인건비·판관비 → 손익 → 현금 → NPV. 모든 화면이 같은 원장을 읽습니다.
+    </div>
+    <div class="sidefoot"><span class="dot"></span><span id="saveState">로컬 미저장</span><br>DB는 작업영역에서 명시적 저장</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow" id="eyebrow">01 / 07</p>
+        <h1 id="pageTitle">기본 가정</h1>
+        <p class="desc" id="pageDesc"></p>
+      </div>
+      <div class="actions no-print">
+        <label class="check autosave" title="입력할 때마다 자동 저장합니다"><input type="checkbox" id="autoSaveToggle" checked><span>자동저장</span></label>
+        <button class="btn teal" id="btnSaveNow" title="지금 저장합니다 (Ctrl+S)">저장하기</button>
+        <button class="btn dark" id="btnPrint">인쇄 / PDF</button>
+      </div>
+    </header>
+    <div class="yearbar no-print"><label for="planYear">선택연도</label><select id="planYear"></select><button class="btn sm" id="copyPrevious">이전연도 입력 복사</button><span id="yearContext"></span></div>
+    <p class="origin-line" id="projectOrigin"></p>
+    <section class="view" id="view-company"><div id="workspaceBody"></div></section>
+
+    <!-- ========== 01 기본 가정 ========== -->
+    <section class="view on" id="view-assume">
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>계획의 뼈대</h2><p>분석 기간과 사업 시작 시점. 사업 시작(예: 2026.11)에서 12월까지가 <b>T0 부분기간</b>이고, <b>이듬해 1월 1일부터 Y1(2027년)·Y2(2028년)… 달력연도</b>로 이어집니다. 판매수요·인원채용·재고는 T0부터 연속 입력됩니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">사업명</span><span class="inp"><input type="text" data-bind="meta.name" placeholder="예: 2027 프리미엄 리빙 사업"></span></label>
+              <label class="field"><span class="lb">사업 시작 연도 (T=0)</span><span class="inp"><input type="number" data-bind="meta.startYear" min="2020" max="2100" step="1"><i>년</i></span><span class="help">이 연도·월부터 Y1(첫 12개월)이 시작됩니다</span></label>
+              <label class="field"><span class="lb">사업 시작 월 (T=0)</span><select data-bind="meta.startMonth" data-num="1"><option value="1">1월</option><option value="2">2월</option><option value="3">3월</option><option value="4">4월</option><option value="5">5월</option><option value="6">6월</option><option value="7">7월</option><option value="8">8월</option><option value="9">9월</option><option value="10">10월</option><option value="11">11월</option><option value="12">12월</option></select><span class="help">예: 2026년 11월 시작 → T0=2026.11~12월, 이듬해 1월부터 Y1(2027년)</span></label>
+              <label class="field"><span class="lb">분석 기간</span><select data-bind="meta.years" data-num="1"><option value="3">3년</option><option value="4">4년</option><option value="5">5년</option><option value="6">6년</option><option value="7">7년</option></select></label>
+              <label class="field"><span class="lb">금액 표시 단위</span><select disabled><option>상단 결과 단위 선택</option></select><span class="help">입력은 원, 결과는 상단에서 원·백만원·억원 선택</span></label>
+            </div>
+            <div class="divider"></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">법인세율</span><span class="inp"><input type="number" data-bind="assume.taxRate" min="0" max="50" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">자기자본비용 (Ke)</span><span class="inp"><input type="number" data-bind="assume.ke" min="0" max="60" step="0.1"><i>%</i></span><span class="help">주주가 요구하는 최소 수익률</span></label>
+              <label class="field"><span class="lb">할인율 (WACC)</span><select data-bind="assume.waccMode"><option value="auto">자동 — 자본구조에서 계산</option><option value="manual">직접 입력</option></select></label>
+              <label class="field"><span class="lb">직접 입력 WACC</span><span class="inp"><input type="number" data-bind="assume.wacc" min="0" max="60" step="0.1" id="waccInput"><i>%</i></span><span class="help" id="waccHelp">자동 모드 계산값</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>운전자본</h2><p>매출채권 회수·매입채무 지급·재고자산 회전 조건과 최소 운영현금. 인건비·판관비는 05번에서 입력합니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">매출채권 회수기간</span><span class="inp"><input type="number" data-bind="assume.arDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">매입채무 지급기간</span><span class="inp"><input type="number" data-bind="assume.apDays" min="0" max="365" step="1"><i>일</i></span></label>
+              <label class="field"><span class="lb">재고자산 회전기간</span><span class="inp"><input type="text" id="invDaysView" readonly><i>일</i></span><span class="help">04번 재고·발주 계획 기준 자동계산 (평균재고 ÷ 매출원가 × 365)</span></label>
+              <label class="field"><span class="lb">초기 보유현금</span><span class="inp"><input type="text" class="comma" data-bind="assume.openingCash" inputmode="numeric"><i>원</i></span><span class="help">기존 법인 통장 잔액</span></label>
+              <label class="field"><span class="lb">최소 운영현금</span><span class="inp"><input type="number" data-bind="assume.minCashMonths" step="1" min="0"><i>개월치 인건비</i></span><span class="help">현금 고갈 판정 기준</span></label>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>잔존가치</h2><p>사업성 TV는 최종 계획연도 값을 사용합니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">잔존가치 방식 · 선택연도 가정</span><select data-bind="assume.tvMode"><option value="none">미포함(0)</option><option value="nav">순자산가치 방식</option><option value="gordon">영구성장모형 방식</option></select><span class="help">사업성 TV는 최종 계획연도 값을 사용합니다.</span></label>
+              <label class="field"><span class="lb">영구성장률 (고든)</span><span class="inp"><input type="number" data-bind="assume.g" step="0.1"><i>%</i></span><span class="help">영구성장 모형 선택 시에만 사용</span></label>
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+
+    <!-- ========== 02 초기 투자 ========== -->
+    <section class="view" id="view-invest">
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>t = 0에 나가는 돈</h2><p>영업을 시작하기 전에 집행하는 자금. 사업성 분석의 <b>초기투자액</b>이 바로 이 금액입니다.</p></div></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">유형자산 투자 (CAPEX)</span><span class="inp"><input type="text" class="comma" data-bind="invest.capex" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.capexLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
+              <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
+              <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">04번 현재재고 × 원가 자동계산</span></label>
+              <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">01번 최소 운영현금 개월수 기준</span></label>
+            </div>
+            <div class="divider"></div>
+            <div class="fgrid">
+              <label class="field"><span class="lb">자기자본 (자본금)</span><span class="inp"><input type="text" class="comma" data-bind="invest.equity" inputmode="numeric"><i>원</i></span><span class="help">주주가 납입하는 돈</span></label>
+              <label class="field"><span class="lb">타인자본 (차입)</span><span class="inp"><input type="text" class="comma" data-bind="invest.debt" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">차입 금리</span><span class="inp"><input type="number" data-bind="invest.rate" step="0.1" min="0"><i>%</i></span></label>
+              <label class="field"><span class="lb">상환 방식</span><select data-bind="invest.repay"><option value="bullet">만기일시상환 (마지막 연도)</option><option value="equal">원금균등분할</option></select></label>
+            </div>
+            <div class="cap">위 입력은 <b>Y1 첫날(t=0)</b>에 한 번만 반영됩니다. 감가상각은 Y1부터 내용연수 동안 정액으로 계상하고, 차입 이자는 입력 금리를 기준으로 월할 계산합니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>개시 재무상태표</h2><p>조달한 돈이 어디로 갔는지. 자산과 부채·자본이 일치해야 합니다.</p></div><span class="badge ok" id="openingBalBadge">균형</span></div>
+            <div class="tablewrap"><table class="tbl plain" id="openingBS"></table></div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
+
+    <!-- ========== 03 판매 수요 ========== -->
+    <section class="view" id="view-demand">
+      <div class="card flush">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">
+          <div>
+            <h2 style="font-size:14px;font-weight:800;letter-spacing:-.02em">9단계 거래처별 제품 판매 수요 <span class="badge teal" style="margin-left:6px">Y1 월별</span></h2>
+            <p style="font-size:11.5px;color:var(--mut);margin-top:2px">수익모델 → 국가 → 브랜드 → 사업영역 → 판매형태 → 채널 → 거래처 → 품목군 → 제품. 9단계 제품의 수량이 04번 재고·발주에 그대로 연결됩니다. 시작월~12월은 <b>T0 전용 표</b>에 입력하고, <b>이듬해 1월부터가 Y1(달력연도)</b>입니다.</p>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sm" id="btnAddRoot">+ 최상위</button>
+            <button class="btn sm ghost" id="btnAddPayroll" style="display:none">+ 부서</button>
+            <button class="btn sm ghost" id="btnToggleAll">전체 접기</button>
+            <button class="btn sm ghost" id="btnDemandCsv">CSV</button>
+          </div>
+        </div>
+        <div class="lvlegend" id="demandLevels"></div>
+        <div class="table-scroll-tools no-print"><b>21개 열 · 월별 수량은 좌우로 이동해 편집합니다</b><span class="xlhint">모든 표 공통 엑셀식 편집: 셀을 드래그해 범위 선택 → Ctrl+C 복사 · Ctrl+V 붙여넣기(한 값은 선택 전체 채우기) · Delete=비우기 · 수식 입력 지원(예: =3000*2)</span><button class="btn sm" data-demand-scroll="left">분류·단가로 ←</button><button class="btn sm" data-demand-scroll="right">월수량·연간합계로 →</button></div>
+        <div class="tablewrap" id="demandScroll" tabindex="0" aria-label="판매수요 21열 가로 스크롤 영역" style="border:none;border-radius:0;max-height:calc(100vh - 260px);overflow-y:auto">
+          <table class="tbl tree" id="demandTree"></table>
+        </div>
+        <div style="padding:10px 16px 14px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut)">
+          <span>그룹 행의 <b>+</b>는 하위 단계 추가, <b>✕</b>는 가지 전체 삭제입니다. 표는 좌우로 스크롤됩니다. 단가·원가는 <b>원/개</b>, 수량은 <b>개</b>.</span>
+          <span id="demandFootNote"></span>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+      <div class="card flush">
+        <div style="padding:14px 16px"><div class="card-h" style="padding:0"><div><h2>연도별 예상</h2><p>수요 × 성장률. 재고 부족으로 못 판 수량은 실제 판매에서 제외됩니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
+      </div>
+    </section>
+
+    <!-- ========== 04 재고·발주 ========== -->
+    <section class="view" id="view-inventory">
+      <div class="note green no-print" style="margin-bottom:14px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+        <div><span class="t">판매 수요와 자동 연동 중</span><span id="invLinkNote">03번 9단계 트리의 판매 수요를 그대로 읽습니다.</span></div>
+        <button class="btn sm teal" data-goto="demand">수요 수정하기</button>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h2><span class="no">01</span>제품별 발주 조건 · 통합 재고</h2><p>리드타임·안전재고·최소발주량만 정하면 발주 시점과 수량이 자동 확정됩니다. 거래처가 여러 곳이어도 재고는 하나로 통합해 계산합니다.</p></div></div>
+        <div id="invStockOpt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 10px"></div>
+        <div class="tablewrap"><table class="tbl" id="invSettings"></table></div>
+        <div class="cap">월 단위 계획입니다. 리드타임은 <b>올림(개월)</b>로 반영하고, 안전재고는 일평균 수요 × 안전일수로 계산합니다. 표의 <b>원가·판가</b>는 부가세를 제외한 공급가액입니다(입력 단가는 VAT 포함). <b>현재재고</b>는 t=0 매입액에 포함됩니다. 재고·발주는 <b>거래처와 무관하게 제품 단위로 통합</b>되며, 최소 발주량은 <b>3,000개</b>입니다. 같은 제품을 거래처별로 나눠 입력했다면 초기재고는 합산되어 하나의 재고로 관리됩니다.</div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="two-panel">
+        <div class="card">
+          <div class="card-h"><div><h2>재고 추이와 발주 시점</h2><p>재고가 발주점 아래로 내려가면 그 달에 발주합니다.</p></div>
+            <div class="chart-tools"><select id="chartProduct" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select></div>
+          </div>
+          <div class="chartbox" id="invChart"></div>
+          <div class="legend"><span><i style="background:#12283f"></i>기말 재고</span><span><i style="background:#a33a2b;border-radius:50%"></i>발주</span><span><i style="background:#a9781f"></i>안전재고</span></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h2>월말 현금 vs 최소 운영현금</h2><p>매출채권 회수 지연과 발주 대금이 겹치는 구간을 봅니다.</p></div></div>
+          <div class="chartbox" id="cashChart"></div>
+          <div class="legend"><span><i style="background:#12283f"></i>월말 현금</span><span><i style="background:#a33a2b"></i>최소선 미달</span><span><i style="background:#a9781f"></i>최소 운영현금</span></div>
+        </div>
+      </div>
+      <div style="height:14px"></div>
+
+
+      <div class="card">
+        <div class="card-h"><div><h2><span class="no">02</span>월별 재고 원장</h2><p>연도를 고르면 <b>기초재고 · 당기입고 · 당기출고 · 당기재고(증감) · 기말재고 · 발주수량</b>이 즉시 다시 계산됩니다. 거래처와 무관한 통합 재고 기준입니다.</p></div>
+          <div class="chart-tools"><select id="ledgerYear" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select><select id="ledgerGroup" class="sm" style="width:auto;padding:5px 8px;font-size:11px;max-width:190px"></select><button class="btn sm ghost" id="btnLedgerCsv">CSV</button></div>
+        </div>
+        <div class="tablewrap" style="max-height:560px"><table class="tbl" id="invLedger"></table></div>
+        <div class="cap">기말재고 = 기초재고 + 당기입고 − 당기출고. 당기재고는 월중 순증감(당기입고 − 당기출고)입니다. 발주수량은 발주점(일평균×(리드타임+30일)+안전재고)을 밑돌 때 자동 확정된 수량이며, 실제 입고는 리드타임 개월 수만큼 뒤에 반영됩니다.</div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="two-panel">
+        <div class="card"><div class="card-h"><div><h2>적정재고 기준</h2><p>발주점과 1회 발주량의 근거.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
+        <div class="card" id="invDiag"></div>
+      </div>
+    </section>
+
+    <!-- ========== 05 인건비·판관비 ========== -->
+    <section class="view" id="view-cost">
+      <div class="kpis" id="costKpis"></div>
+      <div style="height:14px"></div>
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">01</span>부서별 인력 · 인건비 계획</h2><p>부서·인원·급여를 입력하면 4대보험·퇴직충당까지 자동으로 더해집니다. 제조인력은 매출원가로, 나머지는 판관비로 분류됩니다.</p></div>
+              <label class="check side-act" style="white-space:nowrap"><input type="checkbox" data-bind="payroll.enabled">인건비 반영</label>
+            </div>
+            <div class="fgrid" style="margin-bottom:12px">
+              <label class="field"><span class="lb">4대보험률 (사업주)</span><span class="inp"><input type="number" data-bind="payroll.insurance" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">퇴직급여충당률</span><span class="inp"><input type="number" data-bind="payroll.retirement" step="0.1"><i>%</i></span></label>
+              <label class="field"><span class="lb">미입력 연도 기본 급여인상률</span><span class="inp"><input type="number" data-bind="payroll.raise" step="0.1"><i>%</i></span><span class="help">직접 입력한 연도는 유지됩니다.</span></label>
+            </div>
+            <div class="tablewrap"><table class="tbl" id="payrollTable"></table></div>
+            <div class="cap">선택연도 인원 × 월급여 × 12 × (1 + 선택연도 보험·퇴직률). <b>매년 증감·급여인상률은 미입력 연도의 기본값</b>이며, 직접 입력한 연도는 바뀌지 않습니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">02</span>인건비성 경비</h2><p>급여·4대보험·<b>퇴직금</b>·복리후생 등 인건비성 경비를 판매비와 관리비와 별도 계정으로 분리해 관리합니다. 금액은 부서·직급표(01번)에서 입력합니다.</p></div></div>
+            <div class="tablewrap"><table class="tbl" id="laborCostTable"></table></div>
+            <div class="cap">퇴직급여충당(퇴직금)이 포함됩니다. 제조 인력은 매출원가로, 판매·관리 인력은 판관비로 분류됩니다.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">03</span>판매비와 관리비</h2><p>변동비 · 고정비 · 준변동비 순으로 구분합니다. 여비교통비·수도광열비·통신비는 고정비에 포함됩니다. 변동비는 매출에 비례하고, 나머지는 인상률만큼 오릅니다.</p></div></div>
+            <div class="sub-h">변동비 (매출 대비)</div>
+            <div style="margin:-4px 0 6px;font-size:10.5px;color:#8a99ab">매출%로 입력하면 매출에 비례해 자동 계산됩니다.</div>
+            <div class="tablewrap"><table class="tbl" id="sgaVar"></table></div>
+            <div class="sub-h" style="margin-top:14px">고정비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaFixed"></table></div>
+            <div class="sub-h" style="margin-top:14px">준변동비</div>
+            <div class="tablewrap"><table class="tbl" id="sgaSemi"></table></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h"><div><h2><span class="no">04</span>영업외 수익 · 비용</h2><p>이자비용은 02번 차입에서 자동 계산되므로 여기에 넣지 마세요. 비현금 항목은 현금흐름표에서 조정됩니다.</p></div></div>
+            <div class="two-panel">
+              <div><div class="sub-h">영업외 수익</div><div class="tablewrap"><table class="tbl" id="nonopInc"></table></div></div>
+              <div><div class="sub-h">영업외 비용</div><div class="tablewrap"><table class="tbl" id="nonopExp"></table></div></div>
+            </div>
+            <div class="two-panel" style="margin-top:14px"><div><div class="sub-h">비현금 수익</div><div class="tablewrap"><table class="tbl" id="nonopIncNC"></table></div></div><div><div class="sub-h">비현금 비용</div><div class="tablewrap"><table class="tbl" id="nonopExpNC"></table></div></div></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== 06 재무제표 ========== -->
+    <section class="view" id="view-finance">
+      <div class="card flush">
+        <div class="ftabs" id="finTabs">
+          <button class="ftab on" data-stmt="pl">손익계산서</button>
+          <button class="ftab" data-stmt="mgmt">관리회계 손익</button>
+          <button class="ftab" data-stmt="cf">현금흐름표</button>
+          <button class="ftab" data-stmt="bs">재무상태표</button>
+          <button class="ftab" data-stmt="ratio">재무비율</button>
+        </div>
+        <div style="padding:16px 18px 6px" class="stmt-head">
+          <div><h3 id="stmtTitle">손익계산서</h3><p id="stmtDesc">발생주의 기준.</p></div>
+          <div class="badge neutral" id="stmtUnit">상단 선택 단위</div>
+        </div>
+        <div class="tablewrap" style="border:none;border-radius:0;border-top:1px solid var(--line2)">
+          <table class="tbl" id="stmtTable"></table>
+        </div>
+        <div style="padding:12px 18px 16px"><div class="note" id="stmtNote"></div></div>
+      </div>
+    </section>
+
+    <!-- ========== 07 사업성 ========== -->
+    <section class="view" id="view-value">
+      <div id="valVerdict" style="margin-bottom:14px"></div>
+      <div class="hero-val">
+        <div class="hero-left">
+          <p class="eyebrow">PROJECT NPV</p>
+          <div class="big" id="npvBig">—<small>원</small></div>
+          <p class="cap2" id="npvCap">t=0 초기투자액을 반영한 순현재가치</p>
+          <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap" id="npvBadges"></div>
+          <div class="npv-break" id="npvBreak"></div>
+        </div>
+        <div class="hero-right" id="valCells"></div>
+      </div>
+      <div style="height:14px"></div>
+
+      <div class="cols">
+        <div class="stack">
+          <div class="card">
+            <div class="card-h"><div><h2>투자 현금흐름</h2><p>t=0 초기투자 → 매년 FCFF → 잔존가치. 할인 후 누적이 0을 넘는 시점이 회수기간입니다.</p></div></div>
+            <div class="chartbox" id="npvChart"></div>
+            <div class="legend"><span><i style="background:#12283f"></i>FCFF</span><span><i style="background:#0e6e63"></i>누적 PV</span></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>연도별 타당성 원장</h2><p>FCFF = NOPAT + 감가상각 − CAPEX − 순운전자본 증가.</p></div></div>
+            <div class="tablewrap"><table class="tbl plain" id="fcfTable"></table></div>
+          </div>
+          <div class="card">
+            <div class="card-h"><div><h2>세그먼트별 수익성</h2><p>9단계 트리의 상위 분류별 매출·매출총이익·비중.</p></div>
+              <div class="chart-tools"><select id="segSelect" class="sm" style="width:auto;padding:5px 8px;font-size:11px"></select></div>
+            </div>
+            <div class="tablewrap"><table class="tbl plain" id="segTable"></table></div>
+          </div>
+        </div>
+        <aside class="rail">
+          <div class="card">
+            <div class="card-h"><div><h2>민감도</h2><p>단가·수량·원가·할인율이 흔들릴 때 NPV와 IRR.</p></div></div>
+            <div class="tablewrap"><table class="tbl plain" id="sensTable"></table></div>
+            <div class="cap">기준 대비 하나씩만 변화시킨 단일 변수 분석입니다.</div>
+          </div>
+          <div class="card" id="bepBox"></div>
+          <div class="card" id="valDiag"></div>
+          <div class="note amber" id="valFixNote">
+            <span class="t">초기투자 반영 방식</span>
+            t=0 행에 <b>CAPEX + 무형자산 + 초기재고</b>를 한 번에 넣고, 자본금·차입은 <b>재무활동</b>으로만 표시합니다. 그래서 NPV가 부풀지 않고, 현금흐름표에서도 초기 투자금이 보입니다.
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status"></div>
+</template><div id="appHost" hidden></div>
+
+
 </body>
 </html>
+
+
+
 
 
 
