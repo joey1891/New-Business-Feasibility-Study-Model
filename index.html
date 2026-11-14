@@ -2803,7 +2803,9 @@ function decorateCost(){
   const p=R.pl[editYear];$('#costKpis').innerHTML=kpi('Y'+(editYear+1)+' 인건비',shortWon(p.pay.total),'원',p.pay.heads+'명 · 보험·퇴직 포함')+kpi('Y'+(editYear+1)+' 판관비',shortWon(p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt),'원','연도별 금액·비율 반영')+kpi('영업이익',shortWon(p.ebit),'원','선택연도 실적')+kpi('최소 운영현금',shortWon(R.minCashYears[editYear]),'원','선택연도 인건비 × 설정 개월');
 }
 function autoSeedDemandYear(y){
-  if(!canEdit()||!(y>0))return false;
+  // 연도 입력은 서로 독립: 이전연도 값 복사·재동기화를 하지 않습니다.
+  // 미입력 연도는 제품 기본값(월별 수량 × 성장률)으로 표시되며, 편집은 해당 연도에만 저장됩니다.
+  return false;
   let seeded=false;
   flattenProducts(S).forEach(p=>{
     const n=p.node;n.years=n.years||{};n.seedSnap=n.seedSnap||{};
@@ -2980,7 +2982,7 @@ document.addEventListener('click',e=>{if(!canEdit()&&e.target.closest('[data-add
   
 },true);
 document.addEventListener('change',e=>{
-  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(t0Sel){editYear=0;}else{editYear=+e.target.value;if(autoSeedDemandYear(editYear))toast(fyShort(editYear)+' 판매 수요를 이전연도 입력값으로 초기화했습니다');}orderYear=editYear;syncInputs();renderExtensions();if(currentView==='demand'){try{renderDemand();}catch(_){}}switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
+  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(t0Sel){editYear=0;}else{editYear=+e.target.value;}orderYear=editYear;syncInputs();renderExtensions();if(currentView==='demand'){try{renderDemand();}catch(_){}}switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
   catch(err){Workspace.dbStatus='프로젝트 전환 실패: '+safeMessage(err);updateStatuses();}
 });
 document.addEventListener('click',async e=>{const id=e.target.closest('button')?.id;
@@ -3767,6 +3769,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
