@@ -895,6 +895,7 @@ function normNode(n,level){
     out.cost=Math.max(0,num(n.cost,0));
     out.growth=num(n.growth,0);
     out.months=Array.from({length:12},(_,i)=>Math.max(0,Math.round(num((n.months||[])[i],0))));
+    if(Array.isArray(n.t0months)){const t0=Array.from({length:12},(_,i)=>Math.max(0,Math.round(num(n.t0months[i],0))));if(t0.some(v=>v>0))out.t0months=t0;}
   }else{
     out.count=Math.max(0,num(n.count,1));
     out.children=(Array.isArray(n.children)?n.children:[]).map(c=>normNode(c,level+1));
@@ -3695,6 +3696,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
