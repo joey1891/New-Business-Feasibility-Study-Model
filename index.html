@@ -2757,7 +2757,6 @@ document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&(e.key==='s'|
 window.addEventListener('beforeunload',e=>{if(typeof pendingDirty!=='undefined'&&pendingDirty&&!autoSaveOn){e.preventDefault();e.returnValue='저장하지 않은 변경이 있습니다.';return e.returnValue;}});
 try{saveBadge();}catch(e){}
 function shiftProduct(s,field,ratio){flattenProducts(s).forEach(p=>{for(let y=0;y<s.meta.years;y++){const py=productYear(p,y);putAnnual(p.node,y,field,field==='months'?py.months.map(v=>Math.round(v*ratio)):py[field]*ratio);}});}
-function shiftProduct(s,field,ratio){flattenProducts(s).forEach(p=>{for(let y=0;y<s.meta.years;y++){const py=productYear(p,y);putAnnual(p.node,y,field,field==='months'?py.months.map(v=>Math.round(v*ratio)):py[field]*ratio);}});}
 function shiftDiscount(s,delta){const rr=compute(s);for(let y=0;y<s.meta.years;y++){putAnnual(s.assume,y,'waccMode','manual');putAnnual(s.assume,y,'wacc',Math.max(0,rr.waccYears[y]*100+delta));}}
 function updateStatuses(){
   if($('#localStatus'))$('#localStatus').textContent=Workspace.localStatus||'';
@@ -3710,10 +3709,27 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 })();
 
 ;;
+
+function putAnnual(o,y,field,value){o.years=o.years||{};o.years[y]=o.years[y]||{};o.years[y][field]=clone(value);}
+
+function saveBadge(){
+  const lab=document.querySelector('.autosave'),tg=document.getElementById('autoSaveToggle'),btn=document.getElementById('btnSaveNow');
+  if(tg)tg.checked=autoSaveOn;
+  if(lab)lab.classList.toggle('on',autoSaveOn);
+  const el=document.getElementById('saveState');
+  const t=lastSavedAt?lastSavedAt.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):null;
+  if(el)el.textContent=autoSaveOn?(pendingDirty?'자동 저장 대기 · 변경됨':(t?'자동 저장됨 · '+t:'자동 저장 켜짐')):'자동저장 꺼짐 · '+(pendingDirty?'저장 필요':'변경 없음');
+  if(btn){btn.classList.toggle('saved',!pendingDirty&&!!t);btn.textContent=pendingDirty?'저장하기':'저장됨';}
+}
+
+const AUTOSAVE_KEY='fp-autosave-v1';
+let autoSaveOn=(function(){try{return localStorage.getItem(AUTOSAVE_KEY)!=='off';}catch(e){return true;}})();;
+let pendingDirty=false,lastSavedAt=null;;
 </script>
 
 </body>
 </html>
+
 
 
 
