@@ -408,6 +408,7 @@ td.dsel input{background:rgba(47,125,143,.14)}
 input.cin{width:46px;height:24px;padding:1px 4px;font-size:11px;text-align:center}
 button.mv{border:1px solid var(--line2);background:#fff;border-radius:4px;font-size:9px;line-height:1;padding:2px 4px;cursor:pointer;color:#5a6b7d;margin-left:3px}
 button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
+.tsum{font-size:10px;font-weight:700;color:#0f6f66;background:#e6f3f1;padding:1px 5px;border-radius:3px;margin-left:4px;white-space:nowrap}
 .dnd{cursor:grab;color:#8aa0b4;font-size:12px;padding:0 4px;user-select:none}
 #demandTree tr.trdrop td{background:#e6f3f1!important}
 .fixedcell{background:#eef3f8}
@@ -1021,6 +1022,7 @@ function invCfg(s,id){
   if(num(s.inv.moqFloor,0)<3000&&num(c.moq,0)<3000)c.moq=3000;
   c.stock=Math.max(0,num(c.stock,0)); c.lead=Math.max(0,num(c.lead,30));
   c.safety=Math.max(0,num(c.safety,15)); c.moq=Math.max(0,num(c.moq,0)); c.lot=Math.max(1,num(c.lot,1));
+  c.firstOrder=(c.firstOrder==null||c.firstOrder==='')?null:Math.max(0,Math.round(num(c.firstOrder,0)));
   return c;
 }
 
@@ -1090,7 +1092,8 @@ function simulateProduct(p,cfg,months,H,s){
     const ss=yearDaily*safetyDays, rop=daily*(lead+30)+ss, target=daily*(lead+60)+ss;
     const avail=stock+onOrder;
     let ordered=0;
-    if(d>0&&(avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
+    const forceFirst=cfg.firstOrder!=null&&i===cfg.firstOrder;
+    if((d>0||forceFirst)&&(forceFirst||avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
       let q=Math.max(moq,target-avail); q=Math.ceil(q/lot)*lot;
       if(Number.isFinite(q)&&q>0){ ordered=q; onOrder+=q; arrivals[i+L]=(arrivals[i+L]||0)+q;arrivalValues[i+L]=(arrivalValues[i+L]||0)+q*py.cost;
         arrivalTax[i+L]+=q*(py._purchaseTax||0);arrivalDeduct[i+L]+=q*(py._purchaseDeduct||0);
@@ -1186,6 +1189,7 @@ function applyInvEdit(el,value){
   const f=el.dataset.pf;
   ids.forEach((id,ix)=>{
     const c=invCfg(S,id);
+    if(f==='firstOrder'){ c.firstOrder=value==null?null:Math.max(0,Math.round(value)); return; }
     if(f==='stock'){ c.stock=ix===0?Math.max(0,value):0; return; }
     putAnnual(c,editYear,f,f==='lot'?Math.max(1,value):Math.max(0,value));
   });
@@ -1965,11 +1969,11 @@ function demandRowHtml(n,depth,idx){
     const q=prods.reduce((a,p)=>a+prodQty(p),0);
     const rev=prods.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
     return `<tr class="trow grp" data-row="${n.id}">
-      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳<span class="tsum" title="12월 거래처 수 자동 표시 · 총거래처 수">총 ${(n.counts&&n.counts[11]!=null)?n.counts[11]:Math.max(0,num(n.count,1))}곳</span></span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
       <td class="num strong">${won(q)}</td>
       <td class="num strong">${man(rev)}</td>
       <td class="bulkcell"><input class="cell bulk" type="text" inputmode="numeric" data-nid="${n.id}" data-gbulk="1" placeholder="일괄" aria-label="${LEVELS[depth-1]} 하위 ${prods.length}개 제품 월수량 일괄 입력" title="이 ${LEVELS[depth-1]} 아래 모든 제품의 1~12월 수량을 한 번에 채웁니다"></td>
-      ${depth===7?(()=>{const cs=Array.isArray(n.counts)?n.counts.slice(0,12):null;const base=Math.max(0,num(n.count,1));return `<td colspan="3" class="l hint">${LEVELS[6]} · 하위 ${prods.length}개 제품 · 월별 거래처 수 (비우면 기본 ${base}곳)</td>${Array.from({length:12},(_,i)=>{const lk=t0Sel&&(i+1)<smOf(S);const v=cs&&cs[i]!=null?cs[i]:'';return `<td><input class="cell cin" type="number" min="0" step="1" data-nid="${n.id}" data-ncm="${i}" value="${v}" placeholder="${base}" aria-label="${i+1}월 거래처 수" ${lk?'disabled':''} title="${lk?'T0 이전 월 · 입력 불가':(i+1)+'월 거래처 수 · 비우면 기본 '+base+'곳'}"></td>`;}).join('')}<td colspan="3"></td>`;})():`<td colspan="18" class="l hint">${LEVELS[depth-1]} · 하위 ${prods.length}개 제품 · 일괄 입력 시 하위 전체 적용</td>`}
+      ${depth===7?(()=>{const cs=Array.isArray(n.counts)?n.counts.slice(0,12):null;const base=Math.max(0,num(n.count,1));return `<td colspan="3" class="l hint">${LEVELS[6]} · 하위 ${prods.length}개 제품 · 월별 거래처 수 (비우면 기본 ${base}곳)</td>${Array.from({length:12},(_,i)=>{const lk=t0Sel&&(i+1)<smOf(S);const v=cs&&cs[i]!=null?cs[i]:'';return `<td><input class="cell cin" type="number" min="0" step="1" data-nid="${n.id}" data-ncm="${i}" value="${v}" placeholder="${base}" aria-label="${i+1}월 거래처 수" ${lk?'disabled data-readonly-skip="1"':''} title="${lk?'T0 이전 월 · 입력 불가':(i+1)+'월 거래처 수 · 비우면 기본 '+base+'곳'}"></td>`;}).join('')}<td colspan="3"></td>`;})():`<td colspan="18" class="l hint">${LEVELS[depth-1]} · 하위 ${prods.length}개 제품 · 일괄 입력 시 하위 전체 적용</td>`}
     </tr>`;
   }
   const q=prodQty(n);
@@ -1980,7 +1984,7 @@ function demandRowHtml(n,depth,idx){
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="cost" value="${n.cost}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
     <td><input class="cell bulk${t0Sel?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄"${t0Sel?' disabled title="T0 모드 · 월별 열에 입력"':''} aria-label="1년 월수량 일괄 입력"></td>
-    ${(n.months||[]).map((v,i)=>{const m=cntM(n.id,i),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${v}" ${lock?'disabled title="T0 이전 월 · 입력 불가"':''} aria-label="${fyMonth(i)}월">${m>1?`<div class="molbl">${won((+v||0)*m)}</div>`:''}</td>`;}).join('')}
+    ${(n.months||[]).map((v,i)=>{const m=cntM(n.id,i),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${lock?0:v}" ${lock?'disabled data-readonly-skip="1" title="사업 개시 전 월 · 0 고정"':''} aria-label="${fyMonth(i)}월">${m>1&&!lock?`<div class="molbl">${won((+v||0)*m)}</div>`:''}</td>`;}).join('')}
     <td class="tot-col strong">${won(q)}</td>
     <td class="tot-col">${man(q*(+n.price||0))}</td>
     <td></td>
@@ -2006,7 +2010,7 @@ function renderTree(){
     ${Array.from({length:12},(_,i)=>`<th>${fyMonth(i)}월</th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="4"></td>
-     ${Array.from({length:12},(_,i)=>`<td>${won(R.products.reduce((a,p)=>a+(productYear(p,editYear).months[i]||0)*cntM(p.id,i),0))}</td>`).join('')}
+     ${Array.from({length:12},(_,i)=>`<td>${won(t0Sel&&(i+1)<smOf(S)?0:R.products.reduce((a,p)=>a+(productYear(p,editYear).months[i]||0)*cntM(p.id,i),0))}</td>`).join('')}
     <td>${won(totalQ)}</td><td>${man(totalR)}</td><td></td></tr></tfoot>`;
   const lv=$('#demandLevels');
   if(lv) lv.innerHTML=LEVELS.map((n,i)=>`<span class="lvpill"><b>${i+1}</b>${n}</span>`).join('<span class="lvarrow">›</span>');
@@ -2102,11 +2106,12 @@ function renderInvSettings(){
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="safety" value="${c.safety}"></td>
       <td><input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="moq" value="${c.moq}"></td>
       <td><input class="cell" type="number" min="1" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="lot" value="${c.lot}"></td>
+      <td>${(()=>{const fo=invCfg(S,g.id).firstOrder;return `<select class="cell" data-pid="${g.id}" data-gids="${ids}" data-pf="firstOrder" title="미지정 시 발주점 도달 시점에 자동 발주"><option value=""${fo==null?' selected':''}>자동</option>${(R.months||[]).map((m,i)=>`<option value="${i}"${fo===i?' selected':''}>${m.label}</option>`).join('')}</select>`;})()}</td>
       <td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.cost)}</td><td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.price)}</td><td class="fixedcell" title="적정재고 산출 연동 · 고정">${man(first.openingValue)}</td>
     </tr>`;
   }).join('');
-  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="9" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
+  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>최초 발주월</th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="10" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
 }
 
 function renderInventory(){
@@ -2985,7 +2990,8 @@ function annualInputCapture(e){
   if(el.dataset.company){S.company=S.company||{};S.company[el.dataset.company]=el.value;handled=true;}
   else if(el.dataset.bind){const [area,key]=el.dataset.bind.split('.');if((area==='assume'&&key!=='openingCash')||(area==='payroll'&&['insurance','retirement','enabled'].includes(key))){const v=el.type==='checkbox'?el.checked:el.tagName==='SELECT'?el.value:num(el.value);putAnnual(S[area],editYear,key,v);handled=true;}}
   else if(el.dataset.nid){const n=findNode(el.dataset.nid)?.node;if(n){if(el.dataset.nm!==undefined){const py=productYear(n,editYear);py.months[+el.dataset.nm]=Math.max(0,num(el.value));putAnnual(n,editYear,'months',py.months);handled=true;}else if(['price','cost'].includes(el.dataset.nf)){putAnnual(n,editYear,el.dataset.nf,Math.max(0,num(el.value)));handled=true;}}}
-  else if(el.dataset.pid&&el.dataset.pf!=='stock'){applyInvEdit(el,num(el.value));handled=true;}
+  else if(el.dataset.pid&&el.dataset.pf==='firstOrder'){applyInvEdit(el,el.value===''?null:+el.value);handled=true;}
+  else if(el.dataset.pid&&el.dataset.pf!=='stock'&&el.dataset.pf!=='firstOrder'){applyInvEdit(el,num(el.value));handled=true;}
   else if(el.dataset.did&&['heads','salary','insurance','retirement'].includes(el.dataset.df)){const d=S.payroll.departments.find(d=>d.id===el.dataset.did);putAnnual(d,editYear,el.dataset.df,Math.max(0,num(el.value)));handled=true;}
   else if(el.dataset.sid&&['value','type'].includes(el.dataset.sf)){const it=S.sga[el.dataset.list].find(it=>it.id===el.dataset.sid);putAnnual(it,editYear,el.dataset.sf,el.dataset.sf==='type'?el.value:Math.max(0,num(el.value)));handled=true;}
   else if(el.dataset.oid&&['value','type'].includes(el.dataset.of)){const it=S.nonop[el.dataset.nlist].find(it=>it.id===el.dataset.oid);putAnnual(it,editYear,el.dataset.of,el.dataset.of==='type'?el.value:Math.max(0,num(el.value)));handled=true;}
@@ -3717,6 +3723,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
