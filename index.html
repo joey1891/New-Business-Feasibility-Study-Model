@@ -2033,13 +2033,13 @@ function renderDemand(){
  
   const yt=$('#demandYears');
    yt.innerHTML=`<thead><tr><th class="l">연도</th><th>수요<span class="u">개</span></th><th>판매<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th>성장률</th></tr></thead><tbody>`+
-    (t0MonthsOf(S)?[(()=>{const b=t0MonthsOf(S);const dem=R.products.reduce((x,pr)=>x+pr.dem.slice(0,b).reduce((u,v)=>u+v,0),0),sold=R.products.reduce((x,pr)=>x+pr.rows.slice(0,b).reduce((u,r)=>u+r.sold,0),0);return `<tr><td class="l">T0 · ${t0Label(S)}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(R.t0?R.t0.rev:0)}</td><td>—</td></tr>`;})()]:[]).concat(
+    (t0MonthsOf(S)?[(()=>{const b=t0MonthsOf(S);const dem=R.products.reduce((x,pr)=>x+pr.dem.slice(0,b).reduce((u,v)=>u+v,0),0),sold=R.products.reduce((x,pr)=>x+pr.rows.slice(0,b).reduce((u,r)=>u+r.sold,0),0);return `<tr><td class="l"${t0Sel?' style="font-weight:800;color:var(--teal)"':''}>T0 · ${t0Label(S)}${t0Sel?' ◀ 선택':''}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(R.t0?R.t0.rev:0)}</td><td>—</td></tr>`;})()]:[]).concat(
     R.pl.map((p,y)=>{
       const a=(R.off||0)+y*12,b=a+12;
       const dem=R.products.reduce((x,pr)=>x+pr.dem.slice(a,b).reduce((u,v)=>u+v,0),0);
       const sold=R.products.reduce((x,pr)=>x+pr.rows.slice(a,b).reduce((u,r)=>u+r.sold,0),0);
       const prev=y?R.pl[y-1].rev:0;
-      return `<tr><td class="l"${y===editYear?' style="font-weight:800;color:var(--teal)"':' style="cursor:pointer"'}${y!==editYear?` data-goyear="${y}"`:''}>${fyShort(y)}${y===editYear?' ◀ 선택':''}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(p.rev)}</td><td>${y&&prev?pct((p.rev/prev-1)*100):'—'}</td></tr>`;
+      return `<tr><td class="l"${(!t0Sel&&y===editYear)?' style="font-weight:800;color:var(--teal)"':' style="cursor:pointer"'}${(!t0Sel&&y!==editYear)?` data-goyear="${y}"`:''}>${fyShort(y)}${(!t0Sel&&y===editYear)?' ◀ 선택':''}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(p.rev)}</td><td>${y&&prev?pct((p.rev/prev-1)*100):'—'}</td></tr>`;
     })).join('')+`</tbody>`;
 
   const byProduct=new Map();
@@ -3767,6 +3767,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
