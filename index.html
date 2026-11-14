@@ -520,7 +520,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
               <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
               <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">04번 현재재고 × 원가 자동계산</span></label>
-              <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">01번 최소 운영현금 개월수 기준</span></label>
+              <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">예비현금(인건비 × 최소현금 개월수) + 운전자본 필요액(매출채권 · 재고 − 매입채무) — 수요·발주·회수조건 변화에 연동 자동계산</span></label>
             </div>
             <div class="divider"></div>
             <div class="fgrid">
@@ -1476,7 +1476,10 @@ function compute(s0){
     avgInv:invM.reduce((a,v)=>a+v,0)/Math.max(1,NM),
     lostValue
   };
-  const minCashYears=years.map((r,y)=>r.pay.total/12*assumeYear(s,y).minCashMonths),minCash=minCashYears[0];
+  const minCashYears=years.map((r,y)=>r.pay.total/12*assumeYear(s,y).minCashMonths);
+  const wcNeedYears=years.map((r,y)=>{let w=0;const a0=off+y*12,b0=a0+12;for(let i=Math.max(0,a0);i<Math.min(NM,b0);i++){const need=(arM[i]||0)+(invM[i]||0)-(apM[i]||0);if(need>w)w=need;}return Math.max(0,w);});
+  const opFundYears=minCashYears.map((v,y)=>v+wcNeedYears[y]);
+  const minCash=minCashYears[0];
   let worst={cash:cash0,m:0};const firstCash=off?cashM[off-1]:cash0;
   cashM.forEach((v,i)=>{ if(v<worst.cash) worst={cash:v,m:i}; });
   const belowMin=cashM.filter((v,i)=>v<minCashYears[Math.max(0,Math.min(H-1,Math.floor((i-off)/12)))]).length;
@@ -1492,7 +1495,7 @@ function compute(s0){
   if(!products.length) diag.push({level:'red',t:'판매 데이터 없음',text:'9단계 트리에 제품을 추가하세요.'});
   if(products.some(p=>p.rows[0]&&p.rows[0].lost>0)) diag.push({level:'amber',t:'Y1 초기재고 부족',text:'현재재고가 첫 달 수요보다 적습니다.'});
 
-  return enrichDetail({s,H,NM,off,t0:t0rec,t0fcff,t0In,t0Out,months,products,invGroups,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,
+  return enrichDetail({s,H,NM,off,t0:t0rec,t0fcff,t0In,t0Out,months,products,invGroups,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,wcNeedYears,opFundYears,
     tv,tvMode,tvValid,navTV,I0,cash0,openingStock,vat,totals,minCash,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,niM,cfoM,repayM,debtM,interestM,
     diag,funding,equityIrr:eqIrr,moic,exitEquity,eqCF:eqCF,flows,pvCum,
     bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,invest:s.invest.longInvest,vatCredit:vat.opening,vatDue:0,
@@ -1880,7 +1883,7 @@ function renderInvest(){
   const inv=S.invest,a=S.assume;
   const need=R.I0, fund=inv.equity+inv.debt+a.openingCash, gap=fund-need;
   if($('#openingStockView')) $('#openingStockView').value=won(R.openingStock);
-  if($('#minCashView')) $('#minCashView').value=won(R.minCash);
+  if($('#minCashView')) $('#minCashView').value=won(R.opFundYears?R.opFundYears[0]:R.minCash);
   if($('#investKpis'))$('#investKpis').innerHTML=
     kpi('t=0 투자액',shortWon(need),'원','CAPEX + 무형 + 초기재고')+
     kpi('조달총액',shortWon(fund),'원',`자본금 ${shortWon(inv.equity)} · 차입 ${shortWon(inv.debt)}`)+
@@ -1993,7 +1996,7 @@ function demandRowHtml(n,depth,idx){
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
     <td><input class="cell bulk${t0Sel?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄"${t0Sel?' disabled title="T0 모드 · 월별 열에 입력"':''} aria-label="1년 월수량 일괄 입력"></td>
     ${(n.months||[]).map((v,i)=>{const m=cntM(n.id,i),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${lock?0:v}" ${lock?'disabled data-readonly-skip="1" title="사업 개시 전 월 · 0 고정"':''} aria-label="${fyMonth(i)}월">${m>1&&!lock?`<div class="molbl">${won((+v||0)*m)}</div>`:''}</td>`;}).join('')}
-    <td class="tot-col strong">${won(q)}</td>
+    <td class="tot-col strong">${won(q)}${(()=>{const ms=(n.months||[]).reduce((a,b)=>a+(+b||0),0);return q>ms?`<div class="sub" title="월별 입력은 거래처당 수량이며 연간은 거래처 수 배수가 포함된 판매 수요입니다">월합계 ${won(ms)} · 거래처 배수 포함</div>`:'';})()}</td>
     <td class="tot-col">${man(q*(+n.price||0))}</td>
     <td></td>
   </tr>`;
@@ -2035,7 +2038,7 @@ function renderDemand(){
       const dem=R.products.reduce((x,pr)=>x+pr.dem.slice(a,b).reduce((u,v)=>u+v,0),0);
       const sold=R.products.reduce((x,pr)=>x+pr.rows.slice(a,b).reduce((u,r)=>u+r.sold,0),0);
       const prev=y?R.pl[y-1].rev:0;
-      return `<tr><td class="l">${fyShort(y)}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(p.rev)}</td><td>${y&&prev?pct((p.rev/prev-1)*100):'—'}</td></tr>`;
+      return `<tr><td class="l"${y===editYear?' style="font-weight:800;color:var(--teal)"':' style="cursor:pointer"'}${y!==editYear?` data-goyear="${y}"`:''}>${fyShort(y)}${y===editYear?' ◀ 선택':''}</td><td>${won(dem)}</td><td>${won(sold)}</td><td>${man(p.rev)}</td><td>${y&&prev?pct((p.rev/prev-1)*100):'—'}</td></tr>`;
     })).join('')+`</tbody>`;
 
   const byProduct=new Map();
@@ -2802,12 +2805,17 @@ function autoSeedDemandYear(y){
   if(!canEdit()||!(y>0))return false;
   let seeded=false;
   flattenProducts(S).forEach(p=>{
-    const n=p.node;n.years=n.years||{};
-    if(n.years[y])return;
+    const n=p.node;n.years=n.years||{};n.seedSnap=n.seedSnap||{};
     const src=n.years[y-1];
     if(!src)return;
+    const cur=n.years[y];
+    if(cur){
+      // 사용자가 편집한 적 없는 이월값이면(시드 직후 스냅샷과 동일) 이전연도 최신값으로 재동기화
+      if(n.seedSnap[y]===JSON.stringify(cur)){const cp={};Object.keys(src).forEach(k=>{const v=src[k];cp[k]=Array.isArray(v)?v.slice():v;});n.years[y]=cp;n.seedSnap[y]=JSON.stringify(cp);seeded=true;}
+      return;
+    }
     const cp={};Object.keys(src).forEach(k=>{const v=src[k];cp[k]=Array.isArray(v)?v.slice():v;});
-    n.years[y]=cp;seeded=true;
+    n.years[y]=cp;n.seedSnap[y]=JSON.stringify(cp);seeded=true;
   });
   if(seeded){R=compute(S);saveState();}
   return seeded;
@@ -2971,7 +2979,7 @@ document.addEventListener('click',e=>{if(!canEdit()&&e.target.closest('[data-add
   
 },true);
 document.addEventListener('change',e=>{
-  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(!t0Sel){editYear=+e.target.value;if(autoSeedDemandYear(editYear))toast(fyShort(editYear)+' 판매 수요를 이전연도 입력값으로 초기화했습니다');}orderYear=editYear;syncInputs();renderExtensions();switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
+  try{if(e.target.id==='planYear'){t0Sel=e.target.value==='t0';if(!t0Sel){editYear=+e.target.value;if(autoSeedDemandYear(editYear))toast(fyShort(editYear)+' 판매 수요를 이전연도 입력값으로 초기화했습니다');}orderYear=editYear;syncInputs();renderExtensions();if(currentView==='demand'){try{renderDemand();}catch(_){}}switchView(currentView);}if(e.target.id==='dbProjects'&&e.target.value)activateDB(e.target.value);if(e.target.id==='projectPublic'){requireDB(true);Workspace.isPublic=e.target.checked;saveState();}}
   catch(err){Workspace.dbStatus='프로젝트 전환 실패: '+safeMessage(err);updateStatuses();}
 });
 document.addEventListener('click',async e=>{const id=e.target.closest('button')?.id;
@@ -3272,7 +3280,7 @@ function stableInput(e){
   if(!el.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept],input[data-nt0],input[data-rpt0-dept]'))return;
   e.stopImmediatePropagation();if(!canEdit()||Workspace.busy)return;
   if(e.isComposing||composing){inputDirty=true;return;}
-  writeStable(el);inputDirty=true;
+  writeStable(el);inputDirty=true;scheduleLiveCommit();
 }
 function writeStable(el){
   const raw=el.value;
@@ -3307,7 +3315,36 @@ function writeStable(el){
 // Capture listener registered on window precedes legacy document capture listeners.
 window.addEventListener('input',stableInput,true);
 window.addEventListener('compositionstart',e=>{if(e.target.matches('input[data-nid],input[data-did],input[data-sid],input[data-oid]'))composing=true;},true);
-window.addEventListener('compositionend',e=>{if(!composing)return;composing=false;writeStable(e.target);inputDirty=true;},true);
+window.addEventListener('compositionend',e=>{if(!composing)return;composing=false;writeStable(e.target);inputDirty=true;scheduleLiveCommit();},true);
+let liveCommitTimer=null,liveRef=null;
+function scheduleLiveCommit(){
+  const ae=document.activeElement,ds=ae&&ae.dataset?ae.dataset:null;
+  liveRef=ds?{nid:ds.nid,pid:ds.pid,did:ds.did,sid:ds.sid,oid:ds.oid,rpdept:ds.rpdept,nt0:ds.nt0,rpt0Dept:ds.rpt0Dept,nm:ds.nm,nf:ds.nf,sf:ds.sf,df:ds.df,pf:ds.pf,pos:ae.selectionStart!=null?ae.selectionStart:null}:null;
+  clearTimeout(liveCommitTimer);liveCommitTimer=setTimeout(liveCommit,260);
+}
+function liveCommit(){
+  clearTimeout(liveCommitTimer);
+  const before=liveRef;liveRef=null;
+  commitStable();
+  if(!before)return;
+  let sel='';
+  if(before.nid)sel+='input[data-nid="'+before.nid+'"]';
+  else if(before.pid)sel+='input[data-pid="'+before.pid+'"]';
+  else if(before.did)sel+='input[data-did="'+before.did+'"]';
+  else if(before.sid)sel+='input[data-sid="'+before.sid+'"]';
+  else if(before.oid)sel+='input[data-oid="'+before.oid+'"]';
+  else if(before.rpdept)sel+='input[data-rpdept="'+before.rpdept+'"]';
+  else if(before.nt0)sel+='input[data-nt0="'+before.nt0+'"]';
+  else if(before.rpt0Dept)sel+='input[data-rpt0-dept="'+before.rpt0Dept+'"]';
+  else return;
+  if(before.nm!=null)sel+='[data-nm="'+before.nm+'"]';
+  if(before.nf)sel+='[data-nf="'+before.nf+'"]';
+  if(before.sf)sel+='[data-sf="'+before.sf+'"]';
+  if(before.df)sel+='[data-df="'+before.df+'"]';
+  if(before.pf)sel+='[data-pf="'+before.pf+'"]';
+  const el=document.querySelector(sel);
+  if(el){el.focus();if(before.pos!=null&&el.setSelectionRange)try{el.setSelectionRange(before.pos,before.pos);}catch(_){}}
+}
 function commitStable(){if(composing||!Gate.approved)return;if(!inputDirty&&!bulkDirty)return;inputDirty=false;R=compute(S);window.__R=R;saveState();if(rpDirty){rpDirty=false;renderRankMatrix();}renderPeriodResults();renderCurrencyPanels();if(currentView==='demand'){try{renderDemand();}catch(e){try{renderTree();}catch(e2){}}}}
 window.addEventListener('change',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept],input[data-nt0],input[data-rpt0-dept]')){e.stopImmediatePropagation();writeStable(e.target);commitStable();}},true);
 window.addEventListener('focusout',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept],input[data-nt0],input[data-rpt0-dept]'))commitStable();},true);
@@ -3391,7 +3428,7 @@ function renderCurrencyPanels(){
       +grp('자본')+row('자본금',b.capital)+tot('자본 합계',b.equity)
       +tot('부채와 자본 합계',b.liab+b.equity)
       +'<tr><td class="l">균형검증 (자산 − 부채 − 자본)</td><td class="'+(Math.abs(b.check)>1?'neg':'')+'">'+formatMoney(b.check)+'</td></tr></tbody>';
-    $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.minCash);
+    $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.opFundYears?R.opFundYears[0]:R.minCash);
   }
   if(currentView==='cost'){
     const payroll=$('#payrollTable');if(payroll?.tHead)payroll.tHead.rows[0].cells[7].textContent='Y'+(editYear+1)+' · '+unitLabel();
@@ -3729,6 +3766,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
