@@ -1103,8 +1103,8 @@ function simulateProduct(p,cfg,months,H,s){
 /* ---------- 재고 통합(거래처 무관) ---------- */
 const INV_MIN_MOQ=3000;
 function invGroupKey(p){
-  const a=p.path||[];
-  return [a[0],a[1],a[2],a[3],a[4],a[5],a[7],p.name].map(v=>String(v==null?'':v)).join('|');
+  // 재고는 품목명 기준으로만 통합: 같은 품목명이면 경로·거래처와 무관하게 하나의 재고 풀입니다.
+  return 'P|'+String(p.name==null?'':p.name);
 }
 function invGroupParent(p){
   const a=(p.path||[]).slice(0,8),out=[];
@@ -2109,7 +2109,7 @@ function renderInvSettings(){
     const first=gs.reduce((a,gg)=>{const r=gg.rows[editYear*12]||{openingValue:0,openingQty:0};return {openingValue:a.openingValue+r.openingValue,openingQty:a.openingQty+r.openingQty};},{openingValue:0,openingQty:0});
     const ids=gs.flatMap(gg=>gg.memberIds).join('|');
     const stockDisp=gs.reduce((a,gg)=>a+Math.max(0,num(invCfg(S,gg.id).stock,0)),0);
-    const dup=gs.length>1?` · 경로 ${gs.length}개 통합`:'';
+    const dup=gs.length>1?` · 동명 그룹 ${gs.length}개 통합`:'';
     const mrg=g.members.length>1?` · 거래처 ${g.members.length}곳 통합`:'';
     return `<tr>
       <td class="l"><b>${esc(g.name)}</b><div class="sub">${esc(g.parentLabel||'—')}${dup}${mrg} · Y${editYear+1} ${won(y1)}개</div></td>
