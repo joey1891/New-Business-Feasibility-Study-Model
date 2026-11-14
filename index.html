@@ -343,11 +343,9 @@ td.dsel input{background:rgba(47,125,143,.14)}
 .tbl.tree .lvchip{flex:none;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:3px;background:var(--navy);color:#fff;font-size:9px;font-weight:800}
 .tbl.tree .lvd{flex:none;display:inline-grid;place-items:center;width:15px;height:15px;border-radius:3px;background:#dbe6f0;color:#4b6b8a;font-size:9px;font-weight:800}
 .tbl.tree .cnt{flex:none;font-size:9.5px;color:#93a3b5;background:#f0f4f8;border-radius:3px;padding:1px 4px}
-.tbl.tree .custbox{flex:none;display:inline-flex;align-items:center;gap:2px;font-size:9.5px;font-weight:700;color:var(--teal);background:#e8f4f1;border:1px solid #c4e2da;border-radius:3px;padding:0 3px}
 .tbl.tree .molbl{font-size:9px;color:var(--teal);text-align:right;line-height:1.1;margin-top:-1px}
 .tbl.tree .bulk{background:#fff8e8;border-color:#e6d3a3}
 .tbl.tree .bulkcell{background:#fffdf7}
-.tbl.tree .custbox .cell{width:34px;padding:1px 2px;font-size:10px;text-align:center;border:none;background:transparent;color:inherit;font-weight:800}
 .tbl.tree .add{border:1px solid var(--line);background:#fff;color:var(--teal);cursor:pointer;font-size:11px;font-weight:800;line-height:1;padding:2px 5px;border-radius:4px;flex:none}
 .tbl.tree .add:hover{background:var(--tealSoft);border-color:#b9dcd7}
 .tbl.tree tr.item td{background:#fff}
@@ -413,6 +411,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
 #demandTree tr.trdrop td{background:#e6f3f1!important}
 .fixedcell{background:#eef3f8}
 .tbl td.fx{background:#eef3f8}
+#minCashView,#invDaysView{background:#faf3dc!important;border-color:#e3d6a8}
 </style>
 </head>
 
@@ -584,9 +583,6 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
         <div><span class="t">판매 수요와 자동 연동 중</span><span id="invLinkNote">03번 9단계 트리의 판매 수요를 그대로 읽습니다.</span></div>
         <button class="btn sm teal" data-goto="demand">수요 수정하기</button>
       </div>
-      <div class="kpis" id="invKpis"></div>
-      <div style="height:14px"></div>
-
       <div class="card">
         <div class="card-h"><div><h2><span class="no">01</span>제품별 발주 조건 · 통합 재고</h2><p>리드타임·안전재고·최소발주량만 정하면 발주 시점과 수량이 자동 확정됩니다. 거래처가 여러 곳이어도 재고는 하나로 통합해 계산합니다.</p></div></div>
         <div id="invStockOpt" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 0 10px"></div>
@@ -1969,7 +1965,7 @@ function demandRowHtml(n,depth,idx){
     const q=prods.reduce((a,p)=>a+prodQty(p),0);
     const rev=prods.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
     return `<tr class="trow grp" data-row="${n.id}">
-      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="custbox" title="같은 유형의 거래처 수. 입력한 수량 전체에 곱해집니다.">×<input class="cell" type="number" min="0" step="1" data-nid="${n.id}" data-nf="count" value="${Math.max(0,num(n.count,1))}" aria-label="거래처 수">곳<span class="tsum" title="12월 거래처 수 자동 표시 · 총거래처 수">총 ${(n.counts&&n.counts[11]!=null)?n.counts[11]:Math.max(0,num(n.count,1))}곳</span></span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
+      <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><button class="tw" data-toggle="${n.id}" aria-label="접기">${open?'▾':'▸'}</button><span class="lvchip">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${LEVELS[depth-1]}명">${depth===7?`<span class="tsum" title="12월 거래처 수 자동 표시 · 월별 거래처 수는 표 오른쪽에서 지정">총 ${(n.counts&&n.counts[11]!=null)?n.counts[11]:Math.max(0,num(n.count,1))}곳</span>`:''}<span class="cnt">${kids.length}</span><button class="add" data-add="${n.id}" title="하위 ${depth<9?LEVELS[depth]:''} 추가">+</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
       <td class="num strong">${won(q)}</td>
       <td class="num strong">${man(rev)}</td>
       <td class="bulkcell"><input class="cell bulk" type="text" inputmode="numeric" data-nid="${n.id}" data-gbulk="1" placeholder="일괄" aria-label="${LEVELS[depth-1]} 하위 ${prods.length}개 제품 월수량 일괄 입력" title="이 ${LEVELS[depth-1]} 아래 모든 제품의 1~12월 수량을 한 번에 채웁니다"></td>
@@ -2117,15 +2113,6 @@ function renderInvSettings(){
 function renderInventory(){
   if(!document.getElementById('view-inventory')) return;
   const t=R.totals;
-  const k=document.getElementById('invKpis');
-  if(k) k.innerHTML=
-    kpi('계획 매출',shortWon(t.rev),'원',`${R.tbl?'':''}${S.meta.years}년 · 판매 ${won(t.sold)}개`)+
-    kpi('발주',t.orders+'회','',`${shortWon(t.orderAmt)}`)+
-    kpi('평균 재고',shortWon(t.avgInv),'원',`재고자산회전 ${t.cogs?(t.cogs/Math.max(1,t.avgInv)/R.H).toFixed(1):'—'}회/년`)+
-    kpi('판매 손실',won(t.lost),'개',t.lost?`약 ${shortWon(t.lostValue)}`:'품절 없음',t.lost?'amber':'green')+
-    kpi('최악 현금',shortWon(R.worst.cash),'원',`${R.months[R.worst.m].label} · 최소선 ${shortWon(R.minCash)}`,R.worst.cash<R.minCash?'red':'green')+
-    kpi('최소선 미달',R.belowMin+'개월','',`최소 운영현금 ${man(R.minCash)} ${unitLabel()}`,R.belowMin?'amber':'green');
-
   const bench=document.getElementById('invBench');
   if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>일평균<span class="u">개</span></th><th>안전재고<span class="u">개</span></th><th>발주점<span class="u">개</span></th><th>목표재고<span class="u">개</span></th><th>권장 1회<span class="u">개</span></th></tr></thead><tbody>`+
     (()=>{const bn=new Map();(R.invGroups||[]).forEach(p=>{if(!bn.has(p.name))bn.set(p.name,[]);bn.get(p.name).push(p);});
@@ -2175,12 +2162,14 @@ function renderInvLedger(){
     sy.onchange=e=>{ ledgerYear=+e.target.value; renderInvLedger(); };
   }
   if(sg){
-    sg.innerHTML=`<option value="__all">전체 통합</option>`+groups.map(g=>`<option value="${esc(g.key)}">${esc(g.name)}</option>`).join('');
+    const seen=new Set();
+    sg.innerHTML=`<option value="__all">전체 통합</option>`+groups.filter(g=>{if(seen.has(g.name))return false;seen.add(g.name);return true;}).map(g=>`<option value="${esc(g.key)}">${esc(g.name)}</option>`).join('');
     sg.value=ledgerGroup;
     sg.onchange=e=>{ ledgerGroup=e.target.value; renderInvLedger(); };
   }
   if(bc) bc.onclick=()=>ledgerCsv();
-  const sel=ledgerGroup==='__all'?groups:groups.filter(g=>g.key===ledgerGroup);
+  const selKey=groups.find(g=>g.key===ledgerGroup);
+  const sel=ledgerGroup==='__all'?groups:(selKey?groups.filter(g=>g.name===selKey.name):groups);
   const data=[];let tO=0,tI=0,tS=0,tQ=0,tA=0,tStock=0;
   for(let m=0;m<(ledgerYear<0?t0MonthsOf(S):12);m++){
     const i=ledgerYear<0?m:t0MonthsOf(S)+ledgerYear*12+m;
@@ -2857,7 +2846,7 @@ function copyPrevious(){
   syncInputs();paint();toast('선택연도에 복사했습니다. DB는 별도 저장하세요.');
 }
 function freshState(name){const s=defaultState();s.meta.name=name||'새 프로젝트';s.sales.tree=[];s.inv.byProduct={};s.payroll.departments=[];Object.keys(s.sga).forEach(k=>s.sga[k]=[]);Object.keys(s.nonop).forEach(k=>s.nonop[k]=[]);Object.keys(s.invest).filter(k=>typeof s.invest[k]==='number'&&!/Life/.test(k)).forEach(k=>s.invest[k]=0);s.company={};return ensureState(s);}
-function resetView(){t0Sel=t0MonthsOf(S)>0;editYear=0;orderYear=0;R=compute(S);syncInputs();$('#projName').value=S.meta.name;window.__S=S;switchView(currentView);}
+function resetView(){t0Sel=t0MonthsOf(S)>0;editYear=0;orderYear=0;ledgerYear=t0MonthsOf(S)>0?-1:0;R=compute(S);syncInputs();$('#projName').value=S.meta.name;window.__S=S;switchView(currentView);}
 function newProject(){if(Workspace.busy||!canEdit()||!confirm('새 빈 프로젝트를 만들까요? 현재 변경사항은 DB에 저장되지 않은 채 사라집니다. 먼저 「DB 저장」하세요.'))return;Workspace.localId=null;Workspace.dbId=null;Workspace.sourceId=null;Workspace.legacy=false;Workspace.isPublic=false;Workspace.notice='';Workspace.docs=[];Workspace.dbStatus='새 프로젝트 · DB 미저장';S=freshState();resetView();renderWorkspace();}
 function safeMessage(e){return String(e?.message||e||'알 수 없는 오류').replace(/eyJ[A-Za-z0-9_.-]+/g,'[보안값 숨김]').replace(/https:\/\/[^\s]+/g,'[주소 숨김]');}
 function requireDB(write=false){if(!Workspace.client)throw Error('DB 연결 모듈을 불러오지 못했습니다. 인터넷 연결을 확인하세요.');if(!Gate.approved||!Workspace.user||Workspace.checking)throw Error('로그인과 승인이 필요합니다.');if(write&&!Workspace.admin)throw Error('뷰어는 읽기 전용입니다.');}
@@ -3723,6 +3712,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
