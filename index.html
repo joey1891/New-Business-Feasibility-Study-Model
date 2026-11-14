@@ -1967,7 +1967,7 @@ function custInfo(id){
 }
 function custOf(id){ return custInfo(id).base; }
 function cntM(id,i){ const f=custInfo(id),v=f.counts?f.counts[i]:null; return v==null?f.base:Math.max(0,num(v,0)); }
-function prodQty(p){ const ms=productYear(p,editYear).months||[]; return ms.reduce((a,b,i)=>a+(+b||0)*cntM(p.id,i),0); }
+function prodQty(p){ const ms=productYear(p,editYear).months||[]; const skip=t0Sel?smOf(S)-1:0; return ms.reduce((a,b,i)=>i<skip?a:a+(+b||0)*cntM(p.id,i),0); }
 
 function demandRowHtml(n,depth,idx){
   const leaf=depth>=9||!(n.children&&n.children.length);
@@ -1991,12 +1991,12 @@ function demandRowHtml(n,depth,idx){
   const base=n;n={...n,...productYear(n,editYear),growth:base.growth};
   return `<tr class="trow item" data-row="${n.id}">
     <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${depth>=9?'제품명':LEVELS[depth-1]+'명'}">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}${depth<9?`<button class="add" data-add="${n.id}" title="하위 ${LEVELS[depth]} 추가">+</button>`:''}<button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span></td>
-    <td>${won(q)}</td><td>${man(q*n.price)}</td><td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="price" value="${n.price}"></td>
+    <td>${won(q)}</td><td title="연간 판매 수요 × 단가(원) = 매출">${man(q*n.price)}</td><td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="price" value="${n.price}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="cost" value="${n.cost}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
     <td><input class="cell bulk${t0Sel?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄"${t0Sel?' disabled title="T0 모드 · 월별 열에 입력"':''} aria-label="1년 월수량 일괄 입력"></td>
-    ${(n.months||[]).map((v,i)=>{const m=cntM(n.id,i),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${lock?0:v}" ${lock?'disabled data-readonly-skip="1" title="사업 개시 전 월 · 0 고정"':''} aria-label="${fyMonth(i)}월">${m>1&&!lock?`<div class="molbl">${won((+v||0)*m)}</div>`:''}</td>`;}).join('')}
-    <td class="tot-col strong">${won(q)}${(()=>{const ms=(n.months||[]).reduce((a,b)=>a+(+b||0),0);return q>ms?`<div class="sub" title="월별 입력은 거래처당 수량이며 연간은 거래처 수 배수가 포함된 판매 수요입니다">월합계 ${won(ms)} · 거래처 배수 포함</div>`:'';})()}</td>
+    ${(n.months||[]).map((v,i)=>{const m=cntM(n.id,i),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${lock?0:v}" ${lock?'disabled data-readonly-skip="1" title="사업 개시 전 월 · 0 고정"':''} aria-label="${fyMonth(i)}월">${m>1&&!lock?`<div class="molbl" title="입력값은 거래처 1곳당 수량 · 판매수요는 거래처 수 배수 적용">${won((+v||0)*m)} <span style="opacity:.75;font-size:9px">(${won(+v||0)}개×${won(m)}곳)</span></div>`:''}</td>`;}).join('')}
+    <td class="tot-col strong">${won(q)}${(()=>{const ms=(n.months||[]).reduce((a,b,i)=>(t0Sel&&i+1<smOf(S))?a:a+(+b||0),0);return q>ms?`<div class="sub" title="월별 입력(거래처당 수량) 합계에 거래처 수 배수를 적용한 판매 수요">월합계 ${won(ms)} × 거래처 배수 = ${won(q)}</div>`:'';})()}</td>
     <td class="tot-col">${man(q*(+n.price||0))}</td>
     <td></td>
   </tr>`;
@@ -2018,7 +2018,7 @@ function renderTree(){
    const totalR=R.products.reduce((a,p)=>a+prodQty(p)*productYear(p,editYear).price,0);
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px"><col style="width:52px">${Array.from({length:12},()=>'<col style="width:52px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
     <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
-    ${Array.from({length:12},(_,i)=>`<th>${fyMonth(i)}월</th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
+    ${Array.from({length:12},(_,i)=>`<th title="입력값은 거래처 1곳당 월 판매 수량 · 연간·매출 열에는 거래처 수 배수가 적용됩니다">${fyMonth(i)}월<span class="u">거래처당</span></th>`).join('')}<th>연간<span class="u">개</span></th><th>매출<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="4"></td>
      ${Array.from({length:12},(_,i)=>`<td>${won(t0Sel&&(i+1)<smOf(S)?0:R.products.reduce((a,p)=>a+(productYear(p,editYear).months[i]||0)*cntM(p.id,i),0))}</td>`).join('')}
@@ -3767,6 +3767,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
