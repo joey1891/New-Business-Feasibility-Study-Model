@@ -2891,7 +2891,7 @@ async function saveDB(asNew=false){
     if(!confirm((asNew||!Workspace.dbId?'새 DB 프로젝트를 생성':'현재 DB 프로젝트를 갱신')+'할까요?'))return;
     Workspace.busy=true;Workspace.dbStatus='DB 저장 중 · 응답 대기';enforceReadonly();updateStatuses();snapshot=ensureState(clone(S));snapshot.meta.name=name;rev=Workspace.revision;
     const id=Workspace.dbId,payload={name,inputs:snapshot,updated_at:new Date().toISOString(),is_public:Workspace.isPublic};
-    const q=(asNew||!id)?Workspace.client.from('feasibility_projects').insert({...payload,user_id:Workspace.user.id}):Workspace.client.from('feasibility_projects').update(payload).eq('id',id);
+    const q=(asNew||!id)?Workspace.client.from('feasibility_projects').insert({...payload,user_id:Workspace.user.id}):Workspace.client.from('feasibility_projects').update({...payload,user_id:Workspace.user.id}).eq('id',id);
     const {data,error}=await q.select('id').single();if(error)throw error;if(!data?.id)throw Error('저장 성공 응답에 프로젝트 ID가 없습니다.');
     Workspace.dbId=data.id;Workspace.legacy=false;Workspace.sourceId=null;S.meta.name=name;saveState(true);const kind=(asNew||!id)?'신규 생성':'갱신';
     let vfy='';
@@ -2939,7 +2939,7 @@ function renderWorkspace(){
     <div class="workspace-actions"><button class="btn" id="newProject" data-write>새 빈 프로젝트</button></div>
     <p class="status-line">변경사항은 입력 즉시 표시되며, <b>「DB 명시적 저장」</b> 또는 <b>「DB 다른 이름 저장」</b>으로만 서버에 기록됩니다.</p><div class="divider"></div>
     <div class="workspace-actions"><button class="btn" id="dbList">DB 목록 불러오기</button><button class="btn dark" id="dbSave" data-db-write>DB 명시적 저장</button><button class="btn teal" id="dbSaveAs" data-db-write>DB 다른 이름 저장</button></div>
-    <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)} · ${p.updated_at?String(p.updated_at).slice(0,16).replace('T',' '):'시각없음'}${p.is_public?' · 공개':''}</option>`).join('')}</select></label>
+    <label class="field"><span class="lb">DB 프로젝트 · 로그인 후 권한 범위만 조회</span><select id="dbProjects"><option value="">선택하세요 · ${Workspace.projects.length}개</option>${Workspace.projects.map(p=>`<option value="${esc(p.id)}" ${p.id===Workspace.dbId?'selected':''}>${esc(p.name)} · ${p.updated_at?new Date(p.updated_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}):'시각없음'}${p.is_public?' · 공개':''}</option>`).join('')}</select></label>
     <label class="check"><input id="projectPublic" type="checkbox" data-db-write ${Workspace.isPublic?'checked':''}>승인된 뷰어에게 공개</label><p id="dbStatus" class="status-line" role="status"></p>
     <div class="note amber" id="legacyNotice" hidden></div>
   </div><div class="card"><div class="card-h"><div><h2>계정 · 승인</h2><p>원본 승인 흐름을 유지합니다. 뷰어는 읽기 전용입니다.</p></div></div>
@@ -3716,6 +3716,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 </script>
 </body>
 </html>
+
 
 
 
