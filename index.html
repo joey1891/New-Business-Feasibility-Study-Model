@@ -1608,10 +1608,12 @@ function extendMonthly(r){
     const b={ar:r.arM[i],ap:r.apM[i],inv:r.invM[i],...wc,vatCredit:tax.credit,vatDue:tax.due},dnwc=operatingNWC(b)-operatingNWC(prev),nopat=ebit-Math.max(0,p.ebit)*assumeYear(s,t0m?0:y).taxRate/100/dvE,fcff=nopat+dep-dnwc;
     const tv=i===r.NM-1?r.tv:0,flow=tv===null?null:fcff+tv;
     const parts=p.pay.sgaComponents?Object.fromEntries(PAY_COMPONENTS.map(([k])=>['pay_'+k,(num(p.pay.sgaComponents[k])+num(p.pay.mfgComponents[k]))/dvE])):{pay_salary:p.pay.total/dvE};
-    monthly.push({label:t0m?('T0 · '+month.mm+'월'):('Y'+(y+1)+' '+month.mm+'월'),y:t0m?-1:y,i,qty,rev,cogs,gp,sga,dep,ebit,tax:(t0m?p.tax:r.pl[y].tax)/dvE,ni,cfo:r.cfoM[i],cfi:0,cff:-r.repayM[i],net:r.cfoM[i]-r.repayM[i],begin:i?r.cashM[i-1]:r.cash0,cash:r.cashM[i],...b,assets,liab,equity,check:assets-liab-equity,variable:cogs+p.sga.variable.amt/dvE,cm:rev-cogs-p.sga.variable.amt/dvE,fixed:(p.pay.sga+p.sga.fixed.amt+p.sga.semi.amt+p.dep)/dvE,nopat,fcff,tv,flow,pv:flow===null?null:flow/r.discounts[y<0?0:y],salesVAT:tax.output,grossBill:rev+tax.output,inputVAT:tax.input,vatPaid:tax.paid,vatRefund:tax.refunded,vatOffset:tax.offset,payTotal:p.pay.total/dvE,...parts,ordered:r.products.reduce((v,p)=>v+p.rows[i].ordered,0),arrived:r.products.reduce((v,p)=>v+p.rows[i].arrival,0),stockQty:r.products.reduce((v,p)=>v+p.rows[i].stock,0)});
+    monthly.push({label:t0m?('T0 · '+month.mm+'월'):('Y'+(y+1)+' '+month.mm+'월'),y:t0m?-1:y,i,qty,rev,cogs,gp,sga,dep,ebit,tax:(t0m?p.tax:r.pl[y].tax)/dvE,ni,cfo:r.cfoM[i],cfi:0,cff:-r.repayM[i],net:r.cfoM[i]-r.repayM[i],begin:i?r.cashM[i-1]:r.cash0,cash:r.cashM[i],...b,ppe,intang,otherAsset,otherLiab,assets,liab,equity,check:assets-liab-equity,variable:cogs+p.sga.variable.amt/dvE,cm:rev-cogs-p.sga.variable.amt/dvE,fixed:(p.pay.sga+p.sga.fixed.amt+p.sga.semi.amt+p.dep)/dvE,nopat,fcff,tv,flow,pv:flow===null?null:flow/r.discounts[y<0?0:y],salesVAT:tax.output,grossBill:rev+tax.output,inputVAT:tax.input,vatPaid:tax.paid,vatRefund:tax.refunded,vatOffset:tax.offset,payTotal:p.pay.total/dvE,...parts,ordered:r.products.reduce((v,p)=>v+p.rows[i].ordered,0),arrived:r.products.reduce((v,p)=>v+p.rows[i].arrival,0),stockQty:r.products.reduce((v,p)=>v+p.rows[i].stock,0)});
   });
-  const balanceKeys=['cash','ar','ap','inv','prepaid','receivable','advance','accrued','vatCredit','vatDue','assets','liab','equity','check','stockQty'];
+  const balanceKeys=['cash','ar','ap','inv','ppe','intang','otherAsset','otherLiab','prepaid','receivable','advance','accrued','vatCredit','vatDue','assets','liab','equity','check','stockQty'];
    const annual=Array.from({length:r.H},(_,y)=>{const ms=monthly.slice(r.off+y*12,r.off+(y+1)*12),last=ms.at(-1),row={label:fyShort(y,s),y};Object.keys(last).forEach(k=>{if(['label','y','i'].includes(k))return;row[k]=balanceKeys.includes(k)?last[k]:k==='begin'?ms[0].begin:ms.some(m=>m[k]===null)?null:ms.reduce((v,m)=>v+num(m[k]),0);});return row;});
+  if(r.off){const m0=monthly[r.off-1],cap=r.s.invest.equity+r.s.assume.openingCash;
+    r.t0bs={cash:m0.cash,ar:m0.ar,inv:m0.inv,ppe:m0.ppe,intang:m0.intang,otherAsset:m0.otherAsset,assets:m0.assets,ap:m0.ap,debt:r.debtM[r.off-1],otherLiab:m0.otherLiab,liab:m0.liab,capital:cap,retained:m0.equity-cap,equity:m0.equity,prepaid:m0.prepaid,receivable:m0.receivable,advance:m0.advance,accrued:m0.accrued,check:Math.round(m0.check)||0};}
   r.monthly=monthly;r.annualDetail=annual;return r;
 }
 
@@ -2324,64 +2326,64 @@ function renderFinance(){
   {const _n0=document.getElementById('stmtNote'); if(_n0){_n0.hidden=false;if(_n0.parentElement)_n0.parentElement.hidden=false;}}
   if(!document.getElementById('stmtTable')) return;
   $$('.ftab').forEach(b=>b.classList.toggle('on',b.dataset.stmt===finTab));
-  const P=periods();
+  const P=periods(),off=t0MonthsOf(S);
   const T=document.getElementById('stmtTable');
   if(finTab==='pl'){
     document.getElementById('stmtTitle').textContent='손익계산서';
-    document.getElementById('stmtDesc').textContent='발생주의 · 성격별 분류. 제조인건비는 매출원가, 그 외 인건비는 판관비로 표시합니다.';
+    document.getElementById('stmtDesc').textContent='발생주의 · 성격별 분류. 제조인건비는 매출원가, 그 외 인건비는 판관비로 표시합니다.'+(off?' T0 열은 부분기간('+t0Label(S)+') 집계입니다.':'');
+    const T0=off?R.t0:{rev:0,cogs:0,gp:0,pay:{mfg:0,sga:0,byDept:[]},sga:{fixed:{lines:[]},semi:{lines:[]},variable:{lines:[]}},dep:0,nonOpInc:0,intr:0,nonOpExp:0,ebt:0,tax:0,ni:0,ebitda:0,ebit:0},P2=off?['T0<span class="u">'+t0Label(S)+'</span>',...P]:P;
+    const w0=(t0v,arr)=>off?[t0v,...arr]:arr;
+    const t0no=nonopYear(S,0,off?T0.rev:0),t0r=off/12;
     const rows=[];
-    rows.push({l:'매출액',v:R.pl.map(p=>p.rev),cls:'strong',metric:'rev'});
-    rows.push({l:'매출원가 합계 · 제품원가 + 제조인건비 배부',v:R.pl.map(p=>-p.cogs),metric:'cogs',sign:-1});
-    rows.push({l:'매출원가 (제품·상품)',v:R.pl.map(p=>-(p.cogs-p.pay.mfg)),sub:true});
-    rows.push({l:'매출원가 (제조인건비)',v:R.pl.map(p=>-p.pay.mfg),sub:true});
-    rows.push({l:'매출총이익',v:R.pl.map(p=>p.gp),cls:'subtotal',metric:'gp'});
-    rows.push({l:'판매비와 관리비',v:R.pl.map(()=>''),cls:'grprow'});
-    rows.push({l:'인건비 (판관)',v:R.pl.map(p=>-p.pay.sga),sub:true});
-    const depts=S.payroll.departments.filter(d=>!d.mfg);
-    depts.forEach(d=>{
-      rows.push({l:'· '+d.name,v:R.pl.map(p=>-((p.pay.byDept.find(x=>x.id===d.id)||{amount:0}).amount)),sub:true,cls:'ind2'});
+    rows.push({l:'매출액',v:w0(T0.rev,R.pl.map(p=>p.rev)),cls:'strong',metric:'rev'});
+    rows.push({l:'매출원가 합계 · 제품원가 + 제조인건비 배부',v:w0(-T0.cogs,R.pl.map(p=>-p.cogs)),metric:'cogs',sign:-1});
+    rows.push({l:'매출원가 (제품·상품)',v:w0(-(T0.cogs-T0.pay.mfg),R.pl.map(p=>-(p.cogs-p.pay.mfg))),sub:true});
+    rows.push({l:'매출원가 (제조인건비)',v:w0(-T0.pay.mfg,R.pl.map(p=>-p.pay.mfg)),sub:true});
+    rows.push({l:'매출총이익',v:w0(T0.gp,R.pl.map(p=>p.gp)),cls:'subtotal',metric:'gp'});
+    rows.push({l:'판매비와 관리비',v:w0('',R.pl.map(()=>'')),cls:'grprow'});
+    rows.push({l:'인건비 (판관)',v:w0(-T0.pay.sga,R.pl.map(p=>-p.pay.sga)),sub:true});
+    S.payroll.departments.filter(d=>!d.mfg).forEach(d=>{
+      rows.push({l:'· '+d.name,v:w0(-((T0.pay.byDept.find(x=>x.id===d.id)||{amount:0}).amount),R.pl.map(p=>-((p.pay.byDept.find(x=>x.id===d.id)||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
-    const f0=S.sga.fixed[0];
-    R.pl.forEach((p,y)=>{});
     S.sga.fixed.forEach((it,k)=>{
-      rows.push({l:'· '+it.name,v:R.pl.map(p=>-((p.sga.fixed.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+      rows.push({l:'· '+it.name,v:w0(-((T0.sga.fixed.lines[k]||{amount:0}).amount),R.pl.map(p=>-((p.sga.fixed.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
     S.sga.semi.forEach((it,k)=>{
-      rows.push({l:'· '+it.name,v:R.pl.map(p=>-((p.sga.semi.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+      rows.push({l:'· '+it.name,v:w0(-((T0.sga.semi.lines[k]||{amount:0}).amount),R.pl.map(p=>-((p.sga.semi.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
     S.sga.variable.forEach((it,k)=>{
-      rows.push({l:'· '+it.name,v:R.pl.map(p=>-((p.sga.variable.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+      rows.push({l:'· '+it.name,v:w0(-((T0.sga.variable.lines[k]||{amount:0}).amount),R.pl.map(p=>-((p.sga.variable.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
-    rows.push({l:'· 감가상각비',v:R.pl.map(p=>-p.dep),sub:true,cls:'ind2'});
-    rows.push({l:'판관비 합계',v:R.pl.map(p=>-p.opex),sub:true,cls:'total'});
-    rows.push({l:'영업이익 (EBIT)',v:R.pl.map(p=>p.ebit),cls:'subtotal'});
-    rows.push({l:'영업외 수익',v:R.pl.map(p=>p.nonOpInc),sub:true});
-    R.pl[0].nonop.incCash.lines.forEach((it,k)=>{
-      rows.push({l:'· '+it.name,v:R.pl.map(p=>-0+((p.nonop.incCash.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+    rows.push({l:'· 감가상각비',v:w0(-T0.dep,R.pl.map(p=>-p.dep)),sub:true,cls:'ind2'});
+    rows.push({l:'판관비 합계',v:w0(-(T0.pay.sga+T0.sga.fixed.amt+T0.sga.semi.amt+T0.sga.variable.amt+T0.dep),R.pl.map(p=>-p.opex)),sub:true,cls:'total'});
+    rows.push({l:'영업이익 (EBIT)',v:w0(T0.ebit,R.pl.map(p=>p.ebit)),cls:'subtotal'});
+    rows.push({l:'영업외 수익',v:w0(T0.nonOpInc,R.pl.map(p=>p.nonOpInc)),sub:true});
+    (S.nonop.incCash).forEach((it,k)=>{
+      rows.push({l:'· '+it.name,v:w0(((t0no.incCash.lines||[])[k]||{amount:0}).amount*t0r,R.pl.map(p=>((p.nonop.incCash.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
-    R.pl[0].nonop.incNonCash.lines.forEach((it,k)=>{
-      rows.push({l:'· '+it.name+' (비현금)',v:R.pl.map(p=>((p.nonop.incNonCash.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+    (S.nonop.incNonCash).forEach((it,k)=>{
+      rows.push({l:'· '+it.name+' (비현금)',v:w0(((t0no.incNonCash.lines||[])[k]||{amount:0}).amount*t0r,R.pl.map(p=>((p.nonop.incNonCash.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
-    rows.push({l:'영업외 비용',v:R.pl.map(p=>-(p.intr+p.nonOpExp)),sub:true});
-    rows.push({l:'· 이자비용',v:R.pl.map(p=>-p.intr),sub:true,cls:'ind2'});
-    S.nonop.expCash.forEach((it,k)=>{
-      rows.push({l:'· '+it.name,v:R.pl.map(p=>-((p.nonop.expCash.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+    rows.push({l:'영업외 비용',v:w0(-(T0.intr+T0.nonOpExp),R.pl.map(p=>-(p.intr+p.nonOpExp))),sub:true});
+    rows.push({l:'· 이자비용',v:w0(-T0.intr,R.pl.map(p=>-p.intr)),sub:true,cls:'ind2'});
+    (S.nonop.expCash).forEach((it,k)=>{
+      rows.push({l:'· '+it.name,v:w0(-((t0no.expCash.lines||[])[k]||{amount:0}).amount*t0r,R.pl.map(p=>-((p.nonop.expCash.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
-    S.nonop.expNonCash.forEach((it,k)=>{
-      rows.push({l:'· '+it.name+' (비현금)',v:R.pl.map(p=>-((p.nonop.expNonCash.lines[k]||{amount:0}).amount)),sub:true,cls:'ind2'});
+    (S.nonop.expNonCash).forEach((it,k)=>{
+      rows.push({l:'· '+it.name+' (비현금)',v:w0(-((t0no.expNonCash.lines||[])[k]||{amount:0}).amount*t0r,R.pl.map(p=>-((p.nonop.expNonCash.lines[k]||{amount:0}).amount))),sub:true,cls:'ind2'});
     });
-    rows.push({l:'세전이익',v:R.pl.map(p=>p.ebt),cls:'total'});
-    rows.push({l:'법인세',v:R.pl.map(p=>-p.tax),sub:true});
-    rows.push({l:'당기순이익',v:R.pl.map(p=>p.ni),cls:'subtotal'});
-    rows.push({l:'EBITDA',v:R.pl.map(p=>p.ebitda),cls:'grprow'});
-    rows.push({l:'매출총이익률',v:R.pl.map(p=>pcv(p.gm)),cls:'subtotal'});
-    rows.push({l:'영업이익률',v:R.pl.map(p=>pcv(p.om)),cls:'subtotal'});
-    rows.push({l:'순이익률',v:R.pl.map(p=>pcv(p.nm)),cls:'subtotal'});
-    T.innerHTML=buildStmt(rows,P);
+    rows.push({l:'세전이익',v:w0(T0.ebt,R.pl.map(p=>p.ebt)),cls:'total'});
+    rows.push({l:'법인세',v:w0(-T0.tax,R.pl.map(p=>-p.tax)),sub:true});
+    rows.push({l:'당기순이익',v:w0(T0.ni,R.pl.map(p=>p.ni)),cls:'subtotal'});
+    rows.push({l:'EBITDA',v:w0(T0.ebitda,R.pl.map(p=>p.ebitda)),cls:'grprow'});
+    rows.push({l:'매출총이익률',v:w0(T0.rev?pcv(T0.gp/T0.rev):'—',R.pl.map(p=>pcv(p.gm))),cls:'subtotal'});
+    rows.push({l:'영업이익률',v:w0(T0.rev?pcv(T0.ebit/T0.rev):'—',R.pl.map(p=>pcv(p.om))),cls:'subtotal'});
+    rows.push({l:'순이익률',v:w0(T0.rev?pcv(T0.ni/T0.rev):'—',R.pl.map(p=>pcv(p.nm))),cls:'subtotal'});
+    T.innerHTML=buildStmt(rows,P2);
     T.classList.add('stmt');
     const _sn=document.getElementById('stmtNote'); if(_sn){_sn.innerHTML='';_sn.hidden=true;if(_sn.parentElement)_sn.parentElement.hidden=true;}
   }
-  else if(finTab==='mgmt'){
+    else if(finTab==='mgmt'){
     document.getElementById('stmtTitle').textContent='관리회계 손익계산서';
     document.getElementById('stmtDesc').textContent='원가행태별 분류 · 공헌이익과 BEP. 재무제표와 같은 숫자를 변동/고정으로 다시 묶습니다.';
     const rows=[];
@@ -2435,23 +2437,23 @@ function renderFinance(){
   }
   else if(finTab==='bs'){
     document.getElementById('stmtTitle').textContent='재무상태표';
-    document.getElementById('stmtDesc').textContent='각 연도 말 기준. t0는 사업 시작 직전의 개시 잔액입니다.';
-    const head=['t0<span class="u">초기</span>',...P];
+    document.getElementById('stmtDesc').textContent=off?'각 연도 말 기준. T0 열은 부분기간('+t0Label(S)+') 말 잔액입니다.':'각 연도 말 기준. t0는 사업 시작 직전의 개시 잔액입니다.';
+    const head=off?['T0<span class="u">'+t0Label(S)+' 기말</span>',...P]:['t0<span class="u">초기</span>',...P];
     const b0=R.bs0;
-    const c=k=>[b0[k],...R.bs.map(b=>b[k])];
+    const c=k=>[off?(R.t0bs[k]!=null?R.t0bs[k]:0):(b0[k]!=null?b0[k]:0),...R.bs.map(b=>b[k])];
     const rows=[];
     rows.push({l:'자산',v:R.pl.map(()=>''),cls:'grprow'});
     rows.push({l:'현금',v:c('cash'),sub:true});
     rows.push({l:'매출채권',v:c('ar'),sub:true});
     rows.push({l:'재고자산',v:c('inv'),sub:true});
-    ['prepaid','receivable'].forEach((k,i)=>rows.push({l:['선급금 등','미수금 등'][i],v:[0,...R.bs.map(b=>b[k])],sub:true}));
+    ['prepaid','receivable'].forEach((k,i)=>rows.push({l:['선급금 등','미수금 등'][i],v:[off?(R.t0bs[k]!=null?R.t0bs[k]:0):0,...R.bs.map(b=>b[k])],sub:true}));
     rows.push({l:'유형자산 (순)',v:c('ppe'),sub:true});
     rows.push({l:'무형자산 (순)',v:c('intang'),sub:true});
     rows.push({l:'비현금 수익 대응자산',v:[0,...R.bs.map(b=>b.otherAsset)],sub:true});
     rows.push({l:'자산 합계',v:c('assets'),cls:'subtotal'});
     rows.push({l:'부채',v:R.pl.map(()=>''),cls:'grprow'});
     rows.push({l:'매입채무',v:c('ap'),sub:true});
-    ['advance','accrued'].forEach((k,i)=>rows.push({l:['선수금 등','미지급금 등'][i],v:[0,...R.bs.map(b=>b[k])],sub:true}));
+    ['advance','accrued'].forEach((k,i)=>rows.push({l:['선수금 등','미지급금 등'][i],v:[off?(R.t0bs[k]!=null?R.t0bs[k]:0):0,...R.bs.map(b=>b[k])],sub:true}));
     rows.push({l:'차입금',v:c('debt'),sub:true});
     rows.push({l:'비현금 비용 대응부채',v:[0,...R.bs.map(b=>b.otherLiab)],sub:true});
     rows.push({l:'부채 합계',v:c('liab'),cls:'subtotal'});
@@ -2459,8 +2461,8 @@ function renderFinance(){
     rows.push({l:'납입자본',v:c('capital'),sub:true});
     rows.push({l:'이익잉여금',v:c('retained'),sub:true});
     rows.push({l:'자본 합계',v:c('equity'),cls:'subtotal'});
-    rows.push({l:'부채 + 자본',v:[b0.liab+b0.equity,...R.bs.map(b=>b.liab+b.equity)],cls:'total'});
-    rows.push({l:'검증 (자산 − 부채 − 자본)',v:[b0.check,...R.bs.map(b=>b.check)],cls:'total'});
+    rows.push({l:'부채 + 자본',v:[off?(R.t0bs.liab+R.t0bs.equity):(b0.liab+b0.equity),...R.bs.map(b=>b.liab+b.equity)],cls:'total'});
+    rows.push({l:'검증 (자산 − 부채 − 자본)',v:[off?R.t0bs.check:b0.check,...R.bs.map(b=>b.check)],cls:'total'});
     T.innerHTML=buildStmt(rows,head);
     document.getElementById('stmtNote').innerHTML='<b>검증 행은 0이어야 합니다</b> — 월별 현금흐름과 발생주의 손익을 같은 원장에서 계산하므로 자산·부채·자본이 자동으로 맞습니다.';
   }
@@ -2982,12 +2984,13 @@ const detailMoney=v=>v===null?'<span class="neg">계산불가</span>':m(v);
 const allocationNote='GP = 매출 − 실제 이동평균 제품원가 − 제조인건비 배부. CM = GP − 변동판매비 배부. 제조급여는 기존 관리회계 정의대로 변동비에 포함합니다. 제조급여 배부: 제품원가 비례 → 원가 0이면 매출 → 매출 0이면 판매수량 → 활동 없음은 명시적 배부대기 경로. 변동판매비: 매출 비례(매출 0이면 수량 → 원가 → 배부대기). 고정비는 거래처에 배부하지 않으며 거래처 순이익은 만들지 않습니다. 동명 노드는 전체 상위 ID 경로로 분리합니다.';
 function toggleButton(key,label,open){return `<button type="button" class="detail-toggle" data-detail-toggle="${esc(key)}" data-readonly-skip="1" aria-expanded="${open}"><span aria-hidden="true">${open?'▾':'▸'}</span> ${label}</button>`;}
 function accountRows(row){
+  const off=t0MonthsOf(S);
   const key='acct:'+finTab+':'+row.metric,open=detailOpen(key,false),sign=row.sign||1;
   let html=`<tr class="subtotal"><td class="l">${toggleButton(key,esc(row.l),open)}</td>${row.v.map(v=>`<td>${detailMoney(v)}</td>`).join('')}</tr>`;
   if(!open)return html;
   const max=+DetailState['level:'+finTab]||1;
   function walk(nodes){nodes.forEach(n=>{const nk=key+':'+n.key,expanded=detailOpen(nk,n.depth<max),has=n.children.length>0,label=`<span class="tree-depth">${n.depth}</span> ${esc(n.name)}`;
-    html+=`<tr class="account-node" data-account-path="${esc(n.key)}" data-depth="${n.depth}"><td class="l" style="padding-left:${10+(n.depth-1)*15}px">${has?toggleButton(nk,label,expanded):label}</td>${n.years.map(y=>`<td>${detailMoney(sign*y[row.metric])}</td>`).join('')}</tr>`;
+    html+=`<tr class="account-node" data-account-path="${esc(n.key)}" data-depth="${n.depth}"><td class="l" style="padding-left:${10+(n.depth-1)*15}px">${has?toggleButton(nk,label,expanded):label}</td>${off?'<td class="mut">—</td>':''}${n.years.map(y=>`<td>${detailMoney(sign*y[row.metric])}</td>`).join('')}</tr>`;
     if(has&&expanded)walk(n.children);
   });}walk(R.accountTree.tree);return html;
 }
