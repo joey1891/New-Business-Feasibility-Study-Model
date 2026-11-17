@@ -1118,7 +1118,7 @@ function invGroupParent(p){
 }
 function productDemand(p,months){
   const out=[];
-  for(let i=0;i<months.length;i++){ out.push(Math.max(0,Math.round(num(pmQty(p,months[i]))*cntOf(p,months[i].mm-1)))); }
+  for(let i=0;i<months.length;i++){ const mo=months[i]; out.push(Math.max(0,Math.round(num(pmQty(p,mo))*cntOfYear(p,mo.t0?'t0':mo.yi,mo.mm-1)))); }
   return out;
 }
 function buildInvGroups(s,products,months,H){
@@ -1132,7 +1132,7 @@ function buildInvGroups(s,products,months,H){
       const arr=Array(12).fill(0); let demSum=0,costW=0,priceW=0;
       members.forEach(m=>{
         const py=productYear(m,y);
-        for(let i=0;i<12;i++){ const q=Math.max(0,Math.round(num(py.months[i])*cntOf(m,i))); arr[i]+=q; demSum+=q; costW+=q*Math.max(0,num(py.cost,0)); priceW+=q*Math.max(0,num(py.price,0)); }
+        for(let i=0;i<12;i++){ const q=Math.max(0,Math.round(num(py.months[i])*cntOfYear(m,y,i))); arr[i]+=q; demSum+=q; costW+=q*Math.max(0,num(py.cost,0)); priceW+=q*Math.max(0,num(py.price,0)); }
       });
       yMonths.push(arr);
       yCost.push(demSum?costW/demSum:Math.max(0,num(productYear(anchor,y).cost,0)));
