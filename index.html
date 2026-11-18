@@ -1033,7 +1033,7 @@ function flattenProducts(s){
       const cb=depth===7?(n.countsByYear&&typeof n.countsByYear==='object'?n.countsByYear:null):countsBy;
       if(depth>=9||!n.children||!n.children.length){
         if(true){
-          out.push({id:n.id,name:n.name,path:p,node:n,custCount:c==null?1:c,custCounts:cs==null?null:cs.slice(0,12),custCountsByYear:cb==null?null:cb,level:Math.min(9,depth),
+          out.push({id:n.id,name:n.name,path:p,node:n,custCount:c==null?1:c,custCounts:cs==null?null:cs.slice(0,12),custCountsByYear:cb==null?null:cb,t0months:Array.isArray(n.t0months)?n.t0months:null,years:clone(n.years||{}),level:Math.min(9,depth),
             groupL1:p[0]||'', groupL2:p[1]||'', groupL3:p[2]||'', groupL4:p[3]||'',
             groupL5:p[4]||'', groupL6:p[5]||'', groupL7:p[6]||'', groupL8:p[7]||'',
             price:num(n.price,0),cost:num(n.cost,0),growth:num(n.growth,0),months:n.months||Array(12).fill(0)});
@@ -1144,6 +1144,8 @@ function buildInvGroups(s,products,months,H){
     const gYears={};
     for(let y=0;y<H;y++){ const be=productYear(anchor,y); gYears[y]=Object.assign({},be,{price:yPrice[y],cost:yCost[y],months:yMonths[y].slice()}); }
     const gp={id:anchor.id,name:anchor.name,custCount:1,node:{years:gYears}};
+    {const sm=smOf(s),off=t0MonthsOf(s);
+     if(off){gp.t0months=Array.from({length:off},(_,k)=>{const mi=sm-1+k;return members.reduce((a,m)=>a+((m.t0months&&m.t0months[k]!=null)?Math.max(0,Math.round(num(m.t0months[k]))):Math.max(0,Math.round(num(productYear(m,0).months[mi]||0))))*cntOfYear(m,'t0',mi),0);});}}
     const sim=simulateProduct(gp,cfg,months,H,s);
     const g={key,id:anchor.id,name:anchor.name,parentLabel:invGroupParent(anchor),label:invGroupParent(anchor),
       members,memberIds:members.map(m=>m.id),cfg,stock,openStock:Math.round(stock),
@@ -3784,6 +3786,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
