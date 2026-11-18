@@ -1087,7 +1087,7 @@ function simulateProduct(p,cfg,months,H,s){
     const openingQty=stock,openingValue=value;
     let arr=arrivals[i]||0,purchaseCost=arrivalValues[i]||0,purchaseVAT=arrivalTax[i]||0,purchaseDeduct=arrivalDeduct[i]||0; stock+=arr;value+=purchaseCost;onOrder-=arr;
     const d=dem[i],daily=d/months[i].days,yearDaily=(yearDemand[months[i].t0?0:months[i].yi]||0)/365;
-    const ss=yearDaily*safetyDays, cover=coverOf(cy,yi), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss;
+    const ss=yearDaily*safetyDays, cover=coverOf(cy,months[i].yi), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss;
     const avail=stock+onOrder;
     let ordered=0;
     const forceFirst=cfg.firstOrder!=null&&i===cfg.firstOrder;
@@ -3787,6 +3787,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
