@@ -997,7 +997,8 @@ function productYear(p,y){const n=p.node||p;return annual(n,y,{price:n.price,cos
 function t0MonthsView(p){const n=p.node||p,sm=smOf(S),off=t0MonthsOf(S),a=n.t0months,fb=productYear(n,0).months||[];return Array.from({length:12},(_,i)=>{const k=i-sm+1;if(i<sm-1||k<0||k>=off)return 0;return (a&&a[k]!=null)?Math.max(0,Math.round(num(a[k]))):Math.max(0,Math.round(num(fb[i])));});}
 function putT0Months(n,mi,val){const sm=smOf(S),off=t0MonthsOf(S),k=mi-sm+1;if(k<0||k>=off)return;n.t0months=n.t0months||Array(off).fill(0);n.t0months[k]=Math.max(0,Math.round(val));}
 function migrateT0Months(){if(!t0MonthsOf(S))return;const sm=smOf(S),off=t0MonthsOf(S);flattenProducts(S).forEach(p=>{const n=p.node;if(n.t0migrated)return;const y0=n.years&&n.years[0]&&Array.isArray(n.years[0].months)?n.years[0].months:null;if(!Array.isArray(n.t0months)&&y0&&y0.some(v=>Math.max(0,num(v))>0)){n.t0months=Array.from({length:off},(_,k)=>Math.max(0,Math.round(num(y0[sm-1+k],0))));}n.t0migrated=true;});}
-function invYear(s,id,y){return annual(invCfg(s,id),y);}
+function coverOf(c,y){const v=(c&&c.years&&c.years[y]&&c.years[y].cover!=null)?num(c.years[y].cover,60):(c&&c.cover!=null?num(c.cover,60):60);return Math.max(0,Math.round(v));}
+function invYear(s,id,y){const b=invCfg(s,id),o=annual(b,y);o.cover=coverOf(b,y);return o;}
 function deptYear(s,d,y){return annual(d,y,{...d,heads:Math.max(0,d.heads+d.headAdd*y),salary:d.salary*Math.pow(1+s.payroll.raise/100,y)});}
 function hasRankPlan(d){return !!(d&&((Array.isArray(d.mix)&&d.mix.some(m=>m&&m.rankId))||(d.hirePlan&&Object.keys(d.hirePlan).length)));}
 function deptRankHeads(d,y){
@@ -1017,7 +1018,7 @@ function invCfg(s,id){
   const c=s.inv.byProduct[id];
   if(num(s.inv.moqFloor,0)<3000&&num(c.moq,0)<3000)c.moq=3000;
   c.stock=Math.max(0,num(c.stock,0)); c.lead=Math.max(0,num(c.lead,30));
-  c.safety=Math.max(0,num(c.safety,15));c.cover=Math.max(0,Math.round(num(c.cover,60))); c.moq=Math.max(0,num(c.moq,0)); c.lot=Math.max(1,num(c.lot,1));
+  c.safety=Math.max(0,num(c.safety,15)); c.moq=Math.max(0,num(c.moq,0)); c.lot=Math.max(1,num(c.lot,1));
   c.firstOrder=(c.firstOrder==null||c.firstOrder==='')?null:Math.max(0,Math.round(num(c.firstOrder,0)));
   return c;
 }
@@ -1086,7 +1087,7 @@ function simulateProduct(p,cfg,months,H,s){
     const openingQty=stock,openingValue=value;
     let arr=arrivals[i]||0,purchaseCost=arrivalValues[i]||0,purchaseVAT=arrivalTax[i]||0,purchaseDeduct=arrivalDeduct[i]||0; stock+=arr;value+=purchaseCost;onOrder-=arr;
     const d=dem[i],daily=d/months[i].days,yearDaily=(yearDemand[months[i].t0?0:months[i].yi]||0)/365;
-    const ss=yearDaily*safetyDays, cover=Math.max(0,Math.round(num(cy.cover,60))), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss;
+    const ss=yearDaily*safetyDays, cover=coverOf(cy,yi), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss;
     const avail=stock+onOrder;
     let ordered=0;
     const forceFirst=cfg.firstOrder!=null&&i===cfg.firstOrder;
@@ -2128,7 +2129,7 @@ function renderInvSettings(){
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="lead" value="${c.lead}"></td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="safety" value="${c.safety}"></td>
       <td><input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="moq" value="${c.moq}"></td>
-      <td><input class="cell" type="number" min="0" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="cover" value="${c.cover==null?60:c.cover}" title="발주 목표 커버 일수 · 일평균×(리드타임+이 일수)+안전재고까지 채움 · 기본 60"></td>
+      <td><input class="cell" type="number" min="0" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="cover" value="${coverOf(c,editYear)}" title="발주 목표 커버 일수 · 일평균×(리드타임+이 일수)+안전재고까지 채움 · 기본 60"></td>
       <td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.cost)}</td><td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.price)}</td>
       <td>${(()=>{const cf=invCfg(S,g.id);const arr=cf.firstOrder!=null&&R.months[cf.firstOrder]?R.months[cf.firstOrder]:null;return `<input class="cell" type="date" data-pid="${g.id}" data-gids="${ids}" data-pf="firstDate" value="${cf.firstOrderDate||''}" title="최초 발주일 지정 · 미지정 시 발주점 도달 시점에 자동 발주">${arr?`<div class="sub">입고 예정 ${arr.y}.${String(arr.mm).padStart(2,'0')} · 리드타임 ${c.lead}일 반영</div>`:'<div class="sub">미지정 · 발주점 도달 시 자동 발주</div>'}`;})()}</td>
       <td class="fixedcell" title="적정재고 산출 연동 · 고정">${man(first.openingValue)}</td>
@@ -2153,7 +2154,7 @@ function renderInventory(){
       const daily=gs.reduce((a,gg)=>a+((gg.dem[editYear*12]||0)/days),0);
       const ss=(y1/365)*(c.safety||0);
       const rop=Math.round(daily*(c.lead+30)+ss);
-      const target=Math.round(daily*(c.lead+Math.max(0,Math.round(num(c.cover,60))))+ss);
+      const target=Math.round(daily*(c.lead+coverOf(c,editYear))+ss);
       const lot=Math.max(c.moq||0,Math.ceil(Math.max(0,target-firstOp)/(c.lot||1))*(c.lot||1));
       const ft=' title="적정재고 산출 · 자동 고정"';
       return `<tr><td class="l">${esc(p.name)}</td><td class="fx"${ft}>${(y1/365).toFixed(1)}</td><td class="fx"${ft}>${won(ss)}</td><td class="fx"${ft}>${won(rop)}</td><td class="fx"${ft}>${won(target)}</td><td class="fx"${ft}>${won(lot)}</td></tr>`;
@@ -3786,6 +3787,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
