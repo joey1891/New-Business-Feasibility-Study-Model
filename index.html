@@ -1855,7 +1855,7 @@ function switchView(id){
   $$('.navbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===id));
   $$('.view').forEach(v=>v.classList.toggle('on',v.id==='view-'+id));
   const m=VIEW_META[id];
-  $('#eyebrow').textContent=m[0]; $('#pageTitle').textContent=m[1]; $('#pageDesc').textContent=m[2];
+  const eb=$('#eyebrow'),pt=$('#pageTitle'),pd=$('#pageDesc');if(eb)eb.textContent=m[0];if(pt)pt.textContent=m[1];if(pd)pd.textContent=m[2];
   try{ history.replaceState(null,'','#'+id); }catch(e){}
   window.scrollTo({top:0,behavior:'smooth'});
   R=compute(S); window.__R=R; window.__S=S;
@@ -3379,6 +3379,7 @@ function liveCommit(){
   const el=document.querySelector(sel);
   if(el){el.focus();if(before.pos!=null&&el.setSelectionRange)try{el.setSelectionRange(before.pos,before.pos);}catch(_){}}
 }
+document.addEventListener('click',e=>{const t=e.target&&e.target.closest?e.target.closest('[data-rpm-toggle]'):null;if(t){RP_MONTH_OPEN=(RP_MONTH_OPEN===t.dataset.rpmToggle)?null:t.dataset.rpmToggle;renderRankMatrix();}},true);
 function commitStable(){if(composing||!Gate.approved)return;if(!inputDirty&&!bulkDirty)return;inputDirty=false;R=compute(S);window.__R=R;saveState();if(rpDirty){rpDirty=false;renderRankMatrix();}renderPeriodResults();renderCurrencyPanels();if(currentView==='demand'){try{renderDemand();}catch(e){try{renderTree();}catch(e2){}}}}
 window.addEventListener('change',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept],input[data-nt0],input[data-rpt0-dept]')){e.stopImmediatePropagation();writeStable(e.target);commitStable();}},true);
 window.addEventListener('focusout',e=>{if(e.target.matches('input[data-nid],input[data-pid],input[data-did],input[data-sid],input[data-oid],input[data-rpdept],input[data-nt0],input[data-rpt0-dept]'))commitStable();},true);
@@ -3484,6 +3485,7 @@ demandCsv=function(){if(!Gate.approved)return;const factor=MoneyUnits[unitKey()]
 let rpDirty=false;
 function rpMix(d){return (Array.isArray(d.mix)&&d.mix.length)?d.mix:(d.rankId?[{rankId:d.rankId,heads:Math.max(0,num(d.heads))}]:[]);}
 function rpRankList(d){const s=new Set(rpMix(d).map(m=>m.rankId).filter(Boolean));Object.keys(d.hirePlan||{}).forEach(y=>Object.keys(d.hirePlan[y]||{}).forEach(r=>s.add(r)));Object.keys(d.hirePlanT0M||{}).forEach(r=>s.add(r));return Array.from(s);}
+let RP_MONTH_OPEN=null;
 function renderRankMatrix(){
   if(!Gate.approved||currentView!=='cost'||!R)return;
   const host=$('#view-cost');if(!host)return;
@@ -3495,10 +3497,41 @@ function renderRankMatrix(){
   S.payroll.departments.forEach(d=>{
     const list=rpRankList(d);
     const roleLbl={manufacturing:'제조',sales:'판매',admin:'관리'}[(deptYear(S,d,editYear).role)||(d.mfg?'manufacturing':'admin')]||'관리';
-    rows.push(rpGroupRow(`<b>${esc(d.name)}</b><span class="sub" style="margin-left:8px;font-weight:400">${roleLbl}</span>`));
+    rows.push(rpGroupRow(`<b>${esc(d.name)}</b><span class="sub" style="margin-left:8px;font-weight:400">${roleLbl}</span><button class="btn sm" data-rpm-toggle="${d.id}" style="margin-left:10px;padding:2px 8px;font-size:10px" title="이 부서의 월별 채용을 이 표 안에서 입력">${(RP_MONTH_OPEN===d.id)?'▲ 월별 닫기':'▼ 월별 채용'}</button>`));
     if(!list.length){
-      rows.push([`<div class="sub" style="padding-left:14px">직급 미지정</div>`,`<select data-rpdept-sel="${d.id}" data-rkfrom=""><option value="">직급 선택</option>${S.payroll.ranks.map(r=>`<option value="${r.id}">${r.name}</option>`).join('')}</select>`,...Array(H).fill(`<input class="cell" type="number" min="0" step="1" disabled placeholder="직급 선택 후">`),'<b>—</b>','<b>—</b>','']);
+      const defRank=(S.payroll.ranks&&S.payroll.ranks[0])?S.payroll.ranks[0].id:null;
+      if(defRank){ d.mix=[{rankId:defRank,heads:Math.max(0,num(d.heads))}]; }
+      const list2=rpRankList(d);
+      if(!list2.length){
+        rows.push([`<div class="sub" style="padding-left:14px">직급을 추가하세요</div>`,`<select data-rpdept-sel="${d.id}" data-rkfrom=""><option value="">직급 선택</option>${S.payroll.ranks.map(r=>`<option value="${r.id}">${r.name}</option>`).join('')}</select>`,...Array(H).fill(`<input class="cell" type="number" min="0" step="1" disabled>`),'<b>—</b>','<b>—</b>','']);
+        return;
+      }
+      list2.forEach(rk=>{
+        const rkObj=ranks.find(r=>r.id===rk);
+        const cnt=Math.max(0,num(deptRankHeads(d,editYear)[rk]));
+        const cost=rkObj?rk2(rkObj,editYear).salary*cnt:0;
+        rows.push([`<div style="padding-left:14px">${rkObj?esc(rkObj.name):'(삭제된 직급)'}</div>`,
+          `<select data-rpdept-sel="${d.id}" data-rkfrom="${rk}"><option value="">-</option>${S.payroll.ranks.map(r=>`<option value="${r.id}"${r.id===rk?' selected':''}>${r.name}</option>`).join('')}</select>`,
+          ...Array.from({length:H},(_,y)=>`<input class="cell" type="number" min="0" step="1" data-rpdept="${d.id}" data-rprank="${rk}" data-rpyear="${y}" value="${y===0?cnt:0}">`),
+          `<b>${won(cnt)}</b>`,`<span style="white-space:nowrap">${formatMoney(cost)}</span>`,
+          `<button class="del" data-rpdel-dept="${d.id}" data-rpdel-rank="${rk}" title="직급 행 삭제">✕</button>`]);
+      });
       return;
+    }
+    if(RP_MONTH_OPEN===d.id){
+      const isT0=(t0Sel&&editYear===0&&t0MonthsOf(S)>0);
+      const n=isT0?Math.max(1,t0MonthsOf(S)):12;
+      list.filter(rk=>rk).forEach(rk=>{
+        const rkObj=ranks.find(r=>r.id===rk),rname=rkObj?rkObj.name:'직급';
+        const arr=isT0?((d.hirePlanT0M&&d.hirePlanT0M[rk])||Array(n).fill(0)):((d.hirePlanM&&d.hirePlanM[editYear]&&d.hirePlanM[editYear][rk])||Array(12).fill(0));
+        rows.push([`<div class="sub" style="padding-left:22px">${esc(rname)} · 월별 채용</div>`,
+          '<span class="sub">연간 합산</span>',
+          ...Array.from({length:12},(_,m2)=>{
+            if(isT0&&m2>=n)return `<span class="sub" style="display:inline-block;width:60px;text-align:center">—</span>`;
+            return `<input class="cell" type="number" min="0" step="1" ${isT0?`data-rpt0-dept="${d.id}" data-rpt0-rank="${rk}" data-rpt0-month="${m2}"`:`data-rpm-dept="${d.id}" data-rpm-rank="${rk}" data-rpm-month="${m2}"`} value="${Math.max(0,num(arr[m2]))}">`;
+          }),
+          `<b>${won(arr.reduce((a,b)=>a+Math.max(0,num(b)),0))}</b>`,'','']);
+      });
     }
     list.forEach(rk=>{
       const mix=rpMix(d).find(m=>m.rankId===rk);
@@ -3543,7 +3576,7 @@ function renderRankMonthly(after){
       yrRows.push([`${esc(d.name)} › ${esc(rname)}`,...Array.from({length:H},(_,yy)=>won((deptRankHeads(d,yy)[rk])||0))]);
     });
   });
-  box.innerHTML=`<div class="card-h"><div><h2>월별 추가 인원 · 월별·연도별 인원</h2><p>선택연도 Y${y+1}의 월별 추가 채용 인원을 입력하면 위 표의 Y${y+1} 연간 채용 인원과 자동 합산됩니다. 월별 인원은 그 시점까지의 누적 인원입니다.</p></div></div>
+  box.innerHTML=`<div class="card-h"><div><h2>월별 추가 인원 (참조 · 자동 합산)</h2><p>선택연도 Y${y+1}의 월별 추가 채용 인원을 입력하면 위 표의 Y${y+1} 연간 채용 인원과 자동 합산됩니다. 월별 인원은 그 시점까지의 누적 인원입니다.</p></div></div>
   <div class="sub-h" style="margin-top:10px">Y${y+1} 월별 추가 인원 (추가 채용)</div>
   ${addRows.length?resultTable(['부서 › 직급',...MH,'연간 합계'],addRows):'<p class="help">위 표에서 부서에 직급 행을 추가하면 월별 입력이 활성화됩니다.</p>'}
   <div class="sub-h" style="margin-top:14px">Y${y+1} 월별 인원 (누적)</div>
@@ -3802,6 +3835,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
