@@ -1087,13 +1087,14 @@ function simulateProduct(p,cfg,months,H,s){
     const openingQty=stock,openingValue=value;
     let arr=arrivals[i]||0,purchaseCost=arrivalValues[i]||0,purchaseVAT=arrivalTax[i]||0,purchaseDeduct=arrivalDeduct[i]||0; stock+=arr;value+=purchaseCost;onOrder-=arr;
     const d=dem[i],daily=d/months[i].days,yearDaily=(yearDemand[months[i].t0?0:months[i].yi]||0)/365;
-    const ss=yearDaily*safetyDays, cover=coverOf(cy,months[i].yi), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss;
+    const ss=yearDaily*safetyDays, cover=coverOf(cy,months[i].yi), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss
     const avail=stock+onOrder;
     let ordered=0;
     const forceFirst=cfg.firstOrder!=null&&i===cfg.firstOrder;
     const beforeFirst=cfg.firstOrder!=null&&i<cfg.firstOrder;
     if(!beforeFirst&&(d>0||forceFirst)&&(forceFirst||avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
-      let q=Math.max(moq,target-avail); q=Math.ceil(q/lot)*lot;
+      let q=Math.max(moq,target-avail);
+      if(months[i].t0){ const off=t0MonthsOf(s); const span=Math.min(2,off-i); const restDem=dem.slice(i,i+span).reduce((a,b)=>a+b,0); const needRest=restDem-stock; q=needRest>0?Math.ceil(needRest/lot)*lot:0; }
       if(Number.isFinite(q)&&q>0){ ordered=q; onOrder+=q; arrivals[i+L]=(arrivals[i+L]||0)+q;arrivalValues[i+L]=(arrivalValues[i+L]||0)+q*py.cost;
         arrivalTax[i+L]+=q*(py._purchaseTax||0);arrivalDeduct[i+L]+=q*(py._purchaseDeduct||0);
         if(L===0){stock+=q;value+=q*py.cost;purchaseCost+=q*py.cost;arr+=q;onOrder-=q;purchaseVAT+=q*(py._purchaseTax||0);purchaseDeduct+=q*(py._purchaseDeduct||0);}
@@ -3457,7 +3458,7 @@ function renderCurrencyPanels(){
     ['nonopInc','nonopExp','nonopIncNC','nonopExpNC'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[3].textContent='금액 · '+unitLabel();});
   }
   if(currentView==='inventory'){
-    const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=(R.invGroups||[])[i];if(!p)return;const py=productYear(p.members[0],editYear);tr.cells[6].textContent=formatMoney(py.cost);tr.cells[7].textContent=formatMoney(py.price);});[6,7,9].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=(i===9?'초기재고액':['원가','판가'][i-6])+'<span class="u">'+(i===9?unitLabel():'공급가')+'</span>';});
+    const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=(R.invGroups||[])[i];if(!p)return;const py=productYear(p.members[0],editYear);tr.cells[7].textContent=formatMoney(py.cost);tr.cells[8].textContent=formatMoney(py.price);});[7,8,10].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=(i===10?'초기재고액':['원가','판가'][i-7])+'<span class="u">'+(i===10?unitLabel():'공급가')+'</span>';});
   }
   if(currentView==='value'&&$('#tvFormula')){
     const b=R.bs.at(-1),a=assumeYear(S,R.H-1),f=v=>formatMoney(v)+' '+unitLabel();
@@ -3787,6 +3788,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
