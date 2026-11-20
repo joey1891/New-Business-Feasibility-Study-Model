@@ -131,6 +131,7 @@ table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;
 #rankSettings .extended-result{min-width:650px}
 #rankMatrix tr.rp-group td{background:var(--tealSoft);font-weight:700;padding:7px 10px;border-top:2px solid var(--teal)}
 #rankMatrix td select{min-width:96px}
+.cost-all-years{width:max-content!important;min-width:100%}.cost-all-years th,.cost-all-years td{min-width:110px}.cost-all-years td:first-child{min-width:190px}.cost-all-years input.txt{min-width:170px!important}.cost-all-years select{min-width:85px;padding:5px;font-size:12px}#laborCostTable{width:max-content;min-width:100%}#laborCostTable td:first-child{min-width:210px}#laborCostTable td:not(:first-child){min-width:110px}#costReconciliation h3{margin:18px 0 8px;font-size:13px}.cost-nonop>div+div{margin-top:18px}#personnelEditors .tablewrap{margin-bottom:14px}#personnelTotals tfoot td:first-child{min-width:280px}
 .tbl thead th.l{text-align:left}
 table.tbl.plain thead th{position:static}
 .tbl th .u{font-weight:600;color:var(--mut2);font-size:9.6px;display:block;margin-top:1px;letter-spacing:0}
@@ -623,31 +624,17 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
 
     <!-- ========== 05 인건비·판관비 ========== -->
     <section class="view" id="view-cost">
-      <div class="kpis" id="costKpis"></div>
-      <div style="height:14px"></div>
       <div class="cols">
         <div class="stack">
-          <div class="card">
-            <div class="card-h"><div><h2><span class="no">01</span>부서별 인력 · 인건비 계획</h2><p>부서·인원·급여를 입력하면 4대보험·퇴직충당까지 자동으로 더해집니다. 제조인력은 매출원가로, 나머지는 판관비로 분류됩니다.</p></div>
-              <label class="check side-act" style="white-space:nowrap"><input type="checkbox" data-bind="payroll.enabled">인건비 반영</label>
-            </div>
-            <div class="fgrid" style="margin-bottom:12px">
-              <label class="field"><span class="lb">4대보험률 (사업주)</span><span class="inp"><input type="number" data-bind="payroll.insurance" step="0.1"><i>%</i></span></label>
-              <label class="field"><span class="lb">퇴직급여충당률 (법정 8.33%)</span><span class="inp"><input type="number" data-bind="payroll.retirement" step="0.1"><i>%</i></span></label>
-              <label class="field"><span class="lb">미입력 연도 기본 급여인상률</span><span class="inp"><input type="number" data-bind="payroll.raise" step="0.1"><i>%</i></span><span class="help">직접 입력한 연도는 유지됩니다.</span></label>
-            </div>
-            <div class="tablewrap"><table class="tbl" id="payrollTable"></table></div>
-            <div class="cap">선택연도 인원 × 월급여 × 12 × (1 + 선택연도 보험·퇴직률). <b>매년 증감·급여인상률은 미입력 연도의 기본값</b>이며, 직접 입력한 연도는 바뀌지 않습니다.</div>
-          </div>
 
           <div class="card">
-            <div class="card-h"><div><h2><span class="no">02</span>인건비성 경비</h2><p>급여·4대보험·<b>퇴직금</b>·복리후생 등 인건비성 경비를 판매비와 관리비와 별도 계정으로 분리해 관리합니다. 금액은 「인건비 · 판관비」 화면의 부서·직급표에서 입력합니다.</p></div></div>
+            <div class="card-h"><div><h2><span class="no">02</span>인건비성 경비</h2><p>부서·직급 계획의 자동 계산액입니다. 제조/판매·관리 배부는 기존 계산 기준을 따릅니다. 수동 추가분은 아래 판관비·영업외 표에서 별도 입력하며 자동분을 다시 더하지 않습니다.</p></div></div>
             <div class="tablewrap"><table class="tbl" id="laborCostTable"></table></div>
             <div class="cap">퇴직급여충당(퇴직금)이 포함됩니다. 제조 인력은 매출원가로, 판매·관리 인력은 판관비로 분류됩니다.</div>
           </div>
 
           <div class="card">
-            <div class="card-h"><div><h2><span class="no">03</span>판매비와 관리비</h2><p>변동비 · 고정비 · 준변동비 순으로 구분합니다. 여비교통비·수도광열비·통신비는 고정비에 포함됩니다. 변동비는 매출에 비례하고, 나머지는 인상률만큼 오릅니다.</p></div></div>
+            <div class="card-h"><div><h2><span class="no">03</span>판매비와 관리비</h2><p>추가 수동 입력 전용 · 기존 항목·계정명은 그대로 보존합니다. 자동 인건비와 이름이 같아도 별도 추가비용입니다. 금액/매출%는 연도별 독립 입력, 미입력 금액은 기존 기본값과 인상률을 따릅니다.</p></div></div>
             <div class="sub-h">변동비 (매출 대비)</div>
             <div style="margin:-4px 0 6px;font-size:10.5px;color:#8a99ab">매출%로 입력하면 매출에 비례해 자동 계산됩니다.</div>
             <div class="tablewrap"><table class="tbl" id="sgaVar"></table></div>
@@ -659,11 +646,11 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
 
           <div class="card">
             <div class="card-h"><div><h2><span class="no">04</span>영업외 수익 · 비용</h2><p>이자비용은 「초기 투자」의 차입 조건에서 자동 계산되므로 여기에 넣지 마세요. 비현금 항목은 현금흐름표에서 조정됩니다.</p></div></div>
-            <div class="two-panel">
+            <div class="cost-nonop">
               <div><div class="sub-h">영업외 수익</div><div class="tablewrap"><table class="tbl" id="nonopInc"></table></div></div>
               <div><div class="sub-h">영업외 비용</div><div class="tablewrap"><table class="tbl" id="nonopExp"></table></div></div>
             </div>
-            <div class="two-panel" style="margin-top:14px"><div><div class="sub-h">비현금 수익</div><div class="tablewrap"><table class="tbl" id="nonopIncNC"></table></div></div><div><div class="sub-h">비현금 비용</div><div class="tablewrap"><table class="tbl" id="nonopExpNC"></table></div></div></div>
+            <div class="cost-nonop" style="margin-top:14px"><div><div class="sub-h">비현금 수익</div><div class="tablewrap"><table class="tbl" id="nonopIncNC"></table></div></div><div><div class="sub-h">비현금 비용</div><div class="tablewrap"><table class="tbl" id="nonopExpNC"></table></div></div></div>
           </div>
         </div>
 
@@ -2315,76 +2302,56 @@ function drawCashChart(){
 
 /* ================= 05 인건비·판관비 ================= */
 function renderCost(){
-  if(!document.getElementById('view-cost')) return;
-   const y1=R.pl[editYear]||{pay:{total:0,heads:0,byDept:[]},sga:{fixed:{amt:0},semi:{amt:0},variable:{amt:0}},dep:0,rev:0,ebit:0};
-  const payTotal=R.pl.reduce((a,p)=>a+p.pay.total,0);
-  const sgaTotal=R.pl.reduce((a,p)=>a+p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt,0);
-  const k=document.getElementById('costKpis');
-  if(k) k.innerHTML=
-    kpi('Y1 인건비',shortWon(y1.pay.total),'원',`${y1.pay.heads}명 · 4대보험·퇴직 포함`)+
-    kpi('Y1 판관비',shortWon(y1.sga.fixed.amt+y1.sga.semi.amt+y1.sga.variable.amt),'원',`고정 ${shortWon(y1.sga.fixed.amt)} · 변동 ${shortWon(y1.sga.variable.amt)}`)+
-    kpi('Y1 감가상각',shortWon(y1.dep),'원','CAPEX·무형 정액법')+
-    kpi('매출 대비 비용률',pct(y1.rev?((y1.pay.total+y1.sga.fixed.amt+y1.sga.semi.amt+y1.sga.variable.amt+y1.dep)/y1.rev)*100:0),'',`영업이익률 ${pct(y1.rev?y1.ebit/y1.rev*100:0)}`);
-
-  const pt=document.getElementById('payrollTable');
-  if(pt){
-    pt.innerHTML=`<thead><tr><th class="l">부서</th><th>인원<span class="u">명</span></th><th>1인당 월급여<span class="u">원</span></th><th>매년 증감<span class="u">명</span></th><th>제조인력</th><th>Y1 총액<span class="u">만원</span></th><th>Y${R.H} 총액<span class="u">만원</span></th><th></th></tr></thead><tbody>`+
-      S.payroll.departments.map(d=>{
-        const a=payrollYear(S,0),b=payrollYear(S,R.H-1);
-        const ay=(a.byDept.find(x=>x.id===d.id)||{amount:0}).amount;
-        const by=(b.byDept.find(x=>x.id===d.id)||{amount:0}).amount;
-        return `<tr><td class="l"><input class="cell txt" data-did="${d.id}" data-df="name" value="${esc(d.name)}"></td>
-          <td><input class="cell" type="number" min="0" step="1" data-did="${d.id}" data-df="heads" value="${d.heads}"></td>
-          <td><input class="cell money comma" type="text" inputmode="numeric" data-did="${d.id}" data-df="salary" value="${won(d.salary)}"></td>
-          <td><input class="cell" type="number" step="1" data-did="${d.id}" data-df="headAdd" value="${d.headAdd}"></td>
-          <td><label class="check" style="justify-content:center"><input type="checkbox" data-did="${d.id}" data-df="mfg" ${d.mfg?'checked':''}></label></td>
-          <td>${man(ay)}</td><td>${man(by)}</td>
-          <td><button class="del" data-deldept="${d.id}">✕</button></td></tr>`;
-      }).join('')+
-      `<tr class="total"><td class="l">합계 <span class="sub">${S.payroll.departments.reduce((a,d)=>a+d.heads,0)}명(1년차)</span></td><td colspan="4"></td><td>${man(R.pl[0]?R.pl[0].pay.total:0)}</td><td>${man(R.pl[R.H-1]?R.pl[R.H-1].pay.total:0)}</td><td></td></tr></tbody>`;
-  }
-
-  const sgaTable=(key,el)=>{
-    if(!el) return;
-    el.innerHTML=`<thead><tr><th class="l">항목</th><th>산정</th><th>값</th><th>인상률<span class="u">%</span></th><th>Y1<span class="u">만원</span></th><th></th></tr></thead><tbody>`+
-      (S.sga[key]||[]).map(it=>`<tr>
-        <td class="l"><input class="cell txt" data-list="${key}" data-sid="${it.id}" data-sf="name" value="${esc(it.name)}"></td>
-        <td><select class="mini-select" data-list="${key}" data-sid="${it.id}" data-sf="type"><option value="amount"${it.type==='amount'?' selected':''}>금액</option><option value="rate"${it.type==='rate'?' selected':''}>매출%</option></select></td>
-        <td>${it.type==='rate'?`<input class="cell nm2" type="number" step="0.1" data-list="${key}" data-sid="${it.id}" data-sf="value" value="${it.value}">`:`<input class="cell money comma" type="text" inputmode="numeric" data-list="${key}" data-sid="${it.id}" data-sf="value" value="${won(it.value)}">`}</td>
-        <td><input class="cell" type="number" step="0.1" data-list="${key}" data-sid="${it.id}" data-sf="grow" value="${it.grow}"></td>
-        <td>${man(it.type==='rate'?(R.pl[0]?R.pl[0].rev:0)*it.value/100:it.value)}</td>
-        <td><button class="del" data-delsga="${key}:${it.id}">✕</button></td></tr>`).join('')+
-      `<tr><td colspan="6" class="l"><button class="btn sm" data-addsga="${key}">+ 항목 추가</button></td></tr></tbody>`;
-  };
-  sgaTable('fixed',document.getElementById('sgaFixed'));
-  sgaTable('semi',document.getElementById('sgaSemi'));
-  sgaTable('variable',document.getElementById('sgaVar'));
-
-  const nonopTable=(key,el)=>{
-    if(!el) return;
-    el.innerHTML=`<thead><tr><th class="l">항목</th><th>구분</th><th>값</th><th>Y1<span class="u">만원</span></th><th></th></tr></thead><tbody>`+
-      (S.nonop[key]||[]).map(it=>`<tr>
-        <td class="l"><input class="cell txt" data-nlist="${key}" data-oid="${it.id}" data-of="name" value="${esc(it.name)}"></td>
-        <td><select class="mini-select" data-nlist="${key}" data-oid="${it.id}" data-of="type"><option value="amount"${it.type==='amount'?' selected':''}>금액</option><option value="cash"${it.type==='cash'?' selected':''}>현금</option><option value="noncash"${it.type==='noncash'?' selected':''}>비현금</option></select></td>
-        <td><input class="cell money comma" type="text" inputmode="numeric" data-nlist="${key}" data-oid="${it.id}" data-of="value" value="${won(it.value)}"></td>
-        <td>${man(it.value)}</td>
-        <td><button class="del" data-delno="${key}:${it.id}">✕</button></td></tr>`).join('')+
-      `<tr><td colspan="5" class="l"><button class="btn sm" data-addno="${key}">+ 항목 추가</button></td></tr></tbody>`;
-  };
-  nonopTable('incCash',document.getElementById('nonopInc'));
-  nonopTable('expCash',document.getElementById('nonopExp'));
-
-  const lc=document.getElementById('laborCostTable');
-  if(lc){
-    const p=R.pl[editYear]||{pay:{total:0,mfg:0,sga:0,mfgComponents:null,sgaComponents:null}};
-    const comp=PAY_COMPONENTS.map(([k,n])=>{
-      const mf=p.pay.mfgComponents?num(p.pay.mfgComponents[k]):null,sg=p.pay.sgaComponents?num(p.pay.sgaComponents[k]):null;
-      return `<tr><td class="l">${n}${k==='retirement'?' · 퇴직금':''}</td><td>${mf===null?'—':man(mf)}</td><td>${sg===null?'—':man(sg)}</td><td><b>${mf===null?'—':man(mf+sg)}</b></td></tr>`;
-    }).join('');
-    lc.innerHTML=`<thead><tr><th class="l">인건비성 경비 계정 · Y${editYear+1}<span class="u">만원</span></th><th>제조 인건비</th><th>판매·관리 인건비</th><th>합계</th></tr></thead><tbody>${comp}
-    <tr class="total"><td class="l">인건비 합계 (퇴직금 포함)</td><td>${man(p.pay.mfg)}</td><td>${man(p.pay.sga)}</td><td><b>${man(p.pay.total)}</b></td></tr></tbody>`;
+  if(!Gate.approved||!R||!document.getElementById('view-cost'))return;
+  renderCostAccounts();
+}
+function costAmount(area,key,it,y){
+  const p=R.pl[y];return num(p[area][key].lines.find(l=>l.id===it.id)?.amount);
+}
+const COST_TABLES=[['sgaFixed','sga','fixed'],['sgaSemi','sga','semi'],['sgaVar','sga','variable'],['nonopInc','nonop','incCash'],['nonopExp','nonop','expCash'],['nonopIncNC','nonop','incNonCash'],['nonopExpNC','nonop','expNonCash']];
+function costControl(area,key,it,f,y,value){
+  const attr=`data-ce="${f}" data-ce-area="${area}" data-ce-list="${key}" data-ce-id="${ppAttr(it.id)}" data-ce-year="${y}"`,dis=!canEdit()||Workspace.busy?' disabled':'';
+  if(f==='type')return `<select ${attr}${dis} aria-label="${ppAttr(it.name)} ${fyShort(y,S)} 산정"><option value="amount"${value!=='rate'?' selected':''}>금액</option><option value="rate"${value==='rate'?' selected':''}>매출%</option></select>`;
+  const money=f==='value'&&expenseYear(it,y).type!=='rate',txt=f==='name';
+  return `<input class="cell ${txt?'txt':money?'money':''}" type="${txt||money?'text':'number'}" ${txt?'':`inputmode="decimal" step="any"`} ${attr} value="${ppAttr(money?won(value):value)}" aria-label="${ppAttr(it.name)} ${y<0?'공통':fyShort(y,S)} ${f==='value'?(money?'입력 원':'입력 매출%'):f==='grow'?'미입력 인상률 %':'계정명'}"${dis}>`;
+}
+function renderCostAccounts(){
+  if(!Gate.approved||!R)return;
+  COST_TABLES.forEach(([id,area,key])=>{
+    const el=$('#'+id);if(!el)return;el.classList.add('cost-all-years');
+    const list=S[area][key]||[],H=R.H,cols=3+H*3,dis=!canEdit()||Workspace.busy?' disabled':'';
+    el.innerHTML=`<thead><tr><th class="l" rowspan="2">추가 수동 계정</th><th rowspan="2">미입력 인상률 %</th>${R.pl.map((_,y)=>`<th colspan="3" data-cost-year="${y}">${fyShort(y,S)}</th>`).join('')}<th rowspan="2">삭제</th></tr><tr>${R.pl.map(()=>`<th>산정</th><th>입력 · 원 / 매출%</th><th>계산액 · ${unitLabel()}</th>`).join('')}</tr></thead><tbody>${list.map(it=>`<tr><td class="l">${costControl(area,key,it,'name',-1,it.name)}</td><td>${costControl(area,key,it,'grow',-1,it.grow)}</td>${R.pl.map((_,y)=>{const iy=expenseYear(it,y);return `<td>${costControl(area,key,it,'type',y,iy.type)}</td><td>${costControl(area,key,it,'value',y,iy.value)}</td><td data-cost-amount="${y}">${formatMoney(costAmount(area,key,it,y))}</td>`;}).join('')}<td><button class="del" data-ce="delete" data-ce-area="${area}" data-ce-list="${key}" data-ce-id="${ppAttr(it.id)}"${dis}>삭제</button></td></tr>`).join('')}</tbody><tfoot><tr><td class="l">추가 수동 합계</td><td>—</td>${R.pl.map(p=>`<td>—</td><td>—</td><td>${formatMoney(p[area][key].amt)}</td>`).join('')}<td>—</td></tr><tr><td colspan="${cols}"><button class="btn sm" data-ce="add" data-ce-area="${area}" data-ce-list="${key}"${dis}>+ 추가 수동 항목</button></td></tr></tfoot>`;
+  });
+  const lc=$('#laborCostTable');if(lc){
+    lc.innerHTML=`<thead><tr><th class="l" rowspan="2">자동 인건비 계정 · 읽기 전용</th>${R.pl.map((_,y)=>`<th colspan="3">${fyShort(y,S)} · ${unitLabel()}</th>`).join('')}</tr><tr>${R.pl.map(()=>'<th>제조</th><th>판매·관리</th><th>자동 합계</th>').join('')}</tr></thead><tbody>${PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l">${n}${k==='pension'?' <span class="sub">(미연결 부서의 통합 보험액 포함)</span>':''}</td>${R.pl.map(p=>{const mf=num(p.pay.mfgComponents?.[k]),sg=num(p.pay.sgaComponents?.[k]);return `<td>${formatMoney(mf)}</td><td>${formatMoney(sg)}</td><td>${formatMoney(mf+sg)}</td>`;}).join('')}</tr>`).join('')}</tbody><tfoot><tr><td class="l">자동 인건비 합계</td>${R.pl.map(p=>`<td>${formatMoney(p.pay.mfg)}</td><td>${formatMoney(p.pay.sga)}</td><td>${formatMoney(p.pay.total)}</td>`).join('')}</tr></tfoot>`;
+    let rec=$('#costReconciliation');if(!rec){rec=document.createElement('div');rec.id='costReconciliation';lc.closest('.tablewrap').after(rec);}
+    const sum=p=>p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt;
+    // Exact catalogue-name equality is a display reconciliation only, never an engine classification.
+    const matched=new Set(PAY_COMPONENTS.map(([,n])=>n));
+    const manual=(n,y)=>Object.keys(S.sga).reduce((a,key)=>a+(S.sga[key]||[]).filter(it=>it.name===n).reduce((t,it)=>t+costAmount('sga',key,it,y),0),0);
+    const detail=PAY_COMPONENTS.map(([k,n])=>[`${n} · 동일 계정명 대사`,...R.pl.flatMap((p,y)=>{const a=num(p.pay.sgaComponents?.[k]),b=manual(n,y);return [formatMoney(a),formatMoney(b),formatMoney(a+b)];})]);
+    detail.push(['그 외 수동 계정 (원래 분류 유지)',...R.pl.flatMap((p,y)=>{const a=Object.keys(S.sga).reduce((t,key)=>t+(S.sga[key]||[]).filter(it=>!matched.has(it.name)).reduce((v,it)=>v+costAmount('sga',key,it,y),0),0);return ['0',formatMoney(a),formatMoney(a)];})]);
+    rec.innerHTML=`<h3>판매·관리 계정 대사 · 자동 / 추가 수동 / 합산</h3><p class="cap">자동분은 위 인건비에 이미 포함되어 있습니다. 아래 합산은 대사용이며 재가산하지 않습니다. 수동 계정은 직급표 계정명과 정확히 같은 경우에만 표시상 연결합니다. 영업외 항목은 인건비로 재분류하지 않습니다.</p>${resultTable(['계정',...R.pl.flatMap((_,y)=>[fyShort(y,S)+' 자동',fyShort(y,S)+' 추가 수동',fyShort(y,S)+' 합산'])],detail)}<h3>손익 반영 대사 · ${unitLabel()}</h3>${resultTable(['반영 위치',...R.pl.map((_,y)=>fyShort(y,S))],[['매출원가 · 제조 자동 인건비',...R.pl.map(p=>formatMoney(p.pay.mfg))],['판관비 · 판매·관리 자동 인건비',...R.pl.map(p=>formatMoney(p.pay.sga))],['판관비 · 추가 수동 소계',...R.pl.map(p=>formatMoney(sum(p)))],['판관비 합산 · 자동 + 추가 수동（상각 제외）',...R.pl.map(p=>formatMoney(p.pay.sga+sum(p)))],['영업이익 · 매출 − 원가 − 판관 자동 − 추가 수동 − 상각',...R.pl.map(p=>formatMoney(p.ebit))]])}`;
   }
 }
+function costEvent(e){
+  const el=e.target.closest?.('[data-ce]');if(!el)return;e.stopImmediatePropagation();
+  if(!canEdit()||Workspace.busy){e.preventDefault();return;}
+  if(e.type==='input'||(e.type==='click'&&el.tagName!=='BUTTON'))return;
+  const {ce:f,ceArea:area,ceList:key,ceId:id,ceYear:year}=el.dataset,list=S[area]?.[key];if(!list)return;
+  const it=list.find(x=>x.id===id);
+  if(e.type==='click'){
+    e.preventDefault();if(f==='add')list.push({id:uid(area==='sga'?'s':'n'),name:'새 항목',type:'amount',value:0,grow:0});
+    else if(f==='delete'&&it){if(!confirm('이 추가 수동 항목과 모든 연도 입력을 삭제할까요?'))return;list.splice(list.indexOf(it),1);}else return;
+  }else if(e.type==='change'&&it){
+    if(f==='name')it.name=el.value;
+    else if(f==='type'){if(!['amount','rate'].includes(el.value))return;putAnnual(it,+year,'type',el.value);}
+    else {const v=Number(el.value.replace(/,/g,''));if(!Number.isFinite(v)||((f==='value')&&v<0)){renderCostAccounts();return;}if(f==='grow')it.grow=v;else if(f==='value')putAnnual(it,+year,'value',v);else return;}
+  }else return;
+  R=compute(S);window.__R=R;saveState();renderCostAccounts();renderPeriodResults();enforceReadonly();
+}
+['input','change','click'].forEach(type=>window.addEventListener(type,costEvent,true));
+['paste','copy','keydown','mousedown'].forEach(type=>window.addEventListener(type,e=>{if(e.target.closest?.('.cost-all-years'))e.stopImmediatePropagation();},true));
 
 'use strict';
 /* ================= 06 재무제표 ================= */
@@ -2825,15 +2792,12 @@ function refreshAnnualUI(){
   updateStatuses();enforceReadonly();
 }
 function decorateCost(){
+  if(!Gate.approved||!R)return;
   const pr=annual(S.payroll,editYear);
-  ['insurance','retirement'].forEach(k=>{const el=$(`[data-bind="payroll.${k}"]`);if(el)el.value=pr[k];});
-  $('#payrollTable').innerHTML=`<colgroup><col style="width:150px"><col style="width:65px"><col style="width:140px"><col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:115px"><col style="width:105px"><col style="width:35px"></colgroup><thead><tr><th class="l">부서</th><th>인원</th><th>월급여 · 원</th><th>보험 · %</th><th>퇴직 · %</th><th>제조인력</th><th>미입력 연도 증감</th><th>Y${editYear+1} · 만원</th><th></th></tr></thead><tbody>${S.payroll.departments.map(d=>{const dy=deptYear(S,d,editYear),amt=payrollYear(S,editYear).byDept.find(x=>x.id===d.id)?.amount||0;return `<tr><td><input class="cell txt" data-did="${d.id}" data-df="name" value="${esc(d.name)}"></td>${['heads','salary','insurance','retirement'].map(f=>`<td><input class="cell ${f==='salary'?'comma':''}" type="${f==='salary'?'text':'number'}" inputmode="decimal" min="0" step="${f==='heads'?1:0.1}" data-did="${d.id}" data-df="${f}" value="${f==='salary'?won(dy[f]):dy[f]??pr[f]??0}"></td>`).join('')}<td><input type="checkbox" data-did="${d.id}" data-df="mfg" ${d.mfg?'checked':''}></td><td><input class="cell" type="number" data-did="${d.id}" data-df="headAdd" value="${d.headAdd}"></td><td>${man(amt)}</td><td><button class="del" data-deldept="${d.id}">✕</button></td></tr>`;}).join('')}</tbody>`;
-  $$('#view-cost [data-sid]').forEach(el=>{const it=S.sga[el.dataset.list].find(x=>x.id===el.dataset.sid),f=el.dataset.sf,iy=expenseYear(it,editYear);if(f==='value')el.value=iy.type==='rate'?iy.value:won(iy.value);if(f==='type')el.value=iy.type;});
-  ['sgaFixed','sgaSemi','sgaVar'].forEach((id,i)=>{const key=['fixed','semi','variable'][i],tbl=$('#'+id);if(!tbl)return;tbl.querySelectorAll('tbody tr').forEach(tr=>{const el=tr.querySelector('[data-sid]');if(!el)return;const line=R.pl[editYear].sga[key].lines.find(l=>l.id===el.dataset.sid);tr.cells[4].textContent=man(line?.amount||0);});tbl.querySelectorAll('th')[4].innerHTML=`Y${editYear+1}<span class="u">만원</span>`;});
-  const nonopKeys=['incCash','expCash','incNonCash','expNonCash'];
-  ['nonopInc','nonopExp','nonopIncNC','nonopExpNC'].forEach((id,i)=>{const el=$('#'+id);if(!el)return;const key=nonopKeys[i];el.innerHTML=`<thead><tr><th class="l">항목</th><th>산정</th><th>Y${editYear+1} 값</th><th>금액 · 만원</th><th></th></tr></thead><tbody>${S.nonop[key].map(it=>{const iy=expenseYear(it,editYear),amt=iy.type==='rate'?R.pl[editYear].rev*iy.value/100:iy.value;return `<tr><td><input class="cell txt" data-oid="${it.id}" data-nlist="${key}" data-of="name" value="${esc(it.name)}"></td><td><select data-oid="${it.id}" data-nlist="${key}" data-of="type"><option value="amount" ${iy.type==='amount'?'selected':''}>금액</option><option value="rate" ${iy.type==='rate'?'selected':''}>매출%</option></select></td><td>${iy.type==='rate'?`<input class="cell" type="number" step="0.1" data-oid="${it.id}" data-nlist="${key}" data-of="value" value="${iy.value}">`:`<input class="cell comma" type="text" inputmode="numeric" data-oid="${it.id}" data-nlist="${key}" data-of="value" value="${won(iy.value)}">`}</td><td>${man(amt)}</td><td><button class="del" data-delno="${key}:${it.id}">✕</button></td></tr>`;}).join('')}<tr><td colspan="5" class="l"><button class="btn sm" data-addno="${key}">+ 항목 추가</button></td></tr></tbody>`;});
-  const p=R.pl[editYear];$('#costKpis').innerHTML=kpi('Y'+(editYear+1)+' 인건비',shortWon(p.pay.total),'원',p.pay.heads+'명 · 보험·퇴직 포함')+kpi('Y'+(editYear+1)+' 판관비',shortWon(p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt),'원','연도별 금액·비율 반영')+kpi('영업이익',shortWon(p.ebit),'원','선택연도 실적')+kpi('최소 운영현금',shortWon(R.minCashYears[editYear]),'원','선택연도 인건비 × 설정 개월');
+  ['insurance','retirement','enabled'].forEach(k=>{const el=$(`[data-bind="payroll.${k}"]`);if(el){if(k==='enabled')el.checked=pr[k];else el.value=pr[k];}});
+  renderCostAccounts();
 }
+
 function autoSeedDemandYear(y){
   // 연도 입력은 서로 독립: 이전연도 값 복사·재동기화를 하지 않습니다.
   // 미입력 연도는 제품 기본값(월별 수량 × 성장률)으로 표시되며, 편집은 해당 연도에만 저장됩니다.
@@ -3467,11 +3431,7 @@ function renderCurrencyPanels(){
       +'<tr><td class="l">균형검증 (자산 − 부채 − 자본)</td><td class="'+(Math.abs(b.check)>1?'neg':'')+'">'+formatMoney(b.check)+'</td></tr></tbody>';
     $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.opFundYears?R.opFundYears[0]:R.minCash);updateOpFundNote();
   }
-  if(currentView==='cost'){
-    const payroll=$('#payrollTable');if(payroll?.tHead)payroll.tHead.rows[0].cells[7].textContent='Y'+(editYear+1)+' · '+unitLabel();
-    ['sgaFixed','sgaSemi','sgaVar'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[4].innerHTML='Y'+(editYear+1)+'<span class="u">'+unitLabel()+'</span>';});
-    ['nonopInc','nonopExp','nonopIncNC','nonopExpNC'].forEach(id=>{const t=$('#'+id);if(t?.tHead)t.tHead.rows[0].cells[3].textContent='금액 · '+unitLabel();});
-  }
+  if(currentView==='cost')renderCostAccounts();
   if(currentView==='inventory'){
     const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=(R.invGroups||[])[i];if(!p)return;const py=productYear(p.members[0],editYear);tr.cells[7].textContent=formatMoney(py.cost);tr.cells[8].textContent=formatMoney(py.price);});[7,8,10].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=(i===10?'초기재고액':['원가','판가'][i-7])+'<span class="u">'+(i===10?unitLabel():'공급가')+'</span>';});
   }
@@ -3509,7 +3469,7 @@ function renderRankMatrix(){
   departments.forEach(d=>{
     const list=rpRankList(d),legacy=!hasRankPlan(d),dy=deptYear(S,d,editYear);
     if(!list.length){
-      rows.push([`<b>${esc(d.name)}</b>`,legacy?`<select data-pp="legacy-rank" data-pp-dept="${ppAttr(d.id)}" aria-label="${ppAttr(d.name)} 직급 연결"${disabled?' disabled':''}>${ppOptions(ranks,'','미연결 · 기존 급여 유지')}</select>`:'<span class="sub">직급 계획 비어 있음</span>',...(off?['—']:[]),...Array.from({length:H},(_,y)=>legacy?won(deptYear(S,d,y).heads):'0'),won(legacy?dy.heads:0),formatMoney(legacy?payrollYear(S,editYear).byDept.find(x=>x.id===d.id)?.base||0:0),`<button class="btn sm danger" data-pp="delete-dept" data-pp-dept="${ppAttr(d.id)}"${disabled?' disabled':''}>부서 삭제</button>`]);return;
+      rows.push([`<b>${esc(d.name)}</b>`,legacy?`<select data-pp="legacy-rank" data-pp-dept="${ppAttr(d.id)}" aria-label="${ppAttr(d.name)} 직급 연결"${disabled?' disabled':''}>${ppOptions(ranks,'','미연결 · 기존 급여 유지')}</select>`:'<span class="sub">직급 계획 비어 있음</span>',...(off?['—']:[]),...Array.from({length:H},(_,y)=>legacy?won(num(deptYear(S,d,y).heads)-(y?num(deptYear(S,d,y-1).heads):0)):'0'),won(legacy?dy.heads:0),formatMoney(legacy?payrollYear(S,editYear).byDept.find(x=>x.id===d.id)?.base||0:0),`<button class="btn sm danger" data-pp="delete-dept" data-pp-dept="${ppAttr(d.id)}"${disabled?' disabled':''}>부서 삭제</button>`]);return;
     }
     list.forEach(rk=>{
       const r=ranks.find(x=>x.id===rk),cnt=num(deptRankHeads(d,editYear)[rk]);
@@ -3530,9 +3490,26 @@ function renderRankMatrix(){
     <div class="pp-tools"><label>행을 추가할 부서<select data-pp="add-dept"${disabled?' disabled':''}>${ppOptions(departments,PersonnelUI.dept,'부서 선택')}</select></label><label>추가할 직급<select data-pp="add-rank"${disabled?' disabled':''}>${ppOptions(ranks,PersonnelUI.rank,'직급 선택')}</select></label><button class="btn teal" data-pp="add"${disabled?' disabled':''}>직급 행 추가</button></div>
     <div class="pp-tools"><label>새 부서 이름<input data-pp="dept-name" placeholder="부서 이름 직접 입력" maxlength="120"${disabled?' disabled':''}></label><button class="btn" data-pp="new-dept"${disabled?' disabled':''}>부서 추가</button></div>
     ${rows.length?resultTable(head,rows):'<p class="note">등록된 부서가 없습니다. 부서 이름을 입력해 시작하세요.</p>'}
-    <p class="help">연간 급여는 연봉 × 누적 인원이며 보험·퇴직·부대비는 제외한 값입니다. 전체 부담액은 기존 인건비 계산 결과를 확인하세요. 직급 연결·변경 시 직급표의 급여 기준으로 바뀝니다. 미등록 직급의 계획은 보존되며 급여 연결 전에는 해당 직급 비용이 계산되지 않습니다.</p>
+    <p class="help">연간 급여는 연봉 × 누적 인원이며 보험·퇴직·부대비는 제외한 값입니다. 미연결 부서의 Y2 이후 열은 기존 연도별 인원 차이(감소 가능)입니다. 채용/증감과 누적 재직인원을 더해 합산하지 않습니다. 직급 연결·변경 시 직급표의 급여 기준으로 바뀝니다. 미등록 직급의 계획은 보존되며 급여 연결 전에는 해당 직급 비용이 계산되지 않습니다.</p>
     ${off?`<div class="pp-month"><h3>T0 월별 채용 · ${t0Label(S)}</h3><p class="help">입력한 채용 인원은 Y1부터 누적됩니다. 기존 계산 방식은 T0 인건비를 Y1 연간 금액의 기간 비율로 산정하며 채용월별 급여 일할 계산은 하지 않습니다.</p>${resultTable(['부서 › 직급',...Array.from({length:off},(_,m)=>`${sy}년 ${smOf(S)+m}월`),'채용 합계'],monthly)}${monthly.length?'':'<p class="help">직급 행을 추가하면 월별 채용을 입력할 수 있습니다.</p>'}</div>`:'<p class="help">1월 시작은 별도 T0 부분기간이 없습니다. 사업 시작월을 변경하면 해당 월~12월의 T0 채용 열이 표시됩니다.</p>'}
     <details class="pp-month"${PersonnelUI.monthly?' open':''}><summary data-pp="monthly-toggle">${fyShort(editYear,S)} 월별 채용 분해 (선택)</summary><p class="help">월별 합계가 ${editYear?'해당 연도 추가 채용':'Y1 기초 인원'}을 대체합니다. 연간 값을 직접 바꾸면 해당 월별 분해를 해제합니다. 채용월별 급여 계산이 아닌 연간 계획 입력입니다.</p>${resultTable(['부서 › 직급',...Array.from({length:12},(_,m)=>`${m+1}월`),'합계'],departments.flatMap(d=>rpRankList(d).map(rk=>{const a=d.hirePlanM?.[editYear]?.[rk]||[];return [`${esc(d.name)} › ${esc(ranks.find(r=>r.id===rk)?.name||rk)}`,...Array.from({length:12},(_,m)=>ppInput(d,rk,'month',m,num(a[m]),`${d.name} ${rk} ${fyShort(editYear,S)} ${m+1}월`,disabled)),ppSum(a)];})))}</details>`;
+  const planned=y=>departments.reduce((a,d)=>a+(hasRankPlan(d)?deptPlanHeads(d,y):num(deptYear(S,d,y).heads)),0);
+  const t0=departments.reduce((a,d)=>a+rpRankList(d).reduce((t,rk)=>t+ppSum(d.hirePlanT0M?.[rk]),0),0);
+  const entries=Array.from({length:H},(_,y)=>y?planned(y)-planned(y-1):planned(0)-t0);
+  const footer=['전체 합계 · 채용/증감','기초·추가와 누적 구분',...(off?[won(t0)+'명 채용']:[]),...entries.map((n,y)=>won(n)+(y?'명 추가/증감':'명 기초')),won(planned(editYear))+'명 누적',formatMoney(R.pl[editYear].pay.byDept.reduce((a,d)=>a+d.base,0)),'—'];
+  const first=box.querySelector('table');if(first)first.insertAdjacentHTML('beforeend',`<tfoot><tr>${footer.map((v,i)=>`<td${i===0?' class="l"':''}>${v}</td>`).join('')}</tr></tfoot>`);
+  const summary=document.createElement('div');summary.id='personnelTotals';summary.className='pp-month';
+  const metrics=[['기초 / 추가 증감（누적 아님）',...entries.map((n,y)=>won(n)+(y?'명 추가/증감':'명 기초'))],['누적 재직인원（기초 + T0 + 이후 증감）',...R.pl.map((_,y)=>won(planned(y))+'명')],['연간 급여 합계（보험·퇴직·부대비 제외）',...R.pl.map(p=>formatMoney(p.pay.byDept.reduce((a,d)=>a+d.base,0)))],['연간 총부담액（제조 + 판매·관리）',...R.pl.map(p=>formatMoney(p.pay.total))]];
+  summary.innerHTML=`<h3>전 연도 인원·급여 합계 · 금액 ${unitLabel()}</h3><p class="cap">T0 채용 ${won(t0)}명은 Y1 이후 누적 인원에 포함됩니다. 인원은 계획 기준, 금액은 연도별 인건비 반영 여부를 적용한 계산 결과입니다.</p>${resultTable(['합계 구분',...R.pl.map((_,y)=>fyShort(y,S))],metrics)}`;
+  const st=summary.querySelector('table');st.innerHTML=st.innerHTML.replace('<tbody>','<tfoot>').replace('</tbody>','</tfoot>');first?.closest('.tablewrap')?.after(summary);
+  renderPersonnelEditors(box,disabled);
+}
+function renderPersonnelEditors(box,disabled){
+  const dis=disabled?' disabled':'',pr=annual(S.payroll,editYear),ds=S.payroll.departments;
+  const field=(d,f,y,v)=>`<input class="cell ${f==='name'?'txt':''}" type="${['name','salary'].includes(f)?'text':'number'}" data-pp="dept-field" data-pp-dept="${ppAttr(d.id)}" data-pp-field="${f}" data-pp-key="${y}" value="${ppAttr(f==='salary'?won(v):v)}" aria-label="${ppAttr(d.name)} ${y<0?'공통':fyShort(y,S)} ${f}"${dis}>`;
+  const config=document.createElement('div');config.className='pp-month';config.id='personnelEditors';
+  config.innerHTML=`<h3>통합 인원계획 설정 · ${fyShort(editYear,S)}</h3><div class="fgrid"><label class="check"><input type="checkbox" data-bind="payroll.enabled"${pr.enabled?' checked':''}${dis}>선택연도 인건비 반영</label><label class="field">미연결 부서 기본 보험률 %<input type="number" data-bind="payroll.insurance" value="${pr.insurance}"${dis}></label><label class="field">미연결 부서 기본 퇴직률 %<input type="number" data-bind="payroll.retirement" value="${pr.retirement}"${dis}></label><label class="field">미연결 부서 기본 급여인상률 %<input type="number" data-bind="payroll.raise" value="${S.payroll.raise}"${dis}></label></div><h3>부서 이름·배부 편집 · 선택연도</h3><p class="cap">연도별 배부가 우선하며 미설정은 기존 제조인력 표시를 따릅니다. 자동 인건비 계정의 제조/판매·관리 분류에 그대로 적용합니다.</p>${resultTable(['부서명（공통）','배부 · 선택연도'],ds.map(d=>{const dy=deptYear(S,d,editYear),role=dy.role===undefined?(d.mfg?'manufacturing':'admin'):dy.role;return [field(d,'name',-1,d.name),`<select data-pp="dept-field" data-pp-dept="${ppAttr(d.id)}" data-pp-field="role" data-pp-key="${editYear}"${dis}>${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([v,n])=>`<option value="${v}"${role===v?' selected':''}>${n}</option>`).join('')}${!['manufacturing','sales','admin'].includes(role)?`<option selected value="${ppAttr(role)}">${esc(role)}</option>`:''}</select>`];}))}<h3>미연결 부서 · 기존 입력 유지</h3><p class="cap">직급을 연결하지 않아도 아래에서 기존 연도별 인원·월급여·보험·퇴직률과 미입력 인원 증감을 편집할 수 있습니다. 직급 연결 시 이 기준을 대체합니다.</p>${resultTable(['부서','미입력 연도 인원 증감（공통）',...R.pl.flatMap((_,y)=>[fyShort(y,S)+' 재직인원',fyShort(y,S)+' 월급여 · 원',fyShort(y,S)+' 보험 %',fyShort(y,S)+' 퇴직 %'])],ds.filter(d=>!hasRankPlan(d)).map(d=>[esc(d.name),field(d,'headAdd',-1,d.headAdd),...R.pl.flatMap((_,y)=>{const dy=deptYear(S,d,y),pr=annual(S.payroll,y);return ['heads','salary','insurance','retirement'].map(f=>field(d,f,y,dy[f]??pr[f]??0));})]))}`;
+  box.append(config);
 }
 // Late extension calls can only clean up obsolete panels, never recreate them.
 function renderRankMonthly(){document.getElementById('rankMonthly')?.remove();}
@@ -3593,7 +3570,15 @@ function ppEvent(e){
     }else return;
   }else if(e.type==='change'&&d){
     const key=+el.dataset.ppKey;
-    if(['annual','month','t0'].includes(action)){
+    if(action==='dept-field'){
+      const f=el.dataset.ppField;
+      if(f==='name')d.name=el.value;
+      else if(f==='role'){if(!['manufacturing','sales','admin'].includes(el.value))return;putAnnual(d,key,f,el.value);}
+      else if(['heads','salary','insurance','retirement','headAdd'].includes(f)){
+        const v=Number(el.value.replace(/,/g,''));if(!Number.isFinite(v)||(f!=='headAdd'&&v<0)){renderRankMatrix();return;}
+        if(f==='headAdd')d.headAdd=v;else putAnnual(d,key,f,v);
+      }else return;
+    }else if(['annual','month','t0'].includes(action)){
       if(el.value.trim()===''||!Number.isFinite(Number(el.value))||Number(el.value)<0){toast('0 이상의 인원을 입력하세요.');renderRankMatrix();return;}
       const v=Number(el.value);ppPrepare(d);
       const putBase=value=>{d.mix=d.mix.filter(m=>m.rankId!==rk);d.mix.push({rankId:rk,heads:value});};
@@ -3796,8 +3781,6 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
-
-
 
 
 
