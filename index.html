@@ -3504,13 +3504,7 @@ function renderRankMatrix(){
   const st=summary.querySelector('table');st.innerHTML=st.innerHTML.replace('<tbody>','<tfoot>').replace('</tbody>','</tfoot>');first?.closest('.tablewrap')?.after(summary);
   renderPersonnelEditors(box,disabled);
 }
-function renderPersonnelEditors(box,disabled){
-  const dis=disabled?' disabled':'',pr=annual(S.payroll,editYear),ds=S.payroll.departments;
-  const field=(d,f,y,v)=>`<input class="cell ${f==='name'?'txt':''}" type="${['name','salary'].includes(f)?'text':'number'}" data-pp="dept-field" data-pp-dept="${ppAttr(d.id)}" data-pp-field="${f}" data-pp-key="${y}" value="${ppAttr(f==='salary'?won(v):v)}" aria-label="${ppAttr(d.name)} ${y<0?'공통':fyShort(y,S)} ${f}"${dis}>`;
-  const config=document.createElement('div');config.className='pp-month';config.id='personnelEditors';
-  config.innerHTML=`<h3>통합 인원계획 설정 · ${fyShort(editYear,S)}</h3><div class="fgrid"><label class="check"><input type="checkbox" data-bind="payroll.enabled"${pr.enabled?' checked':''}${dis}>선택연도 인건비 반영</label><label class="field">미연결 부서 기본 보험률 %<input type="number" data-bind="payroll.insurance" value="${pr.insurance}"${dis}></label><label class="field">미연결 부서 기본 퇴직률 %<input type="number" data-bind="payroll.retirement" value="${pr.retirement}"${dis}></label><label class="field">미연결 부서 기본 급여인상률 %<input type="number" data-bind="payroll.raise" value="${S.payroll.raise}"${dis}></label></div><h3>부서 이름·배부 편집 · 선택연도</h3><p class="cap">연도별 배부가 우선하며 미설정은 기존 제조인력 표시를 따릅니다. 자동 인건비 계정의 제조/판매·관리 분류에 그대로 적용합니다.</p>${resultTable(['부서명（공통）','배부 · 선택연도'],ds.map(d=>{const dy=deptYear(S,d,editYear),role=dy.role===undefined?(d.mfg?'manufacturing':'admin'):dy.role;return [field(d,'name',-1,d.name),`<select data-pp="dept-field" data-pp-dept="${ppAttr(d.id)}" data-pp-field="role" data-pp-key="${editYear}"${dis}>${[['manufacturing','제조'],['sales','판매'],['admin','관리']].map(([v,n])=>`<option value="${v}"${role===v?' selected':''}>${n}</option>`).join('')}${!['manufacturing','sales','admin'].includes(role)?`<option selected value="${ppAttr(role)}">${esc(role)}</option>`:''}</select>`];}))}<h3>미연결 부서 · 기존 입력 유지</h3><p class="cap">직급을 연결하지 않아도 아래에서 기존 연도별 인원·월급여·보험·퇴직률과 미입력 인원 증감을 편집할 수 있습니다. 직급 연결 시 이 기준을 대체합니다.</p>${resultTable(['부서','미입력 연도 인원 증감（공통）',...R.pl.flatMap((_,y)=>[fyShort(y,S)+' 재직인원',fyShort(y,S)+' 월급여 · 원',fyShort(y,S)+' 보험 %',fyShort(y,S)+' 퇴직 %'])],ds.filter(d=>!hasRankPlan(d)).map(d=>[esc(d.name),field(d,'headAdd',-1,d.headAdd),...R.pl.flatMap((_,y)=>{const dy=deptYear(S,d,y),pr=annual(S.payroll,y);return ['heads','salary','insurance','retirement'].map(f=>field(d,f,y,dy[f]??pr[f]??0));})]))}`;
-  box.append(config);
-}
+function renderPersonnelEditors(){document.getElementById('personnelEditors')?.remove();}
 // Late extension calls can only clean up obsolete panels, never recreate them.
 function renderRankMonthly(){document.getElementById('rankMonthly')?.remove();}
 function renderRankT0(){document.getElementById('rankT0')?.remove();}
@@ -3781,6 +3775,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
