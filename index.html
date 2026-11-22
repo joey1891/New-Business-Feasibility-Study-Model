@@ -571,7 +571,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
           <table class="tbl tree" id="demandTree"></table>
         </div>
         <div style="padding:10px 16px 14px;border-top:1px solid var(--line2);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--mut)">
-          <span><b>단계별 소계는 접혀 있는 하위 제품까지 포함합니다.</b> 수요액은 입력 단가 기준, 실제판매 매출은 부가세 제외 기준입니다. 거래처 행의 월별 입력칸 아래 숫자는 하위 제품의 수량 소계입니다.</span>
+          <span><b>단계별 소계는 접혀 있는 하위 제품까지 포함합니다.</b> 수요액과 실제판매 매출은 모두 부가세 제외 기준입니다. 거래처 행의 월별 입력칸 아래 숫자는 하위 제품의 수량 소계입니다.</span>
           <span id="demandFootNote"></span>
         </div>
       </div>
@@ -2024,9 +2024,9 @@ function demandSubtotals(){
     const sub=empty();
     if(depth<9&&Array.isArray(n.children))n.children.forEach(k=>add(sub,visit(k,depth+1)));
     else {
-      const p=products.get(n.id),price=productYear(n,editYear).price;
+      const p=products.get(n.id);
       sub.leaves=1;
-      p?.rows.slice(a,b).forEach((r,i)=>{sub.months[i+skip]=r.dem;sub.qty+=r.dem;sub.value+=r.dem*price;sub.actual+=r.revenue;});
+      p?.rows.slice(a,b).forEach((r,i)=>{sub.months[i+skip]=r.dem;sub.qty+=r.dem;sub.value+=r.dem*r.price;sub.actual+=r.revenue;});
     }
     subtotals.set(n.id,sub);return sub;
   }
@@ -2058,7 +2058,7 @@ function demandRowHtml(n,depth,subtotals){
   const detail=`<span class="demand-subtotal">제품 소계 · ${won(q)}개 · 판매매출 ${man(sub.actual)} ${unitLabel()}</span>`;
   return `<tr class="trow item" data-row="${n.id}" data-depth="${depth}">
     <td class="l treecell sticky">${box}<span class="dnd" draggable="true" data-drag="${n.id}" title="드래그하여 순서 변경">⠿</span><span class="lvd">${depth}</span><input class="cell txt" data-nid="${n.id}" data-nf="name" value="${esc(n.name)}" aria-label="${depth>=9?'제품명':LEVELS[depth-1]+'명'}">${custOf(n.id)>1?`<span class="cnt" title="거래처 수 배수 적용">×${custOf(n.id)}</span>`:''}${depth<9?`<button class="add" data-add="${n.id}" title="하위 ${LEVELS[depth]} 추가">+</button>`:''}<button class="mv" data-mvup="${n.id}" title="위로 이동">▲</button><button class="mv" data-mvdown="${n.id}" title="아래로 이동">▼</button><button class="del" data-delnode="${n.id}" title="삭제">✕</button></span>${detail}</td>
-    <td>${won(q)}</td><td title="판매 수요 × 입력 단가">${man(sub.value)}</td><td><input class="cell comma" type="text" inputmode="numeric" data-nid="${n.id}" data-nf="price" value="${won(n.price)}"></td>
+    <td>${won(q)}</td><td title="수요 수량 × 부가세 제외 단가">${man(sub.value)}</td><td><input class="cell comma" type="text" inputmode="numeric" data-nid="${n.id}" data-nf="price" value="${won(n.price)}"></td>
     <td><input class="cell comma" type="text" inputmode="numeric" data-nid="${n.id}" data-nf="cost" value="${won(n.cost)}"></td>
     <td><input class="cell" type="text" inputmode="decimal" data-nid="${n.id}" data-nf="growth" value="${n.growth}"></td>
     <td><input class="cell bulk${t0Sel?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄"${t0Sel?' disabled title="T0 모드 · 월별 열에 입력"':''} aria-label="1년 월수량 일괄 입력"></td>
@@ -2091,10 +2091,10 @@ function renderTree(){
    const totalR=t0Sel?(R.t0?R.t0.rev:0):((R.pl[editYear]||{}).rev||0);
    const totalRSrc='실제판매 기준(재고 부족분 제외) — 연도별 예상·공통 원장과 동일';
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px"><col style="width:52px">${Array.from({length:12},()=>'<col style="width:52px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
-    <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수요액<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
+    <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수요액<span class="u">${unitLabel()} · 부가세 제외</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
      ${Array.from({length:12},(_,i)=>`<th title="제품 입력은 거래처당 수량, 그룹 소계는 전체 거래처를 반영한 수량입니다">${fyMonth(i)}월<span class="u">수량</span></th>`).join('')}<th>기간 합계<span class="u">개</span></th><th title="실제판매 수량 기준 · 부가세 제외">매출·실제판매<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr><td class="l">전체 합계</td><td>${won(totalQ)}</td><td title="판매 수요 × 입력 단가">${man(total.value)}</td><td colspan="4"></td>
+    <tfoot><tr><td class="l">전체 합계</td><td>${won(totalQ)}</td><td title="수요 수량 × 부가세 제외 단가">${man(total.value)}</td><td colspan="4"></td>
      ${total.months.map(q=>`<td>${won(q)}</td>`).join('')}
     <td>${won(totalQ)}</td><td title="${totalRSrc}">${man(totalR)}</td><td></td></tr></tfoot>`;
   const lv=$('#demandLevels');
@@ -3814,6 +3814,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
