@@ -123,6 +123,7 @@ select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,
 
 /* ---------- tables ---------- */
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;max-width:100%}
+#invSettings{min-width:950px}#invSettings th:first-child,#invSettings td:first-child{white-space:normal;min-width:150px;max-width:230px}#invSettings td:first-child .sub{white-space:normal;overflow-wrap:anywhere}#invSettings th:nth-child(10),#invSettings td:nth-child(10){min-width:148px}#invSettings td:nth-child(10) input{min-width:126px}
 table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;font-variant-numeric:tabular-nums}
 .tbl th{background:#f3f6f9;color:#54677c;font-size:10.6px;font-weight:800;letter-spacing:.03em;padding:8px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;position:sticky;top:0;z-index:2}
 #sgaFixed,#sgaSemi,#sgaVar{min-width:650px}
@@ -522,7 +523,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
               <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
               <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
-              <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">「재고 · 발주」의 현재재고 × 원가 자동계산</span></label>
+              <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">「재고 · 발주」의 입력 재고와 자동 보강 재고를 포함합니다.</span></label>
               <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">수요·발주·회수조건 변화에 연동 자동계산 (아래 구성 자동 표시)</span></label>
             </div>
             <div class="divider"></div>
@@ -572,7 +573,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
       </div>
       <div style="height:14px"></div>
       <div class="card flush">
-        <div style="padding:14px 16px"><div class="card-h" style="padding:0"><div><h2>연도별 예상</h2><p>수요 × 성장률. 재고 부족으로 못 판 수량은 실제 판매에서 제외됩니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
+        <div style="padding:14px 16px"><div class="card-h" style="padding:0"><div><h2>연도별 예상</h2><p>월별 수요 충족을 기준으로 입고를 계획합니다. 매출은 판매 수량 × 부가세 제외 단가입니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="demandYears"></table></div></div>
       </div>
     </section>
 
@@ -617,7 +618,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
       <div style="height:14px"></div>
 
       <div class="two-panel">
-        <div class="card"><div class="card-h"><div><h2>적정재고 기준</h2><p>발주점과 1회 발주량의 근거.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
+        <div class="card"><div class="card-h"><div><h2>적정 초기재고</h2><p>첫 적기 입고 전까지 필요한 수량과 자동 보강액.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
         <div class="card" id="invDiag"></div>
       </div>
     </section>
@@ -1071,41 +1072,67 @@ function buildMonths(s,H){
 
 /* ---------- 재고 시뮬레이션 ---------- */
 function cntOfYear(p,yk,mi){const byY=p.custCountsByYear,legacy=p.custCounts;let a=null;if(byY&&Array.isArray(byY[String(yk)]))a=byY[String(yk)];else if(Array.isArray(legacy))a=legacy;const v=a==null?null:a[mi];return v==null?Math.max(0,num(p.custCount,1)):Math.max(0,num(v,0));}
+const PLAN_DAY=86400000;
+function planDay(y,m,d){return Date.UTC(y,m-1,d)/PLAN_DAY;}
+function planDate(day){return new Date(day*PLAN_DAY).toISOString().slice(0,10);}
 function simulateProduct(p,cfg,months,H,s){
   const NM=months.length,cost=Math.max(0,productYear(p,0).cost||0);
-  const dem=[];
-  for(let i=0;i<NM;i++){ dem.push(Math.max(0,Math.round(num(pmQty(p,months[i]))*cntOfYear(p,months[i].t0?'t0':months[i].yi,months[i].mm-1)))); }
-  let stock=Math.max(0,num(cfg.stock,0));
-  let value=stock*(cfg.openingUnitCost??cost);
-  const rows=[],orders=[],arrivals=new Array(NM+24).fill(0),arrivalValues=new Array(NM+24).fill(0),arrivalTax=new Array(NM+24).fill(0),arrivalDeduct=new Array(NM+24).fill(0);
-  let onOrder=0;
-  const yearDemand=[];
-  for(let y=0;y<H;y++) yearDemand.push(dem.slice(t0MonthsOf(s)+y*12,t0MonthsOf(s)+(y+1)*12).reduce((a,b)=>a+b,0));
-  for(let i=0;i<NM;i++){
-    const py=months[i].t0?productYear(p,0):productYear(p,months[i].yi),cy=annual(cfg,months[i].t0?0:months[i].yi);
-    const lead=Math.max(0,num(cy.lead)),L=lead>0?Math.max(1,Math.ceil(lead/30)):0;
-    const safetyDays=Math.max(0,num(cy.safety)),moq=Math.max(0,num(cy.moq)),lot=Math.max(1,num(cy.lot,1));
-    const openingQty=stock,openingValue=value;
-    let arr=arrivals[i]||0,purchaseCost=arrivalValues[i]||0,purchaseVAT=arrivalTax[i]||0,purchaseDeduct=arrivalDeduct[i]||0; stock+=arr;value+=purchaseCost;onOrder-=arr;
-    const d=dem[i],daily=d/months[i].days,yearDaily=(yearDemand[months[i].t0?0:months[i].yi]||0)/365;
-    const ss=yearDaily*safetyDays, cover=coverOf(cy,months[i].yi), rop=daily*(lead+30)+ss, target=daily*(lead+cover)+ss
-    const avail=stock+onOrder;
-    let ordered=0;
-    const forceFirst=cfg.firstOrder!=null&&i===cfg.firstOrder;
-    const beforeFirst=cfg.firstOrder!=null&&i<cfg.firstOrder;
-    if(!beforeFirst&&(d>0||forceFirst)&&(forceFirst||avail<=rop+1e-9||(i===0&&avail<d))&&i+L<NM){
-      let q=Math.max(moq,target-avail);
-      if(months[i].t0){ const off=t0MonthsOf(s); const span=Math.min(2,off-i); const restDem=dem.slice(i,i+span).reduce((a,b)=>a+b,0); const needRest=restDem-stock; q=needRest>0?Math.ceil(needRest/lot)*lot:0; }
-      if(Number.isFinite(q)&&q>0){ ordered=q; onOrder+=q; arrivals[i+L]=(arrivals[i+L]||0)+q;arrivalValues[i+L]=(arrivalValues[i+L]||0)+q*py.cost;
-        arrivalTax[i+L]+=q*(py._purchaseTax||0);arrivalDeduct[i+L]+=q*(py._purchaseDeduct||0);
-        if(L===0){stock+=q;value+=q*py.cost;purchaseCost+=q*py.cost;arr+=q;onOrder-=q;purchaseVAT+=q*(py._purchaseTax||0);purchaseDeduct+=q*(py._purchaseDeduct||0);}
-        orders.push({month:i,qty:q,arrMonth:i+L,amount:q*py.cost,supply:q*(py._purchaseSupply??py.cost),vat:q*(py._purchaseTax||0),gross:q*(py._purchaseSupply??py.cost)+q*(py._purchaseTax||0)});
-      }
+  const dem=productDemand(p,months), days=months.map(m=>planDay(m.y,m.mm,1));
+  const years=months.map(m=>m.t0?0:m.yi), rules=years.map(y=>annual(cfg,y));
+  const leads=rules.map(c=>Math.ceil(Math.max(0,num(c.lead))));
+  const dated=typeof cfg.firstOrderDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(cfg.firstOrderDate)?Date.parse(cfg.firstOrderDate+'T00:00:00Z')/PLAN_DAY:NaN;
+  const earliest=Number.isFinite(dated)?Math.max(days[0],dated):cfg.firstOrder==null?days[0]:(days[cfg.firstOrder]??Infinity);
+  const findOrder=i=>{
+    for(let j=i;j>=0;j--){
+      const last=days[j]+months[j].days-1;
+      const orderDay=Math.min(last,days[i]-leads[j]);
+      if(orderDay<Math.max(days[j],earliest))continue;
+      const arrivalDay=orderDay+leads[j];
+      let k=i; while(days[k]>arrivalDay)k--;
+      return {month:j,arrMonth:k,orderDay,arrivalDay};
     }
-    const avg=stock>0?value/stock:0,sold=Math.min(stock,d),cogs=sold*avg; stock-=sold;value=Math.max(0,value-cogs);
-    rows.push({dem:d,sold,lost:d-sold,stock,stockVal:value,openingQty,openingValue,cogs,price:py.price,unitCost:py.cost,avgCost:avg,revenue:sold*py.price,salesVAT:sold*py.price*(py._vat?.salesRate||0)/100,purchaseVAT,purchaseDeduct,purchaseCost,ordered,orderAmt:ordered*py.cost,arrival:arr,ss,rop,target,avail});
+    return null;
+  };
+  const slots=days.map((_,i)=>findOrder(i));
+  const off=t0MonthsOf(s), demandYears=Array.from({length:H},(_,y)=>dem.slice(off+y*12,off+(y+1)*12).reduce((a,b)=>a+b,0));
+  const safety=rules.map((c,i)=>Math.ceil((demandYears[years[i]]||0)/365*Math.max(0,num(c.safety))));
+  let prefix=0, minOpening=0, plannedOpening=0;
+  for(let i=0;i<NM&&!slots[i];i++){
+    prefix+=dem[i]; minOpening=prefix;
+    plannedOpening=Math.max(plannedOpening,prefix+(prefix>0?safety[i]:0));
   }
-  return {rows,orders,dem,cost,L:Math.ceil(cfg.lead/30)};
+  const enteredStock=Math.max(0,Math.floor(num(cfg.stock))), effectiveOpening=Math.max(enteredStock,plannedOpening);
+  const rows=[],orders=[], receipts=Array.from({length:NM},()=>[]), placements=Array.from({length:NM},()=>[]),targets=[];
+  const active=dem.some(q=>q>0);
+  let projected=effectiveOpening;
+  for(let i=0;i<NM;i++){
+    const slot=slots[i];
+    let cover=coverOf(cfg,years[i]), future=0;
+    for(let j=i+1;j<NM&&cover>0;j++){ const use=Math.min(cover,months[j].days);future+=dem[j]*use/months[j].days;cover-=use; }
+    const trigger=dem[i]+safety[i], target=trigger+Math.ceil(future);
+    targets.push({rop:trigger,target});
+    if(active&&slot&&(dem[i]>0||future>0)&&projected<trigger){
+      const cy=rules[slot.month], lot=Math.max(1,Math.ceil(num(cy.lot,1))), moq=Math.max(0,Math.ceil(num(cy.moq)));
+      const qty=Math.ceil(Math.max(moq,target-projected)/lot)*lot;
+      const py=productYear(p,years[slot.month]), unitCost=py.cost;
+      const order={...slot,qty,amount:qty*unitCost,supply:qty*(py._purchaseSupply??unitCost),vat:qty*(py._purchaseTax||0),deduct:qty*(py._purchaseDeduct||0),gross:qty*(py._purchaseSupply??unitCost)+qty*(py._purchaseTax||0)};
+      orders.push(order); placements[slot.month].push(order);receipts[slot.arrMonth].push(order);projected+=qty;
+    }
+    projected-=dem[i];
+  }
+  orders.sort((a,b)=>a.orderDay-b.orderDay||a.arrivalDay-b.arrivalDay);
+  let stock=effectiveOpening,value=stock*(cfg.openingUnitCost??cost),onOrder=0;
+  for(let i=0;i<NM;i++){
+    const py=productYear(p,years[i]),openingQty=stock,openingValue=value,d=dem[i];
+    const sum=(list,k)=>list.reduce((a,o)=>a+o[k],0);
+    const arr=sum(receipts[i],'qty'),purchaseCost=sum(receipts[i],'amount'),purchaseVAT=sum(receipts[i],'vat'),purchaseDeduct=sum(receipts[i],'deduct');
+    const ordered=sum(placements[i],'qty'),orderAmt=sum(placements[i],'amount');
+    stock+=arr;value+=purchaseCost;onOrder+=ordered-arr;
+    const avail=stock+onOrder,avg=stock>0?value/stock:0,sold=Math.min(stock,d),cogs=sold*avg;
+    stock-=sold;value=Math.max(0,value-cogs);
+    rows.push({dem:d,sold,lost:d-sold,stock,stockVal:value,openingQty,openingValue,cogs,price:py.price,unitCost:py.cost,avgCost:avg,revenue:sold*py.price,salesVAT:sold*py.price*(py._vat?.salesRate||0)/100,purchaseVAT,purchaseDeduct,purchaseCost,ordered,orderAmt,arrival:arr,ss:safety[i],...targets[i],avail});
+  }
+  return {rows,orders,dem,cost,L:Math.ceil(cfg.lead/30),enteredStock,minOpening,plannedOpening,effectiveOpening,openingTopUp:effectiveOpening-enteredStock};
 }
 
 /* ---------- 재고 통합(거래처 무관) ---------- */
@@ -1147,11 +1174,11 @@ function buildInvGroups(s,products,months,H){
     const gYears={};
     for(let y=0;y<H;y++){ const be=productYear(anchor,y); gYears[y]=Object.assign({},be,{price:yPrice[y],cost:yCost[y],months:yMonths[y].slice()}); }
     const gp={id:anchor.id,name:anchor.name,custCount:1,node:{years:gYears}};
-    {const sm=smOf(s),off=t0MonthsOf(s);
-     if(off){gp.t0months=Array.from({length:off},(_,k)=>{const mi=sm-1+k;return members.reduce((a,m)=>a+((m.t0months&&m.t0months[k]!=null)?Math.max(0,Math.round(num(m.t0months[k]))):Math.max(0,Math.round(num(productYear(m,0).months[mi]||0))))*cntOfYear(m,'t0',mi),0);});}}
+    {const off=t0MonthsOf(s);
+     if(off){gp.t0months=months.slice(0,off).map(mo=>members.reduce((a,m)=>a+Math.max(0,Math.round(pmQty(m,mo)*cntOfYear(m,'t0',mo.mm-1))),0));}}
     const sim=simulateProduct(gp,cfg,months,H,s);
     const g={key,id:anchor.id,name:anchor.name,parentLabel:invGroupParent(anchor),label:invGroupParent(anchor),
-      members,memberIds:members.map(m=>m.id),cfg,stock,openStock:Math.round(stock),
+      members,memberIds:members.map(m=>m.id),cfg,stock,openStock:sim.effectiveOpening,enteredStock:sim.enteredStock,minOpening:sim.minOpening,plannedOpening:sim.plannedOpening,openingTopUp:sim.openingTopUp,
       unitCost:(cfg.openingUnitCost!=null?cfg.openingUnitCost:productYear(anchor,0).cost),
       dem:sim.dem,rows:sim.rows,orders:sim.orders,L:sim.L,cost:yCost[0],price:yPrice[0]};
     const dems=members.map(m=>productDemand(m,months));
@@ -1164,7 +1191,7 @@ function buildInvGroups(s,products,months,H){
         const share=dTot?dems[mi][i]/dTot:0;
         const py=months[i].t0?productYear(m,0):productYear(m,months[i].yi);
         const last=mi===members.length-1;
-        const sold=last?Math.max(0,row.sold-soldAcc):row.sold*share;
+        const sold=row.sold===dTot?dems[mi][i]:(last?Math.max(0,row.sold-soldAcc):row.sold*share);
         const lost=last?Math.max(0,(row.dem-row.sold)-lostAcc):(row.dem-row.sold)*share;
         soldAcc+=sold; lostAcc+=lost;
         const price=Math.max(0,num(py.price,0)),cost=Math.max(0,num(py.cost,0));
@@ -1205,7 +1232,7 @@ function applyInvEdit(el,value){
       });
       R=compute(S); saveState();
       const cf=invCfg(S,ids[0]);
-      if(cf.firstOrder!=null&&R.months[cf.firstOrder]){ const m=R.months[cf.firstOrder]; toast('최초 발주 '+m.y+'.'+String(m.mm).padStart(2,'0')+' 확정 · 리드타임 '+cf.lead+'일 반영'); if(/^\d{4}-\d{2}-\d{2}$/.test(v)&&currentView==='inventory')renderInvSettings(); }
+       if(cf.firstOrderDate){toast('발주 가능일 적용 · 수요와 리드타임 기준으로 재계산');if(currentView==='inventory')renderInvSettings();}
       return;
     }
     if(f==='stock'){ c.stock=ix===0?Math.max(0,value):0; return; }
@@ -1275,6 +1302,8 @@ function compute(s0){
     p.openStock=Math.round(p.baseStock);
   });
   const invGroups=buildInvGroups(s,products,months,H);
+  const addedStockVat=invGroups.reduce((a,g)=>a+g.openingTopUp*(g.cfg._openingUnitVatCredit||0),0);
+  s._assetVat.stock+=addedStockVat;s._vatOpening+=addedStockVat;
 
   const revM=new Array(NM).fill(0),cogsM=new Array(NM).fill(0),purchM=new Array(NM).fill(0),invM=new Array(NM).fill(0);
   products.forEach(p=>{ for(let i=0;i<NM;i++){ const r=p.rows[i];
@@ -1571,7 +1600,7 @@ function prepareExtended(s){
     }
     const t0=productTax(n,0,v),opening=taxSplit(cfg.openingUnitCost??productYear(n,0).cost,t0.purchaseRate,t0.purchaseIncluded),credit=opening.tax*Math.max(0,Math.min(100,num(t0.deductible)))/100;
     const stockMult=s.inv&&s.inv.autoScaleStock?Math.max(0,num(p.custCount,1)):1;
-    cfg.openingUnitCost=opening.gross-credit;s._assetVat.stock+=cfg.stock*stockMult*credit;
+    cfg.openingUnitCost=opening.gross-credit;cfg._openingUnitVatCredit=credit;s._assetVat.stock+=cfg.stock*stockMult*credit;
     n.years=baseYears;
   });
   ['capex','intangible'].forEach(k=>{const a={enabled:false,rate:10,included:false,deductible:100,...v.assets?.[k]},t=taxSplit(s.invest[k],v.enabled&&a.enabled?a.rate:0,a.included),credit=t.tax*Math.max(0,Math.min(100,num(a.deductible)))/100;s.invest[k]=t.gross-credit;s._assetVat[k]=credit;});
@@ -1982,7 +2011,7 @@ function countsArrOf(f,yk){ if(!f)return null; const key=String(yk==null?'t0':yk
 function cntM(id,i,y){ const f=custInfo(id),yk=(y==null)?(t0Sel?'t0':String(editYear)):String(y),a=countsArrOf(f,yk),v=a==null?null:a[i]; return v==null?f.base:Math.max(0,num(v,0)); }
 function prodQty(p){ const ms=(t0Sel?t0MonthsView(p):productYear(p,editYear).months)||[]; const skip=t0Sel?smOf(S)-1:0; return ms.reduce((a,b,i)=>i<skip?a:a+(+b||0)*cntM(p.id,i),0); }
 
-function demandRowHtml(n,depth,idx){
+function demandRowHtml(n,depth,actualById){
   const leaf=depth>=9||!(n.children&&n.children.length);
   const pad=(depth-1)*14;
   const box=`<span class="ind" style="padding-left:${pad}px">`;
@@ -2010,7 +2039,7 @@ function demandRowHtml(n,depth,idx){
     <td><input class="cell bulk${t0Sel?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nmall="1" placeholder="일괄"${t0Sel?' disabled title="T0 모드 · 월별 열에 입력"':''} aria-label="1년 월수량 일괄 입력"></td>
     ${(n.months||[]).map((v,i)=>{const m=cntM(n.id,i),lock=t0Sel&&(i+1)<smOf(S);return `<td><input class="cell mo${lock?' dim':''}" type="text" inputmode="numeric" data-nid="${n.id}" data-nm="${i}" value="${lock?0:v}" ${lock?'disabled data-readonly-skip="1" title="사업 개시 전 월 · 0 고정"':''} aria-label="${fyMonth(i)}월">${m>1&&!lock?`<div class="molbl" title="입력값은 거래처 1곳당 수량 · 판매수요는 거래처 수 배수 적용">${won((+v||0)*m)} <span style="opacity:.75;font-size:9px">(${won(+v||0)}개×${won(m)}곳)</span></div>`:''}</td>`;}).join('')}
     <td class="tot-col strong">${won(q)}${(()=>{const ms=(n.months||[]).reduce((a,b,i)=>(t0Sel&&i+1<smOf(S))?a:a+(+b||0),0);return q>ms?`<div class="sub" title="월별 입력(거래처당 수량) 합계에 거래처 수 배수를 적용한 판매 수요">월합계 ${won(ms)} × 거래처 배수 = ${won(q)}</div>`:'';})()}</td>
-    <td class="tot-col">${man(q*(+n.price||0))}</td>
+    <td class="tot-col" title="판매 수량 × 부가세 제외 단가">${man(actualById.get(base.id)||0)}</td>
     <td></td>
   </tr>`;
 }
@@ -2019,22 +2048,24 @@ function renderTree(){
   const t=$('#demandTree');
   if(!t) return;
   _custMap=null;_cntMap=null;
+  const a=t0Sel?0:(R.off||0)+editYear*12,b=t0Sel?(R.off||0):a+12;
+  const actualById=new Map(R.products.map(p=>[p.id,p.rows.slice(a,b).reduce((s,r)=>s+r.revenue,0)]));
   let rows='';
   (function walk(nodes,depth){
     (nodes||[]).forEach(n=>{
-      rows+=demandRowHtml(n,depth);
+      rows+=demandRowHtml(n,depth,actualById);
       if(n.children&&n.children.length&&!COLLAPSED.has(n.id)) walk(n.children,depth+1);
     });
   })(S.sales.tree,1);
   if(!rows) rows=`<tr><td colspan="21"><div class="empty"><b>매출트리가 비어 있습니다</b>+ 최상위로 수익모델을 추가하세요.</div></td></tr>`;
-  const totalQ=R.products.reduce((a,p)=>a+prodQty(p),0);
+  const totalQ=R.products.reduce((a,p)=>a+prodQty(p),0),nodes=nodeIndex();
    const totalR=t0Sel?(R.t0?R.t0.rev:0):((R.pl[editYear]||{}).rev||0);
    const totalRSrc='실제판매 기준(재고 부족분 제외) — 연도별 예상·공통 원장과 동일';
   t.innerHTML=`<colgroup><col style="width:236px"><col style="width:58px"><col style="width:62px"><col style="width:78px"><col style="width:78px"><col style="width:42px"><col style="width:52px">${Array.from({length:12},()=>'<col style="width:52px">').join('')}<col style="width:58px"><col style="width:62px"><col style="width:24px"></colgroup>
-    <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 매출<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
+    <thead><tr><th class="l sticky">분류 / 제품</th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수량<span class="u">개</span></th><th>${t0Sel?'T0':'Y'+(editYear+1)} 수요액<span class="u">${unitLabel()}</span></th><th>단가 입력<span class="u">원 · VAT포함</span></th><th>원가 입력<span class="u">원 · VAT포함</span></th><th>미입력 성장<span class="u">%</span></th><th>월 일괄<span class="u">채우기</span></th>
     ${Array.from({length:12},(_,i)=>`<th title="입력값은 거래처 1곳당 월 판매 수량 · 연간·매출 열에는 거래처 수 배수가 적용됩니다">${fyMonth(i)}월<span class="u">거래처당</span></th>`).join('')}<th>연간<span class="u">개</span></th><th title="실제판매 기준 매출 — 재고 부족분은 제외">매출·실제판매<span class="u">${unitLabel()}</span></th><th></th></tr></thead>
     <tbody>${rows}</tbody>
-    <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td>${man(totalR)}</td><td colspan="4"></td>
+    <tfoot><tr><td class="l">합계</td><td>${won(totalQ)}</td><td title="판매 수요 × 입력 단가">${man(R.products.reduce((s,p)=>s+prodQty(p)*productYear(nodes.get(p.id)?.node||p,editYear).price,0))}</td><td colspan="4"></td>
      ${Array.from({length:12},(_,i)=>`<td>${won(t0Sel&&(i+1)<smOf(S)?0:R.products.reduce((a,p)=>a+((t0Sel?t0MonthsView(p):productYear(p,editYear).months)[i]||0)*cntM(p.id,i),0))}</td>`).join('')}
     <td>${won(totalQ)}</td><td title="${totalRSrc}">${man(totalR)}</td><td></td></tr></tfoot>`;
   const lv=$('#demandLevels');
@@ -2112,32 +2143,33 @@ function demandCsv(){
 function renderInvSettings(){
   const t=$('#invSettings'); if(!t) return;
   const opt=$('#invStockOpt');
-  if(opt) opt.innerHTML=`<span class="sub">재고와 발주는 <b>거래처와 무관하게 제품 단위로 통합</b>됩니다. 같은 제품이 여러 거래처에 있어도 재고는 하나의 풀로 관리되고, 최소 발주량은 <b>3,000개</b>입니다. <b>최초 발주일은 아래 표의 「최초 발주일」 열(초기재고액 왼쪽)에서 년·월·일로 지정</b>합니다 — 지정하면 리드타임·안전재고를 반영해 그 시점에 첫 발주가 확정되고 입고 예정일·적정재고가 연동 계산됩니다. 미지정 시 발주점 도달 시점에 자동 발주합니다.</span>`;
+  if(opt) opt.innerHTML=`<span class="sub"><b>월별 수요 충족 발주</b> · 제품별 월초 수요를 기준으로 리드타임을 역산합니다. 발주 가능일 때문에 제때 입고할 수 없는 기간은 <b>초기재고를 자동 보강</b>하고 초기투자에 반영합니다. 입력 재고는 바뀌지 않으며 실제 주문이 자동 전송되지는 않습니다.</span>`;
   const groups=R.invGroups||[];
   const byName=new Map();
   groups.forEach(g=>{ if(!byName.has(g.name)) byName.set(g.name,[]); byName.get(g.name).push(g); });
   const rows=[...byName.values()].map(gs=>{
     const g=gs[0];
     const c=invYear(S,g.id,editYear),py=productYear(g.members[0],editYear);
-    const y1=gs.reduce((a,gg)=>a+gg.dem.slice(editYear*12,editYear*12+12).reduce((x,y2)=>x+y2,0),0);
-    const first=gs.reduce((a,gg)=>{const r=gg.rows[editYear*12]||{openingValue:0,openingQty:0};return {openingValue:a.openingValue+r.openingValue,openingQty:a.openingQty+r.openingQty};},{openingValue:0,openingQty:0});
+    const a=t0Sel?0:R.off+editYear*12,b=t0Sel?R.off:a+12;
+    const y1=g.dem.slice(a,b).reduce((x,v)=>x+v,0),first=g.rows[a];
     const ids=gs.flatMap(gg=>gg.memberIds).join('|');
-    const stockDisp=gs.reduce((a,gg)=>a+Math.max(0,num(invCfg(S,gg.id).stock,0)),0);
+    const stockDisp=g.enteredStock;
     const dup=gs.length>1?` · 동명 그룹 ${gs.length}개 통합`:'';
     const mrg=g.members.length>1?` · 거래처 ${g.members.length}곳 통합`:'';
     return `<tr>
-      <td class="l"><b>${esc(g.name)}</b><div class="sub">${esc(g.parentLabel||'—')}${dup}${mrg} · Y${editYear+1} ${won(y1)}개</div></td>
-      <td>${editYear?`<b>${won(first.openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="stock" value="${stockDisp}">${gs.length>1||g.members.length>1?`<div class="sub">품목 통합 합산</div>`:''}`}</td>
+      <td class="l"><b>${esc(g.name)}</b><div class="sub">${esc(g.parentLabel||'—')}${dup}${mrg} · ${t0Sel?'T0':'Y'+(editYear+1)} ${won(y1)}개</div></td>
+      <td>${editYear?`<b>${won(first.openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="stock" value="${stockDisp}"><div class="sub">개시 적용 ${won(g.openStock)}개${g.openingTopUp?` · 자동 보강 ${won(g.openingTopUp)}개`:''}</div>`}</td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="lead" value="${c.lead}"></td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="safety" value="${c.safety}"></td>
       <td><input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="moq" value="${c.moq}"></td>
-      <td><input class="cell" type="number" min="0" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="cover" value="${coverOf(c,editYear)}" title="발주 목표 커버 일수 · 일평균×(리드타임+이 일수)+안전재고까지 채움 · 기본 60"></td>
-      <td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.cost)}</td><td class="fixedcell" title="적정재고 산출 연동 · 고정">${won(py.price)}</td>
-      <td>${(()=>{const cf=invCfg(S,g.id);const arr=cf.firstOrder!=null&&R.months[cf.firstOrder]?R.months[cf.firstOrder]:null;return `<input class="cell" type="date" data-pid="${g.id}" data-gids="${ids}" data-pf="firstDate" value="${cf.firstOrderDate||''}" title="최초 발주일 지정 · 미지정 시 발주점 도달 시점에 자동 발주">${arr?`<div class="sub">입고 예정 ${arr.y}.${String(arr.mm).padStart(2,'0')} · 리드타임 ${c.lead}일 반영</div>`:'<div class="sub">미지정 · 발주점 도달 시 자동 발주</div>'}`;})()}</td>
-      <td class="fixedcell" title="적정재고 산출 연동 · 고정">${man(first.openingValue)}</td>
+      <td><input class="cell" type="number" min="1" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="lot" value="${c.lot}"></td>
+      <td><input class="cell" type="number" min="0" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="cover" value="${coverOf(c,editYear)}" title="필요 입고월 이후 추가 확보할 수요 기간"></td>
+      <td class="fixedcell" title="개당 공급가 · 원">${won(py.cost)}</td><td class="fixedcell" title="개당 공급가 · 원">${won(py.price)}</td>
+      <td>${(()=>{const cf=invCfg(S,g.id),order=g.orders[0];return `<input class="cell" type="date" data-pid="${g.id}" data-gids="${ids}" data-pf="firstDate" value="${esc(cf.firstOrderDate||'')}" title="이 날짜부터 신규 발주 가능 · 미지정 시 사업 개시일부터 가능"><div class="sub">${order?`첫 계획 발주 ${planDate(order.orderDay)}<br>첫 계획 입고 ${planDate(order.arrivalDay)}`:'계획기간 내 추가 발주 없음'}</div>`;})()}</td>
+      <td class="fixedcell" title="자동 보강 포함 · 사업 개시 기준">${man(g.openStock*g.unitCost)}</td>
     </tr>`;
   }).join('');
-  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>현재재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th title="발주 시 일평균×(리드타임+이 일수)+안전재고까지 채웁니다. 기본 60일 · 줄이면 소액·다빈도 발주로 운전자본이 줄어듭니다">목표커버<span class="u">일</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>최초 발주일</th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
+  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>입력 재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>목표커버<span class="u">일</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>발주 가능 시작일</th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
     <tbody>${rows||'<tr><td colspan="11" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
 }
 
@@ -2145,22 +2177,8 @@ function renderInventory(){
   if(!document.getElementById('view-inventory')) return;
   const t=R.totals;
   const bench=document.getElementById('invBench');
-  if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>일평균<span class="u">개</span></th><th>안전재고<span class="u">개</span></th><th>발주점<span class="u">개</span></th><th>목표재고<span class="u">개</span></th><th>권장 1회<span class="u">개</span></th></tr></thead><tbody>`+
-    (()=>{const bn=new Map();(R.invGroups||[]).forEach(p=>{if(!bn.has(p.name))bn.set(p.name,[]);bn.get(p.name).push(p);});
-    return [...bn.values()].map(gs=>{
-      const p=gs[0];
-      const c=invYear(S,p.id,editYear);
-      const y1=gs.reduce((a,gg)=>a+gg.dem.slice(editYear*12,editYear*12+12).reduce((x,y2)=>x+y2,0),0);
-      const firstOp=gs.reduce((a,gg)=>a+((gg.rows[editYear*12]||{}).openingQty||0),0);
-      const days=R.months[editYear*12].days||30;
-      const daily=gs.reduce((a,gg)=>a+((gg.dem[editYear*12]||0)/days),0);
-      const ss=(y1/365)*(c.safety||0);
-      const rop=Math.round(daily*(c.lead+30)+ss);
-      const target=Math.round(daily*(c.lead+coverOf(c,editYear))+ss);
-      const lot=Math.max(c.moq||0,Math.ceil(Math.max(0,target-firstOp)/(c.lot||1))*(c.lot||1));
-      const ft=' title="적정재고 산출 · 자동 고정"';
-      return `<tr><td class="l">${esc(p.name)}</td><td class="fx"${ft}>${(y1/365).toFixed(1)}</td><td class="fx"${ft}>${won(ss)}</td><td class="fx"${ft}>${won(rop)}</td><td class="fx"${ft}>${won(target)}</td><td class="fx"${ft}>${won(lot)}</td></tr>`;
-    }).join('');})()+`</tbody>`;
+  if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>최소 초기재고<span class="u">개 · 안전재고 제외</span></th><th>권장 초기재고<span class="u">개 · 안전재고 포함</span></th><th>적용 초기재고<span class="u">개</span></th><th>자동 보강<span class="u">개</span></th><th>보강 매입액<span class="u">${unitLabel()}</span></th></tr></thead><tbody>`+
+    (R.invGroups||[]).map(g=>`<tr><td class="l">${esc(g.name)}</td><td>${won(g.minOpening)}</td><td>${won(g.plannedOpening)}</td><td>${won(g.openStock)}</td><td>${won(g.openingTopUp)}</td><td>${man(g.openingTopUp*g.unitCost)}</td></tr>`).join('')+`</tbody>`;
 
 
   const sel=document.getElementById('chartProduct');
@@ -2214,8 +2232,8 @@ function renderInvLedger(){
       (g.orders||[]).forEach(o=>{ if(o.month===i&&o.arrMonth>=NMw){pending+=o.qty;pendMonths.add(R.months[o.arrMonth]?R.months[o.arrMonth].y+'.'+String(R.months[o.arrMonth].mm).padStart(2,'0'):null);} });
     });
     const delta=inc-out;
-    const short=delta<0?sel.reduce((a,g)=>{const r=g.rows[i]||{};const d=(r.sold||0)-(r.arrival||0);const c=num(productYear(g.members[0],ledgerYear<0?0:ledgerYear).cost,0)||0;return a+Math.max(0,d)*c;},0):0;
-    const shortQ=delta<0?sel.reduce((a,g)=>{const r=g.rows[i]||{};return a+Math.max(0,(r.sold||0)-(r.arrival||0));},0):0;
+    const shortQ=sel.reduce((a,g)=>a+(g.rows[i]?.lost||0),0);
+    const short=sel.reduce((a,g)=>a+g.members.reduce((v,p)=>v+(p.rows[i]?.lost||0)*(p.rows[i]?.price||0),0),0);
     if(short)tShort+=short; if(shortQ)tShortQty+=shortQ;
     data.push({mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short});
     if(m===0)tO+=open; tI+=inc; tS+=out; tQ+=ord; tA+=amt; tStock=stock;
@@ -2226,12 +2244,11 @@ function renderInvLedger(){
   t._data=data; t._tot={open:tO,inc:tI,out:tS,delta:tI-tS,stock:tStock,ord:tQ,amt:tA,short:tShort,shortQty:tShortQty};
   t._pending=pending;t._pendMonths=[...pendMonths].join(', ');
   const cap=document.getElementById('ledgerCap');
-  if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 발주 시점·수량의 계산 규칙은 위 「제품별 발주 조건」 요약을 따릅니다. 실제 입고는 리드타임 개월 수만큼 뒤에 반영됩니다.'+(pend>0?`<br><b style="color:var(--teal)">미도착 발주 ${won(pend)}개</b> — 이 기간에 발주되어 아직 입고되지 않은 수량입니다. 입고 예정: ${pm}. 다음 기간 원장에서 당기입고로 반영됩니다.`:'')+(tShort>0?`<br><b style="color:var(--red)">당기 부족분 합계 ${won(tShortQty)}개 ≈ ${man(tShort)}</b> — 발주량은 <b>수요 기준</b>으로 산출되어 자본금·차입과 직접 연동되지 않습니다(자금은 발주 재원으로만 작동). 부족분 해소: ① 「최초 발주일」을 리드타임 이상 앞당기거나 ② 현재재고를 늘리세요 — 필요 초기자금 ≈ ${man(tShort)}이며, 자본금 추가 후 02 투자의 초기재고 매입·04 현재재고 입력에 반영하면 발주·재고 계산에 즉시 적용됩니다.`:'');
-}
+  if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 입고 예정일은 발주일 + 리드타임(달력일)입니다.'+(pend>0?`<br><b>다음 기간 입고 ${won(pend)}개</b> · 입고 예정월 ${pm}`:'')+(tShortQty>0?`<br><b class="neg">미충족 수요 ${won(tShortQty)}개 · 판매 기준 ${man(tShort)}</b>`:'<br><b>미충족 수요 0개</b> · 선택 기간의 제품별 월 수요를 모두 충족합니다.');}
 }
 function ledgerCsv(){
   const t=document.getElementById('invLedger'); if(!t||!t._data) return;
-  const rows=[['월','기초재고(개)','당기입고(개)','당기출고(개)','당기재고 증감(개)','당기부족 금액(원)','기말재고(개)','발주수량(개)','발주금액(원)']];
+  const rows=[['월','기초재고(개)','당기입고(개)','당기출고(개)','당기재고 증감(개)','미충족 판매액(원)','기말재고(개)','발주수량(개)','발주금액(원)']];
   t._data.forEach(r=>rows.push([r.mm+'월',r.open,r.inc,r.out,r.delta,Math.round(r.short||0),r.stock,r.ord,Math.round(r.amt)]));
   const g=t._tot;rows.push(['연간',g.open,g.inc,g.out,g.delta,Math.round(g.short||0),g.stock,g.ord,Math.round(g.amt)]);
   download('월별재고원장.csv','\ufeff'+rows.map(r=>r.map(v=>/[",]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\r\n'));
@@ -2785,7 +2802,7 @@ function refreshAnnualUI(){
     $$('#view-demand .kpi .k').forEach(el=>{el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1));});
     const badge=$('#view-demand h2 .badge');if(badge)badge.textContent=t0Sel?'T0 · 개시 시점 월별 직접입력':`Y${editYear+1} 월별 직접입력`;
   }
-  if(currentView==='inventory'){renderInvSettings();const headers=$$('#invSettings th');if(headers[1])headers[1].innerHTML=editYear?'이월재고<span class="u">개 · 읽기 전용</span>':'초기재고 t0<span class="u">개</span>';if(headers[8])headers[8].innerHTML='최초 발주일';$$('#invSettings .sub').forEach(el=>el.textContent=el.textContent.replace(/Y1/g,'Y'+(editYear+1)));}
+  if(currentView==='inventory')renderInvSettings();
   if(currentView==='cost')decorateCost();
   if(currentView==='value'&&$('#npvCap'))$('#npvCap').textContent=`t0 ${shortWon(R.flows[0])} (투자 ${shortWon(R.I0)}${t0MonthsOf(S)?' · T0 운영 '+shortWon(R.t0fcff):''}) · 연도별 누적할인 · 등가 연율 ${(R.wacc*100).toFixed(2)}% · ${R.H}년`;
   $$('[data-nid],[data-pid],[data-did],[data-sid],[data-oid]').forEach(el=>{el.dataset.k=[el.dataset.nid,el.dataset.nf,el.dataset.nm,el.dataset.pid,el.dataset.pf,el.dataset.did,el.dataset.df,el.dataset.sid,el.dataset.sf,el.dataset.oid,el.dataset.of].filter(v=>v!==undefined).join('_');});
@@ -3432,9 +3449,6 @@ function renderCurrencyPanels(){
     $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.opFundYears?R.opFundYears[0]:R.minCash);updateOpFundNote();
   }
   if(currentView==='cost')renderCostAccounts();
-  if(currentView==='inventory'){
-    const table=$('#invSettings');table.querySelectorAll('tbody tr').forEach((tr,i)=>{const p=(R.invGroups||[])[i];if(!p)return;const py=productYear(p.members[0],editYear);tr.cells[7].textContent=formatMoney(py.cost);tr.cells[8].textContent=formatMoney(py.price);});[7,8,10].forEach((i)=>{table.tHead.rows[0].cells[i].innerHTML=(i===10?'초기재고액':['원가','판가'][i-7])+'<span class="u">'+(i===10?unitLabel():'공급가')+'</span>';});
-  }
   if(currentView==='value'&&$('#tvFormula')){
     const b=R.bs.at(-1),a=assumeYear(S,R.H-1),f=v=>formatMoney(v)+' '+unitLabel();
     $('#tvFormula').innerHTML='<b>TV 산출 · 결과 '+unitLabel()+'</b><br>'+(R.tvMode==='none'?'TV=0 · 미포함':R.tvMode==='nav'?'TV = AR '+f(b.ar)+' + 재고 '+f(b.inv)+' + 선급 '+f(b.prepaid)+' + 미수 '+f(b.receivable)+' + VAT대급금 '+f(b.vatCredit)+' − AP '+f(b.ap)+' − 선수 '+f(b.advance)+' − 미지급 '+f(b.accrued)+' − VAT예수금 '+f(b.vatDue)+' + 유형 '+f(b.ppe)+' + 무형 '+f(b.intang)+' = '+f(R.tv):'TV = 최종 영업FCFF '+f(R.fcf.at(-1).fcff)+' × (1 + '+a.g+'%) / (최종 WACC '+(R.waccYears.at(-1)*100).toFixed(4)+'% − '+a.g+'%) = '+(R.tv===null?'계산불가':f(R.tv)))+'<br>t0 = 취득원가 CAPEX '+f(R.s.invest.capex)+' + 투자자산 '+f(R.s.invest.longInvest||0)+' + 무형 '+f(R.s.invest.intangible)+' + 초기재고 '+f(R.openingStock)+' + 공제 VAT 선지출 '+f(R.vat.opening)+' = I0 '+f(R.I0)+(t0MonthsOf(S)>0?' + T0 운영FCFF '+f(R.t0fcff||0):'')+'. 부가세는 수익이 아니며 미결대급금·예수금은 순자산 TV에 반영, 현금·차입은 제외합니다. 기간밖 정산은 실제 현금화하지 않습니다.';
@@ -3775,13 +3789,6 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 
