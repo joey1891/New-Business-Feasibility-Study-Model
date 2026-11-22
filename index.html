@@ -123,6 +123,7 @@ select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,
 
 /* ---------- tables ---------- */
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;max-width:100%}
+.funding-plan{overflow:hidden}.funding-plan .funding-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;padding:12px 16px}.funding-plan .funding-kpis>div{padding:10px 12px;background:var(--tealSoft);border-radius:8px}.funding-plan .funding-kpis b{display:block;font-size:19px;margin-top:4px}.funding-plan details{margin:10px 16px}.funding-plan summary{cursor:pointer;font-weight:750;padding:8px 0}.funding-plan .tbl{min-width:970px}.funding-plan .funding-positive{color:var(--teal);font-weight:800}#view-invest .cols{grid-template-columns:minmax(0,1fr)}
 #invSettings{min-width:950px}#invSettings th:first-child,#invSettings td:first-child{white-space:normal;min-width:150px;max-width:230px}#invSettings td:first-child .sub{white-space:normal;overflow-wrap:anywhere}#invSettings th:nth-child(10),#invSettings td:nth-child(10){min-width:148px}#invSettings td:nth-child(10) input{min-width:126px}
 table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;font-variant-numeric:tabular-nums}
 .tbl th{background:#f3f6f9;color:#54677c;font-size:10.6px;font-weight:800;letter-spacing:.03em;padding:8px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;position:sticky;top:0;z-index:2}
@@ -527,8 +528,8 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
               <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
               <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
-              <label class="field"><span class="lb">초기 재고 매입</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">「재고 · 발주」의 입력 재고와 자동 보강 재고를 포함합니다.</span></label>
-              <label class="field"><span class="lb">초기 운전자금 (최소현금)</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">수요·발주·회수조건 변화에 연동 자동계산 (아래 구성 자동 표시)</span></label>
+              <label class="field"><span class="lb">사전 확보 초기재고</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">실제로 개시 전에 확보한 입력 재고만 반영합니다.</span></label>
+              <label class="field"><span class="lb">개시일 최소 운영현금</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">개시일 기준 현금 하한입니다. 이후 자금은 월별 현금흐름으로 산출합니다.</span></label>
             </div>
             <div class="divider"></div>
             <div class="fgrid">
@@ -537,13 +538,14 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
               <label class="field"><span class="lb">차입 금리</span><span class="inp"><input type="number" data-bind="invest.rate" step="0.1" min="0"><i>%</i></span></label>
               <label class="field"><span class="lb">상환 방식</span><select data-bind="invest.repay"><option value="bullet">만기일시상환 (마지막 연도)</option><option value="equal">원금균등분할</option></select></label>
             </div>
-            <div class="cap">위 입력은 <b>Y1 첫날(t=0)</b>에 한 번만 반영됩니다. 감가상각은 Y1부터 내용연수 동안 정액으로 계상하고, 차입 이자는 입력 금리를 기준으로 월할 계산합니다.</div>
+            <div class="cap">투자와 최초 조달은 <b>사업 개시일(t=0)</b>에 반영합니다. 개시 후 운영과 조달은 아래에서 별도로 표시합니다.</div>
           </div>
 
           <div class="card">
             <div class="card-h"><div><h2><span class="no">02</span>개시 재무상태표</h2><p>조달한 돈이 어디로 갔는지. 자산과 부채·자본이 일치해야 합니다.</p></div><span class="badge ok" id="openingBalBadge">균형</span></div>
             <div class="tablewrap"><table class="tbl plain" id="openingBS"></table></div>
           </div>
+          <div id="stagedFunding" class="card funding-plan"></div>
         </div>
 
 
@@ -622,7 +624,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
       <div style="height:14px"></div>
 
       <div class="two-panel">
-        <div class="card"><div class="card-h"><div><h2>적정 초기재고</h2><p>첫 적기 입고 전까지 필요한 수량과 자동 보강액.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
+        <div class="card"><div class="card-h"><div><h2>입고 전 재고 필요량</h2><p>추가 확보 필요량은 참고값입니다. 기초재고·매입·판매에 자동 반영하지 않습니다.</p></div></div><div class="tablewrap"><table class="tbl plain" id="invBench"></table></div></div>
         <div class="card" id="invDiag"></div>
       </div>
     </section>
@@ -996,11 +998,10 @@ function t0MonthsView(p){const n=p.node||p,sm=smOf(S),off=t0MonthsOf(S),a=n.t0mo
 function putT0Months(n,mi,val){const sm=smOf(S),off=t0MonthsOf(S),k=mi-sm+1;if(k<0||k>=off)return;n.t0months=n.t0months||Array(off).fill(0);n.t0months[k]=Math.max(0,Math.round(val));}
 function migrateT0Months(){if(!t0MonthsOf(S))return;const sm=smOf(S),off=t0MonthsOf(S);flattenProducts(S).forEach(p=>{const n=p.node;if(n.t0migrated)return;const y0=n.years&&n.years[0]&&Array.isArray(n.years[0].months)?n.years[0].months:null;if(!Array.isArray(n.t0months)&&y0&&y0.some(v=>Math.max(0,num(v))>0)){n.t0months=Array.from({length:off},(_,k)=>Math.max(0,Math.round(num(y0[sm-1+k],0))));}n.t0migrated=true;});}
 function updateOpFundNote(){
-  const f=$('#minCashView');if(!f||typeof R==='undefined'||!R||!R.wcNeedYears)return;
+  const f=$('#minCashView');if(!f||typeof R==='undefined'||!R)return;
+  f.value=won(R.minCash);
   const h=f.closest('.field')?f.closest('.field').querySelector('.help'):null;if(!h)return;
-  const off=R.off||0;let bp=-1,bi=off;
-  for(let i=off;i<Math.min(R.NM||R.months.length,off+12);i++){const v=(R.arM[i]||0)+(R.invM[i]||0)-(R.apM[i]||0);if(v>bp){bp=v;bi=i;}}
-  h.innerHTML='= 예비현금(인건비×최소현금 개월수) '+won(R.minCashYears?R.minCashYears[0]:R.minCash)+' + 운전자본 필요액 '+won(R.wcNeedYears[0])+'<br>운전자본 필요액은 Y1 중 최고월 기준: <b>매출채권 '+won(R.arM[bi])+'</b>(월매출×회수기간 '+num(assumeYear(S,0).arDays)+'일 · 매출 규모가 지배) + 재고 '+won(R.invM[bi])+' − 매입채무 '+won(R.apM[bi])+'. 발주·목표커버 감소는 <b>재고 항목에만</b> 반영되며, T0(개시 시점) 실제 현금 흐름은 상단 「T0 운영 FCFF」로 별도 표시됩니다.';
+  h.textContent='월평균 인건비 × 최소현금 개월 수. 연중 운전자본 최고액을 개시일에 합산하지 않습니다.';
 }
 
 function coverOf(c,y){const v=(c&&c.years&&c.years[y]&&c.years[y].cover!=null)?num(c.years[y].cover,60):(c&&c.cover!=null?num(c.cover,60):60);return Math.max(0,Math.round(v));}
@@ -1105,7 +1106,7 @@ function simulateProduct(p,cfg,months,H,s){
     prefix+=dem[i]; minOpening=prefix;
     plannedOpening=Math.max(plannedOpening,prefix+(prefix>0?safety[i]:0));
   }
-  const enteredStock=Math.max(0,Math.floor(num(cfg.stock))), effectiveOpening=Math.max(enteredStock,plannedOpening);
+  const enteredStock=Math.max(0,Math.floor(num(cfg.stock))), effectiveOpening=enteredStock;
   const rows=[],orders=[], receipts=Array.from({length:NM},()=>[]), placements=Array.from({length:NM},()=>[]),targets=[];
   const active=dem.some(q=>q>0);
   let projected=effectiveOpening;
@@ -1122,7 +1123,7 @@ function simulateProduct(p,cfg,months,H,s){
       const order={...slot,qty,amount:qty*unitCost,supply:qty*(py._purchaseSupply??unitCost),vat:qty*(py._purchaseTax||0),deduct:qty*(py._purchaseDeduct||0),gross:qty*(py._purchaseSupply??unitCost)+qty*(py._purchaseTax||0)};
       orders.push(order); placements[slot.month].push(order);receipts[slot.arrMonth].push(order);projected+=qty;
     }
-    projected-=dem[i];
+    projected=Math.max(0,projected-dem[i]);
   }
   orders.sort((a,b)=>a.orderDay-b.orderDay||a.arrivalDay-b.arrivalDay);
   let stock=effectiveOpening,value=stock*(cfg.openingUnitCost??cost),onOrder=0;
@@ -1136,7 +1137,7 @@ function simulateProduct(p,cfg,months,H,s){
     stock-=sold;value=Math.max(0,value-cogs);
     rows.push({dem:d,sold,lost:d-sold,stock,stockVal:value,openingQty,openingValue,cogs,price:py.price,unitCost:py.cost,avgCost:avg,revenue:sold*py.price,salesVAT:sold*py.price*(py._vat?.salesRate||0)/100,purchaseVAT,purchaseDeduct,purchaseCost,ordered,orderAmt,arrival:arr,ss:safety[i],...targets[i],avail});
   }
-  return {rows,orders,dem,cost,L:Math.ceil(cfg.lead/30),enteredStock,minOpening,plannedOpening,effectiveOpening,openingTopUp:effectiveOpening-enteredStock};
+  return {rows,orders,dem,cost,L:Math.ceil(cfg.lead/30),enteredStock,minOpening,plannedOpening,effectiveOpening,openingNeed:Math.max(0,plannedOpening-enteredStock)};
 }
 
 /* ---------- 재고 통합(거래처 무관) ---------- */
@@ -1182,7 +1183,7 @@ function buildInvGroups(s,products,months,H){
      if(off){gp.t0months=months.slice(0,off).map(mo=>members.reduce((a,m)=>a+Math.max(0,Math.round(pmQty(m,mo)*cntOfYear(m,'t0',mo.mm-1))),0));}}
     const sim=simulateProduct(gp,cfg,months,H,s);
     const g={key,id:anchor.id,name:anchor.name,parentLabel:invGroupParent(anchor),label:invGroupParent(anchor),
-      members,memberIds:members.map(m=>m.id),cfg,stock,openStock:sim.effectiveOpening,enteredStock:sim.enteredStock,minOpening:sim.minOpening,plannedOpening:sim.plannedOpening,openingTopUp:sim.openingTopUp,
+      members,memberIds:members.map(m=>m.id),cfg,stock,openStock:sim.effectiveOpening,enteredStock:sim.enteredStock,minOpening:sim.minOpening,plannedOpening:sim.plannedOpening,openingNeed:sim.openingNeed,
       unitCost:(cfg.openingUnitCost!=null?cfg.openingUnitCost:productYear(anchor,0).cost),
       dem:sim.dem,rows:sim.rows,orders:sim.orders,L:sim.L,cost:yCost[0],price:yPrice[0]};
     const dems=members.map(m=>productDemand(m,months));
@@ -1306,8 +1307,6 @@ function compute(s0){
     p.openStock=Math.round(p.baseStock);
   });
   const invGroups=buildInvGroups(s,products,months,H);
-  const addedStockVat=invGroups.reduce((a,g)=>a+g.openingTopUp*(g.cfg._openingUnitVatCredit||0),0);
-  s._assetVat.stock+=addedStockVat;s._vatOpening+=addedStockVat;
 
   const revM=new Array(NM).fill(0),cogsM=new Array(NM).fill(0),purchM=new Array(NM).fill(0),invM=new Array(NM).fill(0);
   products.forEach(p=>{ for(let i=0;i<NM;i++){ const r=p.rows[i];
@@ -1922,11 +1921,47 @@ function renderAssume(){
 }
 
 /* ================= 02 초기 투자 ================= */
+function buildFundingPlan(r){
+  const s=r.s, other=s.invest.debt+s.assume.openingCash;
+  const equity=Math.ceil(Math.max(0,r.I0+r.minCash-other));
+  const opening=other+equity-r.I0;
+  const wc0=operatingNWC({ar:0,ap:0,inv:r.openingStock,...wcT0(s)});
+  let balance=opening,previousWC=wc0,cumulative=0,extraUpfront=0,unfunded=opening;
+  const months=r.months.map((m,i)=>{
+    const floor=r.minCashYears[m.t0?0:m.yi],wc=operatingNWC({ar:r.arM[i],inv:r.invM[i],ap:r.apM[i],...wcPhase(s,i).now});
+    const begin=balance, wcBegin=previousWC, operating=r.cfoM[i], repay=r.repayM[i], before=begin+operating-repay;
+    const add=Math.ceil(Math.max(0,floor-before-1e-7));
+    cumulative+=add;balance=before+add;previousWC=wc;
+    unfunded+=operating-repay;extraUpfront=Math.max(extraUpfront,floor-unfunded);
+    return {m,begin,wcBegin,wc,operating,repay,before,floor,add,end:balance,cumulative};
+  });
+  return {other,equity,opening,wc0,months,cumulative,oneShot:equity+Math.ceil(Math.max(0,extraUpfront-1e-7))};
+}
+function renderFundingPlan(){
+  const el=$('#stagedFunding');if(!el)return;
+  const plan=buildFundingPlan(R),u=unitLabel(), f=v=>man(v)+' '+u;
+  const open=new Set(Array.from(el.querySelectorAll?.('details[open]')||[]).map(d=>d.dataset.period));
+  const periods=new Map();plan.months.forEach(x=>{const k=x.m.t0?'T0':'Y'+(x.m.yi+1);if(!periods.has(k))periods.set(k,[]);periods.get(k).push(x);});
+  const cols=['기간','기초 순운전자본','기말 순운전자본','순운전자본 증감','기초 현금','영업 현금흐름','차입 원금 상환','투입 전 현금','최소 운영현금','추가 투입','기말 현금','누적 추가 투입'];
+  const head=`<thead><tr>${cols.map((x,i)=>`<th${i?'':' class="l"'}>${x}</th>`).join('')}</tr></thead>`;
+  const row=(label,values)=>`<tr><td class="l">${label}</td>${values.map((v,i)=>`<td${i===8&&v>0?' class="funding-positive"':''}>${v==null?'—':man(v)}</td>`).join('')}</tr>`;
+  const annual=[],detail=[];
+  periods.forEach((xs,k)=>{
+    const a=xs[0],z=xs.at(-1),sum=key=>xs.reduce((v,x)=>v+x[key],0);
+    annual.push(row(k+' · '+a.m.y+'년',[a.wcBegin,z.wc,z.wc-a.wcBegin,a.begin,sum('operating'),sum('repay'),null,z.floor,sum('add'),z.end,z.cumulative]));
+    detail.push(`<details data-period="${k}"${open.has(k)?' open':''}><summary>${k} · ${a.m.y}년 월별 내역 · 추가 투입 ${f(sum('add'))}</summary><div class="tablewrap"><table class="tbl plain">${head}<tbody>${xs.map(x=>row(x.m.y+'년 '+x.m.mm+'월',[x.wcBegin,x.wc,x.wc-x.wcBegin,x.begin,x.operating,x.repay,x.before,x.floor,x.add,x.end,x.cumulative])).join('')}</tbody></table></div></details>`);
+  });
+  const cards=[['개시일 최소 자기자본',plan.equity],['개시일 총 필요자금',R.I0+R.minCash],['개시 후 추가 투입 합계',plan.cumulative],['추가 조달 없이 시작할 때 최소 자기자본',plan.oneShot]];
+  el.innerHTML=`<div class="card-h"><div><h2><span class="no">03</span>최소 초기투자와 단계별 자금 투입</h2><p>연중 최고 운전자본을 일괄 투입하지 않고, 월별 현금 부족분만 조달하는 계획입니다.</p></div></div><div class="funding-kpis">${cards.map(([k,v])=>`<div>${k}<b>${f(v)}</b></div>`).join('')}</div>
+  <div class="cap">개시일 총 필요자금 = 개시 투자 ${f(R.I0)} + 최소 운영현금 ${f(R.minCash)}. 최소 자기자본은 여기서 예정 차입과 보유현금 ${f(plan.other)}을 차감한 금액입니다. 설정한 자기자본은 변경하지 않으며, 아래는 최소액으로 시작하는 별도 시나리오입니다.</div>
+  <div class="tablewrap"><table class="tbl plain">${head}<tbody>${row('개시일(t=0)',[plan.wc0,plan.wc0,0,null,null,null,null,R.minCash,0,plan.opening,0])}${annual.join('')}</tbody></table></div>${detail.join('')}
+  <div class="cap">금액 단위: ${u}. 순운전자본은 재고·영업채권·선급금에서 영업채무·선수금 등을 뺀 잔액입니다. 증감은 영업 현금흐름에 이미 반영되므로 재차 차감하지 않습니다. 월말 현금 하한 기준이며, 월중 자금 부족과 후속 조달 비용은 반영하지 않습니다. 추가 투입은 실행된 거래가 아닙니다.</div>`;
+}
 function renderInvest(){
   const inv=S.invest,a=S.assume;
   const need=R.I0, fund=inv.equity+inv.debt+a.openingCash, gap=fund-need;
   if($('#openingStockView')) $('#openingStockView').value=won(R.openingStock);
-  if($('#minCashView')) $('#minCashView').value=won(R.opFundYears?R.opFundYears[0]:R.minCash);updateOpFundNote();
+  updateOpFundNote();renderFundingPlan();
   if($('#investKpis'))$('#investKpis').innerHTML=
     kpi('t=0 투자액',shortWon(need),'원','CAPEX + 무형 + 초기재고')+
     kpi('조달총액',shortWon(fund),'원',`자본금 ${shortWon(inv.equity)} · 차입 ${shortWon(inv.debt)}`)+
@@ -2173,7 +2208,7 @@ function demandCsv(){
 function renderInvSettings(){
   const t=$('#invSettings'); if(!t) return;
   const opt=$('#invStockOpt');
-  if(opt) opt.innerHTML=`<span class="sub"><b>월별 수요 충족 발주</b> · 제품별 월초 수요를 기준으로 리드타임을 역산합니다. 발주 가능일 때문에 제때 입고할 수 없는 기간은 <b>초기재고를 자동 보강</b>하고 초기투자에 반영합니다. 입력 재고는 바뀌지 않으며 실제 주문이 자동 전송되지는 않습니다.</span>`;
+  if(opt) opt.innerHTML=`<span class="sub"><b>입고된 수량만 판매에 사용합니다.</b> 개시 전에 실제 확보한 재고가 없으면 입력 재고를 0으로 두세요. 첫 입고 전 부족분은 미충족 수요로 표시합니다. 발주 가능 시작일은 주문 확정일이 아닙니다.</span>`;
   const groups=R.invGroups||[];
   const byName=new Map();
   groups.forEach(g=>{ if(!byName.has(g.name)) byName.set(g.name,[]); byName.get(g.name).push(g); });
@@ -2188,7 +2223,7 @@ function renderInvSettings(){
     const mrg=g.members.length>1?` · 거래처 ${g.members.length}곳 통합`:'';
     return `<tr>
       <td class="l"><b>${esc(g.name)}</b><div class="sub">${esc(g.parentLabel||'—')}${dup}${mrg} · ${t0Sel?'T0':'Y'+(editYear+1)} ${won(y1)}개</div></td>
-      <td>${editYear?`<b>${won(first.openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="stock" value="${stockDisp}"><div class="sub">개시 적용 ${won(g.openStock)}개${g.openingTopUp?` · 자동 보강 ${won(g.openingTopUp)}개`:''}</div>`}</td>
+      <td>${editYear?`<b>${won(first.openingQty)}</b><div class="sub">이전연도 잔량 자동이월</div>`:`<input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="stock" value="${stockDisp}"><div class="sub">사전 확보분만 입력</div>`}</td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="lead" value="${c.lead}"></td>
       <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="safety" value="${c.safety}"></td>
       <td><input class="cell" type="number" min="0" step="100" data-pid="${g.id}" data-gids="${ids}" data-pf="moq" value="${c.moq}"></td>
@@ -2196,7 +2231,7 @@ function renderInvSettings(){
       <td><input class="cell" type="number" min="0" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="cover" value="${coverOf(c,editYear)}" title="필요 입고월 이후 추가 확보할 수요 기간"></td>
       <td class="fixedcell" title="개당 공급가 · 원">${won(py.cost)}</td><td class="fixedcell" title="개당 공급가 · 원">${won(py.price)}</td>
       <td>${(()=>{const cf=invCfg(S,g.id),order=g.orders[0];return `<input class="cell" type="date" data-pid="${g.id}" data-gids="${ids}" data-pf="firstDate" value="${esc(cf.firstOrderDate||'')}" title="이 날짜부터 신규 발주 가능 · 미지정 시 사업 개시일부터 가능"><div class="sub">${order?`첫 계획 발주 ${planDate(order.orderDay)}<br>첫 계획 입고 ${planDate(order.arrivalDay)}`:'계획기간 내 추가 발주 없음'}</div>`;})()}</td>
-      <td class="fixedcell" title="자동 보강 포함 · 사업 개시 기준">${man(g.openStock*g.unitCost)}</td>
+      <td class="fixedcell" title="사전 확보 재고만 반영 · 사업 개시 기준">${man(g.openStock*g.unitCost)}</td>
     </tr>`;
   }).join('');
   t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>입력 재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>목표커버<span class="u">일</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>발주 가능 시작일</th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
@@ -2207,8 +2242,8 @@ function renderInventory(){
   if(!document.getElementById('view-inventory')) return;
   const t=R.totals;
   const bench=document.getElementById('invBench');
-  if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>최소 초기재고<span class="u">개 · 안전재고 제외</span></th><th>권장 초기재고<span class="u">개 · 안전재고 포함</span></th><th>적용 초기재고<span class="u">개</span></th><th>자동 보강<span class="u">개</span></th><th>보강 매입액<span class="u">${unitLabel()}</span></th></tr></thead><tbody>`+
-    (R.invGroups||[]).map(g=>`<tr><td class="l">${esc(g.name)}</td><td>${won(g.minOpening)}</td><td>${won(g.plannedOpening)}</td><td>${won(g.openStock)}</td><td>${won(g.openingTopUp)}</td><td>${man(g.openingTopUp*g.unitCost)}</td></tr>`).join('')+`</tbody>`;
+  if(bench) bench.innerHTML=`<thead><tr><th class="l">제품</th><th>최소 필요량<span class="u">개 · 안전재고 제외</span></th><th>권장 필요량<span class="u">개 · 안전재고 포함</span></th><th>사전 확보 재고<span class="u">개</span></th><th>추가 확보 필요량<span class="u">개 · 미반영</span></th><th>추가 확보 추정액<span class="u">${unitLabel()} · 미반영</span></th></tr></thead><tbody>`+
+    (R.invGroups||[]).map(g=>`<tr><td class="l">${esc(g.name)}</td><td>${won(g.minOpening)}</td><td>${won(g.plannedOpening)}</td><td>${won(g.openStock)}</td><td>${won(g.openingNeed)}</td><td>${man(g.openingNeed*g.unitCost)}</td></tr>`).join('')+`</tbody>`;
 
 
   const sel=document.getElementById('chartProduct');
@@ -3471,7 +3506,7 @@ function renderCurrencyPanels(){
       +grp('자본')+row('자본금',b.capital)+tot('자본 합계',b.equity)
       +tot('부채와 자본 합계',b.liab+b.equity)
       +'<tr><td class="l">균형검증 (자산 − 부채 − 자본)</td><td class="'+(Math.abs(b.check)>1?'neg':'')+'">'+formatMoney(b.check)+'</td></tr></tbody>';
-    $('#openingStockView').value=won(R.openingStock);$('#minCashView').value=won(R.opFundYears?R.opFundYears[0]:R.minCash);updateOpFundNote();
+    $('#openingStockView').value=won(R.openingStock);updateOpFundNote();
   }
   if(currentView==='cost')renderCostAccounts();
   if(currentView==='value'&&$('#tvFormula')){
@@ -3814,8 +3849,6 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
-
-
 
 
 
