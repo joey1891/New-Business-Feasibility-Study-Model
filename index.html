@@ -1383,7 +1383,7 @@ function compute(s0){
     const sg0=sgaYear(s,0,rev);
     const sga={fixed:{amt:sg0.fixed.amt*r,lines:sg0.fixed.lines.map(l=>Object.assign({},l,{amount:l.amount*r}))},semi:{amt:sg0.semi.amt*r,lines:sg0.semi.lines.map(l=>Object.assign({},l,{amount:l.amount*r}))},variable:sg0.variable};
     const no0=nonopYear(s,0,rev);
-    const nonop={incCash:{amt:no0.incCash.amt*r,lines:[]},incNonCash:{amt:no0.incNonCash.amt*r,lines:[]},expCash:{amt:no0.expCash.amt*r,lines:[]},expNonCash:{amt:no0.expNonCash.amt*r,lines:[]}};
+     const nonop=Object.fromEntries(Object.entries(no0).map(([k,v])=>[k,{amt:v.amt*r,lines:v.lines.map(l=>({...l,amount:l.amount*r}))}]));
     const dep=Math.min(lifeM,off)*(s.invest.capex/lifeM)+Math.min(lifeI,off)*(s.invest.intangible/lifeI);
     const intr=sum(interestM);
     const nonOpInc=nonop.incCash.amt+nonop.incNonCash.amt,nonOpExp=nonop.expCash.amt+nonop.expNonCash.amt;
@@ -1952,6 +1952,15 @@ function buildFundingPlan(r){
   });
   return {other,equity,opening,wc0,months,cumulative,oneShot:equity+Math.ceil(Math.max(0,extraUpfront-1e-7))};
 }
+function openingTopUp(r){return Math.ceil(Math.max(0,r.minCash-r.cash0,...r.cashM.map((v,i)=>r.minCashYears[r.months[i].t0?0:r.months[i].yi]-v))-1e-7);}
+function operatingCashParts(r,i){
+  const m=r.months[i],p=m.t0?r.t0:r.pl[m.yi],d=p.div||12,v=r.vat.rows[i];
+  const receipts=v.salesGross+(i?r.arM[i-1]:0)-r.arM[i];
+  const payments=v.purchaseGross+(i?r.apM[i-1]:0)-r.apM[i];
+  const items=[['판매대금 회수',receipts],['상품 매입 지급',-payments],['제조 인건비',-p.pay.mfg/d],['판매·관리 인건비',-p.pay.sga/d],['고정 판관비',-p.sga.fixed.amt/d],['준변동 판관비',-p.sga.semi.amt/d],['변동 판관비',-p.sga.variable.amt/d],['영업외 현금 수익',p.nonop.incCash.amt/d],['영업외 현금 비용',-p.nonop.expCash.amt/d],['이자비용',-p.intr/d],['법인세 반영액',-p.tax/d],['부가세 정산(납부·환급)',v.refunded-v.paid]];
+  items.push(['기타 운전자본·부가세 및 월 배분 조정',r.cfoM[i]-items.reduce((a,[,n])=>a+n,0)]);
+  return items;
+}
 function renderFundingPlan(){
   const el=$('#stagedFunding');if(!el)return;
   const plan=buildFundingPlan(R),u=unitLabel(), f=v=>man(v)+' '+u;
@@ -1970,7 +1979,7 @@ function renderFundingPlan(){
   el.innerHTML=`<div class="card-h"><div><h2><span class="no">03</span>최소 초기투자와 단계별 자금 투입</h2><p>연중 최고 운전자본을 일괄 투입하지 않고, 월별 현금 부족분만 조달하는 계획입니다.</p></div></div><div class="funding-kpis">${cards.map(([k,v])=>`<div>${k}<b>${f(v)}</b></div>`).join('')}</div>
   <div class="cap">개시일 총 필요자금 = 개시 투자 ${f(R.I0)} + 최소 운영현금 ${f(R.minCash)}. 최소 자기자본은 여기서 예정 차입과 보유현금 ${f(plan.other)}을 차감한 금액입니다. 설정한 자기자본은 변경하지 않으며, 아래는 최소액으로 시작하는 별도 시나리오입니다.</div>
   <div class="tablewrap"><table class="tbl plain">${head}<tbody>${row('개시일(t=0)',[plan.wc0,plan.wc0,0,null,null,null,null,R.minCash,0,plan.opening,0])}${annual.join('')}</tbody></table></div>${detail.join('')}
-  <div class="cap">금액 단위: ${u}. 순운전자본은 재고·영업채권·선급금에서 영업채무·선수금 등을 뺀 잔액입니다. 증감은 영업 현금흐름에 이미 반영되므로 재차 차감하지 않습니다. 월말 현금 하한 기준이며, 월중 자금 부족과 후속 조달 비용은 반영하지 않습니다. 추가 투입은 실행된 거래가 아닙니다.</div>`;
+  <div class="cap">금액 단위: ${u}. 월별 추가 투입표는 분할 조달 비교안입니다. 재고 원장에는 입력한 조달 기준으로 전체 기간의 월말 최소현금 부족을 메울 <b>개시일 추가투입 ${f(openingTopUp(R))}</b>을 자동 반영합니다. 이 금액은 계획값이며 설정한 자본금, 재무제표, 월중 결제 시점은 바꾸지 않습니다.</div>`;
 }
 function renderInvest(){
   const inv=S.invest,a=S.assume;
@@ -2304,6 +2313,7 @@ function renderInvLedger(){
   const selKey=groups.find(g=>g.key===ledgerGroup);
   const sel=ledgerGroup==='__all'?groups:(selKey?groups.filter(g=>g.name===selKey.name):groups);
   const receiptsByMonth=new Map();
+  const topUp=openingTopUp(R);
   sel.forEach(g=>(g.orders||[]).forEach(o=>{if(!receiptsByMonth.has(o.arrMonth))receiptsByMonth.set(o.arrMonth,[]);receiptsByMonth.get(o.arrMonth).push({name:g.name,path:g.parentLabel,orderDay:o.orderDay,arrivalDay:o.arrivalDay,qty:o.qty,amount:o.amount});}));
   const data=[];let tO=0,tI=0,tS=0,tQ=0,tA=0,tStock=0,tShort=0,tShortQty=0,pending=0;const pendMonths=new Set();
   const NMw=ledgerYear<0?t0MonthsOf(S):(t0MonthsOf(S)+(ledgerYear+1)*12);
@@ -2318,26 +2328,29 @@ function renderInvLedger(){
     const shortQ=sel.reduce((a,g)=>a+(g.rows[i]?.lost||0),0);
     const short=sel.reduce((a,g)=>a+g.members.reduce((v,p)=>v+(p.rows[i]?.lost||0)*(p.rows[i]?.price||0),0),0);
     if(short)tShort+=short; if(shortQ)tShortQty+=shortQ;
-    const cash=i?R.cashM[i-1]:R.cash0;
+    const cash=(i?R.cashM[i-1]:R.cash0)+topUp;
     const collected=R.vat.rows[i].salesGross+(i?R.arM[i-1]:0)-R.arM[i];
-    const closing=R.cashM[i],floor=R.minCashYears[R.months[i].t0?0:R.months[i].yi];
+    const closing=R.cashM[i]+topUp,floor=R.minCashYears[R.months[i].t0?0:R.months[i].yi];
     const available=Math.max(0,closing-floor), reserveGap=Math.max(0,floor-closing);
     const companyOrders=groups.flatMap(g=>(g.orders||[]).filter(o=>o.month===i));
     const gross=companyOrders.reduce((v,o)=>v+o.gross,0);
     const receipts=(receiptsByMonth.get(i)||[]).sort((a,b)=>a.arrivalDay-b.arrivalDay||a.orderDay-b.orderDay||a.name.localeCompare(b.name,'ko'));
     const receiptAmount=receipts.reduce((v,o)=>v+o.amount,0);
-    data.push({mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,hasOrder:companyOrders.length>0,gap:closing-floor-gross});
+    data.push({i,mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,cfo:R.cfoM[i],repay:R.repayM[i],collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,hasOrder:companyOrders.length>0,gap:closing-floor-gross});
     if(m===0)tO+=open; tI+=inc; tS+=out; tQ+=ord; tA+=amt; tStock=stock;
   }
   t.innerHTML=`<thead><tr><th class="l">월</th><th>기초재고<span class="u">개</span></th><th>당기입고<span class="u">개</span></th><th>당기출고<span class="u">개</span></th><th>당기재고<span class="u">증감</span></th><th>기말재고<span class="u">개</span></th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>회사 보유현금<span class="u">월초 · ${unitLabel()}</span></th><th>발주자금 확인<span class="u">회사 전체 · 즉시 결제 가정</span></th></tr></thead><tbody>`+
     data.map(r=>`<tr><td class="l">${r.mm}월</td><td>${won(r.open)}</td><td>${won(r.inc)}</td><td style="color:${r.delta<0?'var(--red)':'var(--ink2)'}">${r.delta>0?'+':''}${won(r.delta)}${r.short?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(r.short)}</div>`:''}</td><td${r.stock<=0?' style="color:var(--red)"':''}>${won(r.stock)}</td><td class="tot-col strong">${r.ord?won(r.ord):'—'}</td><td>${r.amt?man(r.amt):'—'}</td><td class="strong${r.cash<0?' neg':''}">${man(r.cash)}</td><td>${r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)} ${unitLabel()}</div>`:'발주 없음'}</td></tr>`).join('')+
     `</tbody><tfoot><tr><td class="l">기간 합계</td><td>${won(tO)}</td><td>${won(tI)}</td><td>${won(tS)}</td><td>${tI-tS>0?'+':''}${won(tI-tS)}${tShort?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(tShort)}</div>`:''}</td><td>${won(tStock)}</td><td>${won(tQ)}</td><td>${man(tA)}</td><td>${data.length?man(data[0].cash)+' (기초)':'—'}</td><td>—</td></tr></tfoot>`;
   const fields=['월','기초재고','당기입고','당기입고 금액','입고의 원발주 내역','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','월말 매출채권','월말 매입채무','판매대금 회수 추정','최소 운영현금','월말 결제 여력','발주자금 확인'];
+  const cashHeaders=['영업현금흐름','차입 원금 상환','월말 현금'];
+  fields.splice(11,0,...cashHeaders);
   const cell=v=>`<td>${v}</td>`;
+  const withCash=(values,r)=>{values.splice(11,0,...(r?[man(r.cfo),man(r.repay),man(r.closing)]:[man(data.reduce((a,x)=>a+x.cfo,0)),man(data.reduce((a,x)=>a+x.repay,0)),data.length?man(data.at(-1).closing):'—']));return values.map(cell).join('');};
   const trace=o=>`${planDate(o.orderDay)} → ${planDate(o.arrivalDay)} → ${won(o.qty)}개`;
-  t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i===4?'<span class="u">원발주일 → 입고 예정일 → 수량</span>':i===3||i>=9&&i<=15?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
-    data.map(r=>`<tr>${[r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.ar),man(r.ap),man(r.collected),man(r.floor),man(r.available)+`<div class="sub">월말 현금 ${man(r.closing)}</div>${r.reserveGap>0?`<div class="sub neg">최소현금 부족 ${man(r.reserveGap)}</div>`:''}`,r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'].map(cell).join('')}</tr>`).join('')+
-    `</tbody><tfoot><tr>${['기간 합계',won(tO),won(tI),man(data.reduce((a,r)=>a+r.receiptAmount,0)),'—',won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',data.length?man(data.at(-1).ar)+' (기말)':'—',data.length?man(data.at(-1).ap)+' (기말)':'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'].map(cell).join('')}</tr></tfoot>`;
+  t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i===4?'<span class="u">원발주일 → 입고 예정일 → 수량</span>':i===3||i>=9&&i<fields.length-1?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
+    data.map(r=>`<tr>${withCash([r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.ar),man(r.ap),man(r.collected),man(r.floor),man(r.available)+(r.reserveGap>0?`<div class="sub neg">최소현금 부족 ${man(r.reserveGap)}</div>`:''),r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'],r)}</tr>`).join('')+
+    `</tbody><tfoot><tr>${withCash(['기간 합계',won(tO),won(tI),man(data.reduce((a,r)=>a+r.receiptAmount,0)),'—',won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',data.length?man(data.at(-1).ar)+' (기말)':'—',data.length?man(data.at(-1).ap)+' (기말)':'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'])}</tr></tfoot>`;
   t._data=data; t._tot={open:tO,inc:tI,out:tS,delta:tI-tS,stock:tStock,ord:tQ,amt:tA,short:tShort,shortQty:tShortQty};
   t._pending=pending;t._pendMonths=[...pendMonths].join(', ');
   const cap=document.getElementById('ledgerCap');
@@ -2345,6 +2358,13 @@ function renderInvLedger(){
   if(cap)cap.innerHTML+='<br>판매대금 회수 추정 = 기초 매출채권 + 당월 청구액 − 기말 매출채권. 월말 현금에 이미 반영되므로 다시 더하지 않습니다. 월말 결제 여력은 최소 운영현금을 남긴 뒤의 잔액(최저 0)입니다. 회사 전체 발주액(부가세 포함)을 월말에 추가 결제할 수 있는지 보는 보수적 점검입니다. 이미 반영된 매입 지급이 있을 수 있으므로 실제 미지급액이나 발주일 당일의 지급 가능 여부를 뜻하지 않습니다.';
   if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
   if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 부족액은 결제 가정액과 최소 운영현금을 모두 충당하는 데 필요한 추가 현금입니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
+  if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 자동 추가투입 ${man(topUp)} = <b>${man(R.cash0+topUp)} ${unitLabel()}</b><br>`+cap.innerHTML+renderT0CashBridge(R,topUp);
+}
+function renderT0CashBridge(r,topUp){
+  if(!r.off)return '';
+  const inv=r.s.invest,init=[['자기자본',inv.equity],['차입',inv.debt],['보유현금',r.s.assume.openingCash],['개시일 자동 추가투입',topUp],['유형자산 투자',-inv.capex],['무형자산 투자',-inv.intangible],['기타 투자',-inv.longInvest],['사전 확보 초기재고',-r.openingStock],['개시 부가세 선지출',-r.vat.opening],['원장 개시 현금',r.cash0+topUp]];
+  const series=r.months.slice(0,r.off).map((_,i)=>{const parts=operatingCashParts(r,i);return [[ '월초 현금',(i?r.cashM[i-1]:r.cash0)+topUp],...parts,['영업현금흐름 합계',r.cfoM[i]],['차입 원금 상환',-r.repayM[i]],['월말 현금',r.cashM[i]+topUp]];});
+  return `<details><summary>T0 현금 분해 · 개시 투자, 매입 지급과 비용 (${unitLabel()})</summary>${resultTable(['개시 자금 항목',unitLabel()],init.map(([k,v])=>[k,man(v)]))}${resultTable(['현금흐름 항목',...r.months.slice(0,r.off).map(m=>m.mm+'월')],series[0].map(([k],j)=>[k,...series.map(s=>man(s[j][1]))]))}<p>양수는 유입, 음수는 유출입니다. 매입 지급 및 판매대금 회수는 월말 채무·채권 변동으로 추정했습니다.</p></details>`;
 }
 function ledgerCsv(){
   const t=document.getElementById('invLedger'); if(!t||!t._data) return;
@@ -2357,6 +2377,9 @@ function ledgerCsv(){
   rows[0].splice(12,0,'월말 매출채권(원)','월말 매입채무(원)');
   t._data.forEach((r,i)=>rows[i+1].splice(12,0,Math.round(r.ar),Math.round(r.ap)));
   const last=t._data.at(-1);rows.at(-1).splice(12,0,last?Math.round(last.ar):'',last?Math.round(last.ap):'');
+  rows[0].splice(12,0,'영업현금흐름(원)','차입 원금 상환(원)','월말 현금·추가투입 반영(원)');
+  t._data.forEach((r,i)=>rows[i+1].splice(12,0,...[r.cfo,r.repay,r.closing].map(Math.round)));
+  rows.at(-1).splice(12,0,Math.round(t._data.reduce((a,r)=>a+r.cfo,0)),Math.round(t._data.reduce((a,r)=>a+r.repay,0)),last?Math.round(last.closing):'');
   download('월별재고원장.csv','\ufeff'+rows.map(r=>r.map(v=>/[",\r\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\r\n'));
   toast('월별 재고 원장 CSV를 내려받았습니다');
 }
@@ -2445,8 +2468,20 @@ function renderCostAccounts(){
     const list=S[area][key]||[],H=R.H,cols=3+H*3,dis=!canEdit()||Workspace.busy?' disabled':'';
     el.innerHTML=`<thead><tr><th class="l" rowspan="2">추가 수동 계정</th><th rowspan="2">미입력 인상률 %</th>${R.pl.map((_,y)=>`<th colspan="3" data-cost-year="${y}">${fyShort(y,S)}</th>`).join('')}<th rowspan="2">삭제</th></tr><tr>${R.pl.map(()=>`<th>산정</th><th>입력 · 원 / 매출%</th><th>계산액 · ${unitLabel()}</th>`).join('')}</tr></thead><tbody>${list.map(it=>`<tr><td class="l">${costControl(area,key,it,'name',-1,it.name)}</td><td>${costControl(area,key,it,'grow',-1,it.grow)}</td>${R.pl.map((_,y)=>{const iy=expenseYear(it,y);return `<td>${costControl(area,key,it,'type',y,iy.type)}</td><td>${costControl(area,key,it,'value',y,iy.value)}</td><td data-cost-amount="${y}">${formatMoney(costAmount(area,key,it,y))}</td>`;}).join('')}<td><button class="del" data-ce="delete" data-ce-area="${area}" data-ce-list="${key}" data-ce-id="${ppAttr(it.id)}"${dis}>삭제</button></td></tr>`).join('')}</tbody><tfoot><tr><td class="l">추가 수동 합계</td><td>—</td>${R.pl.map(p=>`<td>—</td><td>—</td><td>${formatMoney(p[area][key].amt)}</td>`).join('')}<td>—</td></tr><tr><td colspan="${cols}"><button class="btn sm" data-ce="add" data-ce-area="${area}" data-ce-list="${key}"${dis}>+ 추가 수동 항목</button></td></tr></tfoot>`;
   });
+  if(R.t0)COST_TABLES.forEach(([id,area,key])=>{
+    const el=$('#'+id);if(!el)return;const t0=R.t0[area][key];
+    el.tHead.rows[0].cells[1].insertAdjacentHTML('afterend',`<th rowspan="2">T0 계산액 · ${unitLabel()}<br>${t0Label(S)}</th>`);
+    Array.from(el.tBodies[0].rows).forEach((tr,i)=>tr.cells[1].insertAdjacentHTML('afterend',`<td>${formatMoney(num(t0.lines.find(l=>l.id===S[area][key][i].id)?.amount))}</td>`));
+    el.tFoot.rows[0].cells[1].insertAdjacentHTML('afterend',`<td>${formatMoney(t0.amt)}</td>`);
+    el.tFoot.rows[1].cells[0].colSpan++;
+  });
   const lc=$('#laborCostTable');if(lc){
     lc.innerHTML=`<thead><tr><th class="l" rowspan="2">자동 인건비 계정 · 읽기 전용</th>${R.pl.map((_,y)=>`<th colspan="3">${fyShort(y,S)} · ${unitLabel()}</th>`).join('')}</tr><tr>${R.pl.map(()=>'<th>제조</th><th>판매·관리</th><th>자동 합계</th>').join('')}</tr></thead><tbody>${PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l">${n}${k==='pension'?' <span class="sub">(미연결 부서의 통합 보험액 포함)</span>':''}</td>${R.pl.map(p=>{const mf=num(p.pay.mfgComponents?.[k]),sg=num(p.pay.sgaComponents?.[k]);return `<td>${formatMoney(mf)}</td><td>${formatMoney(sg)}</td><td>${formatMoney(mf+sg)}</td>`;}).join('')}</tr>`).join('')}</tbody><tfoot><tr><td class="l">자동 인건비 합계</td>${R.pl.map(p=>`<td>${formatMoney(p.pay.mfg)}</td><td>${formatMoney(p.pay.sga)}</td><td>${formatMoney(p.pay.total)}</td>`).join('')}</tr></tfoot>`;
+    if(R.t0){const pay=R.t0.pay, triple=(a,b)=>`<td>${formatMoney(a)}</td><td>${formatMoney(b)}</td><td>${formatMoney(a+b)}</td>`;
+      lc.tHead.rows[0].cells[0].insertAdjacentHTML('afterend',`<th colspan="3">T0 · ${t0Label(S)} · ${unitLabel()}</th>`);
+      lc.tHead.rows[1].insertAdjacentHTML('afterbegin','<th>제조</th><th>판매·관리</th><th>자동 합계</th>');
+      Array.from(lc.tBodies[0].rows).forEach((tr,i)=>{const k=PAY_COMPONENTS[i][0];tr.cells[0].insertAdjacentHTML('afterend',triple(num(pay.mfgComponents?.[k]),num(pay.sgaComponents?.[k])));});
+      lc.tFoot.rows[0].cells[0].insertAdjacentHTML('afterend',triple(pay.mfg,pay.sga));}
     let rec=$('#costReconciliation');if(!rec){rec=document.createElement('div');rec.id='costReconciliation';lc.closest('.tablewrap').after(rec);}
     const sum=p=>p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt;
     // Exact catalogue-name equality is a display reconciliation only, never an engine classification.
@@ -3615,7 +3650,8 @@ function renderRankMatrix(){
   const first=box.querySelector('table');if(first)first.insertAdjacentHTML('beforeend',`<tfoot><tr>${footer.map((v,i)=>`<td${i===0?' class="l"':''}>${v}</td>`).join('')}</tr></tfoot>`);
   const summary=document.createElement('div');summary.id='personnelTotals';summary.className='pp-month';
   const metrics=[['기초 / 추가 증감（누적 아님）',...entries.map((n,y)=>won(n)+(y?'명 추가/증감':'명 기초'))],['누적 재직인원（기초 + T0 + 이후 증감）',...R.pl.map((_,y)=>won(planned(y))+'명')],['연간 급여 합계（보험·퇴직·부대비 제외）',...R.pl.map(p=>formatMoney(p.pay.byDept.reduce((a,d)=>a+d.base,0)))],['연간 총부담액（제조 + 판매·관리）',...R.pl.map(p=>formatMoney(p.pay.total))]];
-  summary.innerHTML=`<h3>전 연도 인원·급여 합계 · 금액 ${unitLabel()}</h3><p class="cap">T0 채용 ${won(t0)}명은 Y1 이후 누적 인원에 포함됩니다. 인원은 계획 기준, 금액은 연도별 인건비 반영 여부를 적용한 계산 결과입니다.</p>${resultTable(['합계 구분',...R.pl.map((_,y)=>fyShort(y,S))],metrics)}`;
+   if(R.t0){const pay=R.t0.pay;[won(t0)+'명 채용',won(planned(0))+'명 (Y1 기초 포함)',formatMoney(pay.byDept.reduce((a,d)=>a+d.base,0)),formatMoney(pay.total)].forEach((v,i)=>metrics[i].splice(1,0,v));}
+   summary.innerHTML=`<h3>전 연도 인원·급여 합계 · 금액 ${unitLabel()}</h3><p class="cap">T0 채용은 Y1 이후 누적 인원에 포함됩니다. T0 급여와 총부담액은 Y1 연간 비용을 T0 개월 수로 안분한 계산액입니다.</p>${resultTable(['합계 구분',...(R.t0?['T0 · '+t0Label(S)]:[]),...R.pl.map((_,y)=>fyShort(y,S))],metrics)}`;
   const st=summary.querySelector('table');st.innerHTML=st.innerHTML.replace('<tbody>','<tfoot>').replace('</tbody>','</tfoot>');first?.closest('.tablewrap')?.after(summary);
   renderPersonnelEditors(box,disabled);
 }
@@ -3890,8 +3926,6 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
-
-
 
 
 
