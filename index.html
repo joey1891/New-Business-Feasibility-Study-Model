@@ -1979,14 +1979,19 @@ function buildFundingPlan(r){
   const months=r.months.map((m,i)=>{
     const floor=r.minCashYears[m.t0?0:m.yi],wc=operatingNWC({ar:r.arM[i],inv:r.invM[i],ap:r.apM[i],...wcPhase(s,i).now});
     const begin=balance, wcBegin=previousWC, operating=r.cfoM[i], repay=r.repayM[i], before=begin+operating-repay;
-    const add=Math.ceil(Math.max(0,floor-before-1e-7));
+    const recommended=Math.ceil(Math.max(0,floor-before-1e-7)), key=fundingMonthKey(m);
+    const manual=fundingAmount(s.invest.monthlyTopUps?.[key]);
+    const add=manual??recommended;
     cumulative+=add;balance=before+add;previousWC=wc;
     unfunded+=operating-repay;extraUpfront=Math.max(extraUpfront,floor-unfunded);
-    return {m,begin,wcBegin,wc,operating,repay,before,floor,add,end:balance,cumulative};
+    return {m,begin,wcBegin,wc,operating,repay,before,floor,add,recommended,manual,end:balance,cumulative};
   });
   return {other,equity,opening,wc0,months,cumulative,oneShot:equity+Math.ceil(Math.max(0,extraUpfront-1e-7))};
 }
-function openingTopUp(r){return Math.ceil(Math.max(0,r.minCash-r.cash0,...r.cashM.map((v,i)=>r.minCashYears[r.months[i].t0?0:r.months[i].yi]-v))-1e-7);}
+function fundingMonthKey(m){return m.y+'-'+String(m.mm).padStart(2,'0');}
+function fundingAmount(v){if(v==null||String(v).trim()==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isSafeInteger(n)&&n>=0?n:null;}
+function recommendedOpeningTopUp(r){return Math.ceil(Math.max(0,r.minCash-r.cash0,...r.cashM.map((v,i)=>r.minCashYears[r.months[i].t0?0:r.months[i].yi]-v))-1e-7);}
+function openingTopUp(r){return fundingAmount(r.s.invest.openingTopUp)??recommendedOpeningTopUp(r);}
 function operatingCashParts(r,i){
   const m=r.months[i],p=m.t0?r.t0:r.pl[m.yi],d=p.div||12,v=r.vat.rows[i];
   const receipts=r.receivables.paid[i];
@@ -1998,22 +2003,32 @@ function operatingCashParts(r,i){
 function renderFundingPlan(){
   const el=$('#stagedFunding');if(!el)return;
   const plan=buildFundingPlan(R),u=unitLabel(), f=v=>man(v)+' '+u;
+  const dis=canEdit()&&!Workspace.busy?'':' disabled', openingInput=fundingAmount(S.invest.openingTopUp);
+  const fundingInput=(key,value,label)=>`<input class="cell" type="text" inputmode="numeric" data-funding-amount="${key}" aria-label="${label} · 원" value="${value==null?'':won(value)}" placeholder="자동"${dis}>`;
   const open=new Set(Array.from(el.querySelectorAll?.('details[open]')||[]).map(d=>d.dataset.period));
   const periods=new Map();plan.months.forEach(x=>{const k=x.m.t0?'T0':'Y'+(x.m.yi+1);if(!periods.has(k))periods.set(k,[]);periods.get(k).push(x);});
   const cols=['기간','기초 순운전자본','기말 순운전자본','순운전자본 증감','기초 현금','영업 현금흐름','차입 원금 상환','투입 전 현금','최소 운영현금','추가 투입','기말 현금','누적 추가 투입'];
   const head=`<thead><tr>${cols.map((x,i)=>`<th${i?'':' class="l"'}>${x}</th>`).join('')}</tr></thead>`;
-  const row=(label,values)=>`<tr><td class="l">${label}</td>${values.map((v,i)=>`<td${i===8&&v>0?' class="funding-positive"':''}>${v==null?'—':man(v)}</td>`).join('')}</tr>`;
+  const row=(label,values,month)=>`<tr><td class="l">${label}</td>${values.map((v,i)=>`<td${i===8&&v>0?' class="funding-positive"':''}>${i===8&&month?fundingInput(fundingMonthKey(month.m),month.manual,label+' 추가 투입')+`<div class="sub">적용 ${f(v)} · 권장 ${f(month.recommended)}</div>`:v==null?'—':man(v)}${i===9&&month&&month.end<month.floor-0.005?`<div class="sub neg">최소현금 부족 ${f(month.floor-month.end)}</div>`:''}</td>`).join('')}</tr>`;
   const annual=[],detail=[];
   periods.forEach((xs,k)=>{
     const a=xs[0],z=xs.at(-1),sum=key=>xs.reduce((v,x)=>v+x[key],0);
     annual.push(row(k+' · '+a.m.y+'년',[a.wcBegin,z.wc,z.wc-a.wcBegin,a.begin,sum('operating'),sum('repay'),null,z.floor,sum('add'),z.end,z.cumulative]));
-    detail.push(`<details data-period="${k}"${open.has(k)?' open':''}><summary>${k} · ${a.m.y}년 월별 내역 · 추가 투입 ${f(sum('add'))}</summary><div class="tablewrap"><table class="tbl plain">${head}<tbody>${xs.map(x=>row(x.m.y+'년 '+x.m.mm+'월',[x.wcBegin,x.wc,x.wc-x.wcBegin,x.begin,x.operating,x.repay,x.before,x.floor,x.add,x.end,x.cumulative])).join('')}</tbody></table></div></details>`);
+    detail.push(`<details data-period="${k}"${open.has(k)?' open':''}><summary>${k} · ${a.m.y}년 월별 내역 · 추가 투입 ${f(sum('add'))}</summary><div class="tablewrap"><table class="tbl plain">${head}<tbody>${xs.map(x=>row(x.m.y+'년 '+x.m.mm+'월',[x.wcBegin,x.wc,x.wc-x.wcBegin,x.begin,x.operating,x.repay,x.before,x.floor,x.add,x.end,x.cumulative],x)).join('')}</tbody></table></div></details>`);
   });
   const cards=[['개시일 최소 자기자본',plan.equity],['개시일 총 필요자금',R.I0+R.minCash],['개시 후 추가 투입 합계',plan.cumulative],['추가 조달 없이 시작할 때 최소 자기자본',plan.oneShot]];
   el.innerHTML=`<div class="card-h"><div><h2><span class="no">03</span>최소 초기투자와 단계별 자금 투입</h2><p>연중 최고 운전자본을 일괄 투입하지 않고, 월별 현금 부족분만 조달하는 계획입니다.</p></div></div><div class="funding-kpis">${cards.map(([k,v])=>`<div>${k}<b>${f(v)}</b></div>`).join('')}</div>
   <div class="cap">개시일 총 필요자금 = 개시 투자 ${f(R.I0)} + 최소 운영현금 ${f(R.minCash)}. 최소 자기자본은 여기서 예정 차입과 보유현금 ${f(plan.other)}을 차감한 금액입니다. 설정한 자기자본은 변경하지 않으며, 아래는 최소액으로 시작하는 별도 시나리오입니다.</div>
+  <div class="cap"><label><b>개시일 추가투입액 (원)</b> ${fundingInput('opening',openingInput,'개시일 추가투입액')}</label> · 적용 ${f(openingTopUp(R))} · 자동 권장 ${f(recommendedOpeningTopUp(R))}<br>입력 후 다른 칸으로 이동하면 적용합니다. <b>0은 투입 안 함</b>, 빈칸은 자동 권장액입니다.</div>
   <div class="tablewrap"><table class="tbl plain">${head}<tbody>${row('개시일(t=0)',[plan.wc0,plan.wc0,0,null,null,null,null,R.minCash,0,plan.opening,0])}${annual.join('')}</tbody></table></div>${detail.join('')}
-  <div class="cap">금액 단위: ${u}. 월별 추가 투입표는 분할 조달 비교안입니다. 재고 원장에는 입력한 조달 기준으로 전체 기간의 월말 최소현금 부족을 메울 <b>개시일 추가투입 ${f(openingTopUp(R))}</b>을 자동 반영합니다. 이 금액은 계획값이며 설정한 자본금, 재무제표, 월중 결제 시점은 바꾸지 않습니다.</div>`;
+  <div class="cap">표 단위: ${u}. 월별 입력은 분할 조달 비교안에만 반영되며, 개시일 추가투입과 중복 합산하지 않습니다. 개시일 입력은 재고 원장의 개시 현금과 이후 잔액에 적용됩니다. 두 입력 모두 설정한 자본금과 재무제표는 바꾸지 않습니다.</div>`;
+  el.onchange=e=>{const key=e.target.dataset.fundingAmount;if(!key||!canEdit()||Workspace.busy)return;
+    const text=e.target.value.trim(),value=fundingAmount(text);
+    if(text&&value===null){toast('0 이상의 정수 금액을 원 단위로 입력하세요.');renderFundingPlan();return;}
+    if(key==='opening'){if(value===null)delete S.invest.openingTopUp;else S.invest.openingTopUp=value;}
+    else if(/^\d{4}-\d{2}$/.test(key)){const m=S.invest.monthlyTopUps??={};if(value===null)delete m[key];else m[key]=value;}else return;
+    paint();
+  };
 }
 function renderInvest(){
   const inv=S.invest,a=S.assume;
@@ -2392,11 +2407,11 @@ function renderInvLedger(){
   if(cap)cap.innerHTML+='<br>실제판매의 부가세 포함 청구액을 판매월의 달력일에 균등 배분하고, 청구 당시 회수일수를 적용합니다. 매입은 건별 입고일의 지급조건을 적용합니다. 회수·지급은 월말 현금에 이미 반영되며, 월말 결제 여력은 최소 운영현금을 유보한 금액입니다. 발주자금 확인은 별도의 즉시 추가 결제 점검이며, 실제 지급일이나 이미 지급한 금액을 뜻하지 않습니다.';
   if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
   if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 부족액은 결제 가정액과 최소 운영현금을 모두 충당하는 데 필요한 추가 현금입니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
-  if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 자동 추가투입 ${man(topUp)} = <b>${man(R.cash0+topUp)} ${unitLabel()}</b><br>`+cap.innerHTML+receivablesAuditHtml(R,ledgerYear<0?0:R.off+ledgerYear*12,NMw)+renderT0CashBridge(R,topUp);
+  if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 추가투입(${fundingAmount(R.s.invest.openingTopUp)==null?'자동':'직접 입력'}) ${man(topUp)} = <b>${man(R.cash0+topUp)} ${unitLabel()}</b><br>`+cap.innerHTML+receivablesAuditHtml(R,ledgerYear<0?0:R.off+ledgerYear*12,NMw)+renderT0CashBridge(R,topUp);
 }
 function renderT0CashBridge(r,topUp){
   if(!r.off)return '';
-  const inv=r.s.invest,init=[['자기자본',inv.equity],['차입',inv.debt],['보유현금',r.s.assume.openingCash],['개시일 자동 추가투입',topUp],['유형자산 투자',-inv.capex],['무형자산 투자',-inv.intangible],['기타 투자',-inv.longInvest],['사전 확보 초기재고',-r.openingStock],['개시 부가세 선지출',-r.vat.opening],['원장 개시 현금',r.cash0+topUp]];
+  const inv=r.s.invest,init=[['자기자본',inv.equity],['차입',inv.debt],['보유현금',r.s.assume.openingCash],['개시일 추가투입',topUp],['유형자산 투자',-inv.capex],['무형자산 투자',-inv.intangible],['기타 투자',-inv.longInvest],['사전 확보 초기재고',-r.openingStock],['개시 부가세 선지출',-r.vat.opening],['원장 개시 현금',r.cash0+topUp]];
   const series=r.months.slice(0,r.off).map((_,i)=>{const parts=operatingCashParts(r,i);return [[ '월초 현금',(i?r.cashM[i-1]:r.cash0)+topUp],...parts,['영업현금흐름 합계',r.cfoM[i]],['차입 원금 상환',-r.repayM[i]],['월말 현금',r.cashM[i]+topUp]];});
   return `<details><summary>T0 현금 분해 · 개시 투자, 매입 지급과 비용 (${unitLabel()})</summary>${resultTable(['개시 자금 항목',unitLabel()],init.map(([k,v])=>[k,man(v)]))}${resultTable(['현금흐름 항목',...r.months.slice(0,r.off).map(m=>m.mm+'월')],series[0].map(([k],j)=>[k,...series.map(s=>man(s[j][1]))]))}<p>양수는 유입, 음수는 유출입니다. 매입 지급 및 판매대금 회수는 월말 채무·채권 변동으로 추정했습니다.</p></details>`;
 }
