@@ -2524,6 +2524,14 @@ function periods(){
   return R.pl.map((p,y)=>`${fyShort(y).replace(' · ','<span class="u">')}</span>`);
 }
 
+function managementRows(r){
+  const p=r.t0,pl=p?[p,...r.pl]:r.pl, cmRatio=p?.rev?p.cm/p.rev:null;
+  const bep=cmRatio>0?p.fixed/cmRatio:null;
+  const mg=p?[{rev:p.rev,varCost:p.varCost,cm:p.cm,cmRatio,fixed:p.fixed,op:p.ebit,bep,margin:bep!==null?(p.rev-bep)/p.rev:null,dol:p.ebit?p.cm/p.ebit:null},...r.mgmt]:r.mgmt;
+  const amounts=(l,f,cls,metric,sign)=>({l,v:mg.map(f),cls,metric,sign});
+  const cost=(l,f)=>({l,v:pl.map(f),sub:true,cls:'ind2'});
+  return [amounts('매출액',g=>g.rev,'strong','rev'),{l:'매출원가 · 제품원가 + 제조인건비 배부',v:pl.map(p=>-p.cogs),metric:'cogs',sign:-1},amounts('변동비',g=>-g.varCost,'grprow','varCost',-1),cost('· 제품·상품 매출원가',p=>-(p.cogs-p.pay.mfg)),cost('· 제조인건비',p=>-p.pay.mfg),cost('· 변동 판관비',p=>-p.sga.variable.amt),amounts('공헌이익',g=>g.cm,'subtotal','cm'),amounts('공헌이익률',g=>pcv(g.cmRatio),'subtotal'),amounts('고정비',g=>-g.fixed,'grprow'),cost('· 인건비 (판관)',p=>-p.pay.sga),cost('· 고정비',p=>-p.sga.fixed.amt),cost('· 준변동비',p=>-p.sga.semi.amt),cost('· 감가상각비',p=>-p.dep),amounts('영업이익',g=>g.op,'subtotal'),amounts('BEP 매출액',g=>g.bep??'—','total'),amounts('안전율 (매출−BEP)/매출',g=>pcv(g.margin),'total'),amounts('영업레버리지 (DOL)',g=>g.dol==null?'—':g.dol.toFixed(2)+'배','total')];
+}
 function renderFinance(){
   {const _n0=document.getElementById('stmtNote'); if(_n0){_n0.hidden=false;if(_n0.parentElement)_n0.parentElement.hidden=false;}}
   if(!document.getElementById('stmtTable')) return;
@@ -2588,26 +2596,8 @@ function renderFinance(){
     else if(finTab==='mgmt'){
     document.getElementById('stmtTitle').textContent='관리회계 손익계산서';
     document.getElementById('stmtDesc').textContent='원가행태별 분류 · 공헌이익과 BEP. 재무제표와 같은 숫자를 변동/고정으로 다시 묶습니다.';
-    const rows=[];
-    rows.push({l:'매출액',v:R.mgmt.map(g=>g.rev),cls:'strong',metric:'rev'});
-    rows.push({l:'매출원가 · 제품원가 + 제조인건비 배부',v:R.pl.map(p=>-p.cogs),metric:'cogs',sign:-1});
-    rows.push({l:'변동비',v:R.mgmt.map(g=>-g.varCost),cls:'grprow',metric:'varCost',sign:-1});
-    rows.push({l:'· 제품·상품 매출원가',v:R.pl.map(p=>-(p.cogs-p.pay.mfg)),sub:true,cls:'ind2'});
-    rows.push({l:'· 제조인건비',v:R.pl.map(p=>-p.pay.mfg),sub:true,cls:'ind2'});
-    rows.push({l:'· 변동 판관비',v:R.pl.map(p=>-p.sga.variable.amt),sub:true,cls:'ind2'});
-    rows.push({l:'공헌이익',v:R.mgmt.map(g=>g.cm),cls:'subtotal',metric:'cm'});
-    rows.push({l:'공헌이익률',v:R.mgmt.map(g=>pcv(g.cmRatio)),cls:'subtotal'});
-    rows.push({l:'고정비',v:R.mgmt.map(g=>-g.fixed),cls:'grprow'});
-    rows.push({l:'· 인건비 (판관)',v:R.pl.map(p=>-p.pay.sga),sub:true,cls:'ind2'});
-    rows.push({l:'· 고정비',v:R.pl.map(p=>-p.sga.fixed.amt),sub:true,cls:'ind2'});
-    rows.push({l:'· 준변동비',v:R.pl.map(p=>-p.sga.semi.amt),sub:true,cls:'ind2'});
-    rows.push({l:'· 감가상각비',v:R.pl.map(p=>-p.dep),sub:true,cls:'ind2'});
-    rows.push({l:'영업이익',v:R.mgmt.map(g=>g.op),cls:'subtotal'});
-    rows.push({l:'BEP 매출액',v:R.mgmt.map(g=>g.bep),cls:'total'});
-    rows.push({l:'안전율 (매출−BEP)/매출',v:R.mgmt.map(g=>g.margin==null?'—':pcv(g.margin)),cls:'total'});
-    rows.push({l:'영업레버리지 (DOL)',v:R.mgmt.map(g=>g.dol==null?'—':g.dol.toFixed(2)+'배'),cls:'total'});
-    T.innerHTML=buildStmt(rows,P);
-    document.getElementById('stmtNote').innerHTML='<b>관리회계의 핵심</b> — 공헌이익 = 매출 − 변동비, 영업이익 = 공헌이익 − 고정비. BEP는 고정비 ÷ 공헌이익률입니다. 안전율이 20% 이하면 매출이 조금만 줄어도 적자로 전환됩니다.';
+    T.innerHTML=buildStmt(managementRows(R),R.t0?[`T0<span class="u">${t0Label(S)}</span>`,...P]:P);
+    document.getElementById('stmtNote').innerHTML='공헌이익 = 매출 − 변동비. 영업이익 = 공헌이익 − 고정비. BEP 매출액 = 고정비 ÷ 공헌이익률. '+(R.t0?'T0는 개시월부터 12월까지의 합계이며 연간 환산하지 않습니다. 펼친 거래처별 배부 내역은 Y1부터 표시합니다.':'');
   }
   else if(finTab==='cf'){
     renderDetailedCF();return;
@@ -3193,22 +3183,26 @@ function nestedTable(nodes,scope,head){
   return `<thead><tr><th class="l">계정 <span class="u">${unitLabel()}</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody>`;
 }
 function cashflowNodes(){
-  const v=(field,initial=0)=>[initial,...R.cf.map(c=>c[field]||0)],zero=Array(R.H+1).fill(0),wc=R.wcLines.map(l=>({id:'wc-'+l.key,label:l.label+(['ap','advance','accrued','vatDue'].includes(l.key)?' 증가(+) / 감소(−)':' 감소(+) / 증가(−)'),values:l.values.map((value,i)=>i===0&&l.key==='vatCredit'?-R.vat.assetVat.stock:value)}));
+  const p=R.t0,off=R.off||0,last=off-1,vat=R.vat.rows[last];
+  const ni=p?.ni||0,dep=p?.depPPE||0,amort=p?.depInt||0,exp=p?.nonop.expNonCash.amt||0,inc=p?.nonop.incNonCash.amt||0,repay=p?.repay||0;
+  const t0wc=off?{ar:-R.arM[last],inv:R.openingStock-R.invM[last],ap:R.apM[last],vatCredit:R.vat.opening-vat.credit,vatDue:vat.due}:{};
+  const v=(field,initial=0)=>[initial,...R.cf.map(c=>c[field]||0)],zero=Array(R.H+1).fill(0),wc=R.wcLines.map(l=>({id:'wc-'+l.key,label:l.label+(['ap','advance','accrued','vatDue'].includes(l.key)?' 증가(+) / 감소(−)':' 감소(+) / 증가(−)'),values:[t0wc[l.key]||0,...l.values.slice(1)]}));
+  const adjustment=R.cf0.cfo-ni-dep-amort-exp+inc-wc.reduce((a,l)=>a+l.values[0],0);
   return [
     {id:'cfo',label:'Ⅰ. 영업활동 현금흐름',cls:'subtotal',values:v('cfo',R.cf0.cfo),children:[
-      {id:'ni',label:'당기순이익',values:v('ni')},
-      {id:'noncash-exp',label:'현금유출 없는 비용 가산(+)',values:R.cf.map(c=>c.dep+c.nonCashExp).reduce((a,v)=>a.concat(v),[0]),children:[{id:'dep',label:'감가상각비',values:v('depPPE')},{id:'amort',label:'무형자산상각비',values:v('depInt')},{id:'baddebt',label:'대손상각비 · 별도 미설정 (기타와 중복 가산하지 않음)',values:zero},{id:'other-exp',label:'기타비현금비용 · 기존 영업외 비현금비용 전체',values:v('nonCashExp')}]},
-      {id:'noncash-inc',label:'현금유입 없는 수익 차감(−)',values:v('nonCashInc').map(x=>-x),children:[{id:'other-inc',label:'기타비현금수익',values:v('nonCashInc').map(x=>-x)}]},
-      {id:'wc',label:'영업자산부채 변동 증감(ΔWC)',values:Array.from({length:R.H+1},(_,i)=>wc.reduce((v,l)=>v+l.values[i],0)),children:wc}]},
+      {id:'ni',label:'당기순이익',values:v('ni',ni)},
+      {id:'noncash-exp',label:'현금유출 없는 비용 가산(+)',values:[dep+amort+exp,...R.cf.map(c=>c.dep+c.nonCashExp)],children:[{id:'dep',label:'감가상각비',values:v('depPPE',dep)},{id:'amort',label:'무형자산상각비',values:v('depInt',amort)},{id:'baddebt',label:'대손상각비 · 별도 미설정 (기타와 중복 가산하지 않음)',values:zero},{id:'other-exp',label:'기타비현금비용 · 기존 영업외 비현금비용 전체',values:v('nonCashExp',exp)}]},
+      {id:'noncash-inc',label:'현금유입 없는 수익 차감(−)',values:v('nonCashInc',inc).map(x=>-x),children:[{id:'other-inc',label:'기타비현금수익',values:v('nonCashInc',inc).map(x=>-x)}]},
+      {id:'wc',label:'영업자산부채 변동 증감(ΔWC)',values:Array.from({length:R.H+1},(_,i)=>wc.reduce((v,l)=>v+l.values[i],0)),children:wc},...(off&&Math.abs(adjustment)>0.000001?[{id:'t0-reconcile',label:'T0 기타 조정 · 월별 현금원장 대사 차이',values:[adjustment,...R.cf.map(()=>0)]}]:[])]},
     {id:'cfi',label:'Ⅱ. 투자활동 현금흐름',cls:'subtotal',values:v('cfi',R.cf0.cfi),children:[{id:'capex',label:'CAPEX · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.capex-R.vat.assetVat.capex,...R.cf.map(()=>0)]},{id:'intangible',label:'무형자산투자 · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.intangible-R.vat.assetVat.intangible,...R.cf.map(()=>0)]}]},
-    {id:'cff',label:'Ⅲ. 재무활동 현금흐름',cls:'subtotal',values:v('cff',R.cf0.cff),children:[{id:'equity',label:'자본유입',values:[S.invest.equity,...R.cf.map(()=>0)]},{id:'debt',label:'차입유입',values:[S.invest.debt,...R.cf.map(()=>0)]},{id:'repay',label:'차입상환',values:v('cff')}]},
+    {id:'cff',label:'Ⅲ. 재무활동 현금흐름',cls:'subtotal',values:v('cff',R.cf0.cff-repay),children:[{id:'equity',label:'자본유입',values:[S.invest.equity,...R.cf.map(()=>0)]},{id:'debt',label:'차입유입',values:[S.invest.debt,...R.cf.map(()=>0)]},{id:'repay',label:'차입상환',values:v('cff',-repay)}]},
     {id:'net',label:'현금증감',cls:'total',values:v('net',R.cf0.net)},{id:'begin',label:'기초현금 · t0는 기존 보유현금',values:v('begin',R.cf0.begin)},{id:'end',label:'기말현금',cls:'subtotal',values:v('end',R.cf0.end)}
   ];
 }
 function renderDetailedCF(){
-  $('#stmtTitle').textContent='현금흐름표';$('#stmtDesc').textContent='동일 월원장의 간접법 분해 · t0는 영업 전 개시이며 Y0 운영이 아닙니다.';
-  $('#stmtTable').innerHTML=nestedTable(cashflowNodes(),'cf',['t0<span class="u">개시 전</span>',...periods()]);
-  $('#stmtNote').innerHTML='초기재고는 t0 영업자산 증가(영업현금 유출), CAPEX·무형은 투자활동, 자본·차입은 재무활동입니다. 기존 보유현금은 기초현금이며 자본유입으로 재가산하지 않습니다. 선급금·미수금·선수금·미지급금은 연말 잔액을 월별 선형 이행합니다. 미입력 잔액은 0, 대손상각은 별도 미설정이며 기존 비현금비용을 임의 분류하지 않습니다.';
+  $('#stmtTitle').textContent='현금흐름표';$('#stmtDesc').textContent=R.off?'T0 개시년은 사업 시작월부터 12월까지입니다. 개시 자금과 운영 결과를 한 열에 표시합니다.':'1월 개시: 초기 집행은 T0, 1~12월 운영은 Y1에 표시합니다.';
+  $('#stmtTable').innerHTML=nestedTable(cashflowNodes(),'cf',[R.off?`T0<span class="u">${t0Label(S)}</span>`:'T0<span class="u">개시 집행</span>',...periods()]);
+  $('#stmtNote').innerHTML=`T0 당기순이익은 손익계산서와 같은 기간의 금액입니다. 매출채권 증가는 미회수 매출을 제외하는 조정이며, 현금 지급이 아닙니다. 개시 직후 현금은 <b>${man(R.cash0)} ${unitLabel()}</b>입니다. T0 기말현금에는 이후 운영 현금흐름이 포함됩니다.`;
 }
 function fcffNodes(){
   const z=Array(R.H+1).fill(0),v=fn=>[0,...R.pl.map((p,y)=>fn(p,y))];
@@ -3556,7 +3550,7 @@ const financeExtendedBase=renderFinance;renderFinance=function(){if(!Gate.approv
 const valueExtendedBase=renderValue;renderValue=function(){if(!Gate.approved)return;valueExtendedBase();renderCurrencyPanels();};
 function appendFinanceDetails(){
   const table=$('#stmtTable');if(!table)return;
-  if(finTab==='mgmt'&&R.pl[0].pay.sgaComponents){const rows=PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l ind">판관 인건비 · ${n}</td>${R.pl.map(p=>'<td>'+m(-num(p.pay.sgaComponents?.[k]))+'</td>').join('')}</tr>`).join('');table.tBodies[0].insertAdjacentHTML('beforeend',rows);}
+  if(finTab==='mgmt'&&R.pl[0].pay.sgaComponents){const periods=R.t0?[R.t0,...R.pl]:R.pl;const rows=PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l ind">판관 인건비 · ${n}</td>${periods.map(p=>'<td>'+m(-num(p.pay.sgaComponents?.[k]))+'</td>').join('')}</tr>`).join('');table.tBodies[0].insertAdjacentHTML('beforeend',rows);}
   if(finTab==='bs'){table.tBodies[0].insertAdjacentHTML('beforeend',`<tr><td class="l">부가세대급금 (자산합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatCredit)+'</td>').join('')}</tr><tr><td class="l">부가세예수금 (부채합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatDue)+'</td>').join('')}</tr>`);}
 }
 const extendedMountBase=mountApproved;mountApproved=function(...args){extendedMountBase(...args);if(Gate.approved){renderExtensions();if(typeof saveBadge==='function')saveBadge();}};
@@ -3926,6 +3920,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
