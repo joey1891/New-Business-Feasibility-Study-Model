@@ -2321,29 +2321,30 @@ function renderInvLedger(){
     const cash=i?R.cashM[i-1]:R.cash0;
     const collected=R.vat.rows[i].salesGross+(i?R.arM[i-1]:0)-R.arM[i];
     const closing=R.cashM[i],floor=R.minCashYears[R.months[i].t0?0:R.months[i].yi];
-    const available=Math.max(0,closing-floor);
+    const available=Math.max(0,closing-floor), reserveGap=Math.max(0,floor-closing);
     const companyOrders=groups.flatMap(g=>(g.orders||[]).filter(o=>o.month===i));
     const gross=companyOrders.reduce((v,o)=>v+o.gross,0);
     const receipts=(receiptsByMonth.get(i)||[]).sort((a,b)=>a.arrivalDay-b.arrivalDay||a.orderDay-b.orderDay||a.name.localeCompare(b.name,'ko'));
     const receiptAmount=receipts.reduce((v,o)=>v+o.amount,0);
-    data.push({mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,collected,closing,floor,available,gross,hasOrder:companyOrders.length>0,gap:available-gross});
+    data.push({mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,hasOrder:companyOrders.length>0,gap:closing-floor-gross});
     if(m===0)tO+=open; tI+=inc; tS+=out; tQ+=ord; tA+=amt; tStock=stock;
   }
   t.innerHTML=`<thead><tr><th class="l">월</th><th>기초재고<span class="u">개</span></th><th>당기입고<span class="u">개</span></th><th>당기출고<span class="u">개</span></th><th>당기재고<span class="u">증감</span></th><th>기말재고<span class="u">개</span></th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>회사 보유현금<span class="u">월초 · ${unitLabel()}</span></th><th>발주자금 확인<span class="u">회사 전체 · 즉시 결제 가정</span></th></tr></thead><tbody>`+
     data.map(r=>`<tr><td class="l">${r.mm}월</td><td>${won(r.open)}</td><td>${won(r.inc)}</td><td style="color:${r.delta<0?'var(--red)':'var(--ink2)'}">${r.delta>0?'+':''}${won(r.delta)}${r.short?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(r.short)}</div>`:''}</td><td${r.stock<=0?' style="color:var(--red)"':''}>${won(r.stock)}</td><td class="tot-col strong">${r.ord?won(r.ord):'—'}</td><td>${r.amt?man(r.amt):'—'}</td><td class="strong${r.cash<0?' neg':''}">${man(r.cash)}</td><td>${r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)} ${unitLabel()}</div>`:'발주 없음'}</td></tr>`).join('')+
     `</tbody><tfoot><tr><td class="l">기간 합계</td><td>${won(tO)}</td><td>${won(tI)}</td><td>${won(tS)}</td><td>${tI-tS>0?'+':''}${won(tI-tS)}${tShort?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(tShort)}</div>`:''}</td><td>${won(tStock)}</td><td>${won(tQ)}</td><td>${man(tA)}</td><td>${data.length?man(data[0].cash)+' (기초)':'—'}</td><td>—</td></tr></tfoot>`;
-  const fields=['월','기초재고','당기입고','당기입고 금액','입고의 원발주 내역','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','판매대금 회수 추정','최소 운영현금','월말 결제 여력','발주자금 확인'];
+  const fields=['월','기초재고','당기입고','당기입고 금액','입고의 원발주 내역','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','월말 매출채권','월말 매입채무','판매대금 회수 추정','최소 운영현금','월말 결제 여력','발주자금 확인'];
   const cell=v=>`<td>${v}</td>`;
   const trace=o=>`${planDate(o.orderDay)} → ${planDate(o.arrivalDay)} → ${won(o.qty)}개`;
-  t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i===4?'<span class="u">원발주일 → 입고 예정일 → 수량</span>':i===3||i>=9&&i<=13?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
-    data.map(r=>`<tr>${[r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.collected),man(r.floor),man(r.available)+`<div class="sub">월말 현금 ${man(r.closing)}</div>`,r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'].map(cell).join('')}</tr>`).join('')+
-    `</tbody><tfoot><tr>${['기간 합계',won(tO),won(tI),man(data.reduce((a,r)=>a+r.receiptAmount,0)),'—',won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'].map(cell).join('')}</tr></tfoot>`;
+  t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i===4?'<span class="u">원발주일 → 입고 예정일 → 수량</span>':i===3||i>=9&&i<=15?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
+    data.map(r=>`<tr>${[r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.ar),man(r.ap),man(r.collected),man(r.floor),man(r.available)+`<div class="sub">월말 현금 ${man(r.closing)}</div>${r.reserveGap>0?`<div class="sub neg">최소현금 부족 ${man(r.reserveGap)}</div>`:''}`,r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'].map(cell).join('')}</tr>`).join('')+
+    `</tbody><tfoot><tr>${['기간 합계',won(tO),won(tI),man(data.reduce((a,r)=>a+r.receiptAmount,0)),'—',won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',data.length?man(data.at(-1).ar)+' (기말)':'—',data.length?man(data.at(-1).ap)+' (기말)':'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'].map(cell).join('')}</tr></tfoot>`;
   t._data=data; t._tot={open:tO,inc:tI,out:tS,delta:tI-tS,stock:tStock,ord:tQ,amt:tA,short:tShort,shortQty:tShortQty};
   t._pending=pending;t._pendMonths=[...pendMonths].join(', ');
   const cap=document.getElementById('ledgerCap');
   if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 입고 예정일은 발주일 + 리드타임(달력일)입니다.'+(pend>0?`<br><b>다음 기간 입고 ${won(pend)}개</b> · 입고 예정월 ${pm}`:'')+(tShortQty>0?`<br><b class="neg">미충족 수요 ${won(tShortQty)}개 · 판매 기준 ${man(tShort)}</b>`:'<br><b>미충족 수요 0개</b> · 선택 기간의 제품별 월 수요를 모두 충족합니다.');}
   if(cap)cap.innerHTML+='<br>판매대금 회수 추정 = 기초 매출채권 + 당월 청구액 − 기말 매출채권. 월말 현금에 이미 반영되므로 다시 더하지 않습니다. 월말 결제 여력은 최소 운영현금을 남긴 뒤의 잔액(최저 0)입니다. 회사 전체 발주액(부가세 포함)을 월말에 추가 결제할 수 있는지 보는 보수적 점검입니다. 이미 반영된 매입 지급이 있을 수 있으므로 실제 미지급액이나 발주일 당일의 지급 가능 여부를 뜻하지 않습니다.';
   if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
+  if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 부족액은 결제 가정액과 최소 운영현금을 모두 충당하는 데 필요한 추가 현금입니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
 }
 function ledgerCsv(){
   const t=document.getElementById('invLedger'); if(!t||!t._data) return;
@@ -2353,6 +2354,9 @@ function ledgerCsv(){
   rows[0].splice(3,0,'당기입고 금액(원)','입고의 원발주 내역');
   t._data.forEach((r,i)=>rows[i+1].splice(3,0,Math.round(r.receiptAmount),r.receipts.map(o=>`${o.name} · ${planDate(o.orderDay)} → ${planDate(o.arrivalDay)} → ${o.qty}개`).join(' | ')));
   rows.at(-1).splice(3,0,Math.round(t._data.reduce((a,r)=>a+r.receiptAmount,0)),'');
+  rows[0].splice(12,0,'월말 매출채권(원)','월말 매입채무(원)');
+  t._data.forEach((r,i)=>rows[i+1].splice(12,0,Math.round(r.ar),Math.round(r.ap)));
+  const last=t._data.at(-1);rows.at(-1).splice(12,0,last?Math.round(last.ar):'',last?Math.round(last.ap):'');
   download('월별재고원장.csv','\ufeff'+rows.map(r=>r.map(v=>/[",\r\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\r\n'));
   toast('월별 재고 원장 CSV를 내려받았습니다');
 }
