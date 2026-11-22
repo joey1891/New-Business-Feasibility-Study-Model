@@ -123,6 +123,7 @@ select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,
 
 /* ---------- tables ---------- */
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;max-width:100%}
+#invLedger .receipt-trace{text-align:left;min-width:225px;white-space:nowrap;font-size:11px}#invLedger .receipt-trace b{display:block;color:var(--teal)}#invLedger .receipt-trace>div+div{border-top:1px solid var(--line);padding-top:4px;margin-top:4px}
 .funding-plan{overflow:hidden}.funding-plan .funding-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;padding:12px 16px}.funding-plan .funding-kpis>div{padding:10px 12px;background:var(--tealSoft);border-radius:8px}.funding-plan .funding-kpis b{display:block;font-size:19px;margin-top:4px}.funding-plan details{margin:10px 16px}.funding-plan summary{cursor:pointer;font-weight:750;padding:8px 0}.funding-plan .tbl{min-width:970px}.funding-plan .funding-positive{color:var(--teal);font-weight:800}#view-invest .cols{grid-template-columns:minmax(0,1fr)}
 #invSettings{min-width:950px}#invSettings th:first-child,#invSettings td:first-child{white-space:normal;min-width:150px;max-width:230px}#invSettings td:first-child .sub{white-space:normal;overflow-wrap:anywhere}#invSettings th:nth-child(10),#invSettings td:nth-child(10){min-width:148px}#invSettings td:nth-child(10) input{min-width:126px}
 table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;font-variant-numeric:tabular-nums}
@@ -2302,6 +2303,8 @@ function renderInvLedger(){
   if(bc) bc.onclick=()=>ledgerCsv();
   const selKey=groups.find(g=>g.key===ledgerGroup);
   const sel=ledgerGroup==='__all'?groups:(selKey?groups.filter(g=>g.name===selKey.name):groups);
+  const receiptsByMonth=new Map();
+  sel.forEach(g=>(g.orders||[]).forEach(o=>{if(!receiptsByMonth.has(o.arrMonth))receiptsByMonth.set(o.arrMonth,[]);receiptsByMonth.get(o.arrMonth).push({name:g.name,path:g.parentLabel,orderDay:o.orderDay,arrivalDay:o.arrivalDay,qty:o.qty,amount:o.amount});}));
   const data=[];let tO=0,tI=0,tS=0,tQ=0,tA=0,tStock=0,tShort=0,tShortQty=0,pending=0;const pendMonths=new Set();
   const NMw=ledgerYear<0?t0MonthsOf(S):(t0MonthsOf(S)+(ledgerYear+1)*12);
   for(let m=0;m<(ledgerYear<0?t0MonthsOf(S):12);m++){
@@ -2321,29 +2324,36 @@ function renderInvLedger(){
     const available=Math.max(0,closing-floor);
     const companyOrders=groups.flatMap(g=>(g.orders||[]).filter(o=>o.month===i));
     const gross=companyOrders.reduce((v,o)=>v+o.gross,0);
-    data.push({mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,cash,collected,closing,floor,available,gross,hasOrder:companyOrders.length>0,gap:available-gross});
+    const receipts=(receiptsByMonth.get(i)||[]).sort((a,b)=>a.arrivalDay-b.arrivalDay||a.orderDay-b.orderDay||a.name.localeCompare(b.name,'ko'));
+    const receiptAmount=receipts.reduce((v,o)=>v+o.amount,0);
+    data.push({mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,collected,closing,floor,available,gross,hasOrder:companyOrders.length>0,gap:available-gross});
     if(m===0)tO+=open; tI+=inc; tS+=out; tQ+=ord; tA+=amt; tStock=stock;
   }
   t.innerHTML=`<thead><tr><th class="l">월</th><th>기초재고<span class="u">개</span></th><th>당기입고<span class="u">개</span></th><th>당기출고<span class="u">개</span></th><th>당기재고<span class="u">증감</span></th><th>기말재고<span class="u">개</span></th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>회사 보유현금<span class="u">월초 · ${unitLabel()}</span></th><th>발주자금 확인<span class="u">회사 전체 · 즉시 결제 가정</span></th></tr></thead><tbody>`+
     data.map(r=>`<tr><td class="l">${r.mm}월</td><td>${won(r.open)}</td><td>${won(r.inc)}</td><td style="color:${r.delta<0?'var(--red)':'var(--ink2)'}">${r.delta>0?'+':''}${won(r.delta)}${r.short?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(r.short)}</div>`:''}</td><td${r.stock<=0?' style="color:var(--red)"':''}>${won(r.stock)}</td><td class="tot-col strong">${r.ord?won(r.ord):'—'}</td><td>${r.amt?man(r.amt):'—'}</td><td class="strong${r.cash<0?' neg':''}">${man(r.cash)}</td><td>${r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)} ${unitLabel()}</div>`:'발주 없음'}</td></tr>`).join('')+
     `</tbody><tfoot><tr><td class="l">기간 합계</td><td>${won(tO)}</td><td>${won(tI)}</td><td>${won(tS)}</td><td>${tI-tS>0?'+':''}${won(tI-tS)}${tShort?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(tShort)}</div>`:''}</td><td>${won(tStock)}</td><td>${won(tQ)}</td><td>${man(tA)}</td><td>${data.length?man(data[0].cash)+' (기초)':'—'}</td><td>—</td></tr></tfoot>`;
-  const fields=['월','기초재고','당기입고','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','판매대금 회수 추정','최소 운영현금','월말 결제 여력','발주자금 확인'];
+  const fields=['월','기초재고','당기입고','당기입고 금액','입고의 원발주 내역','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','판매대금 회수 추정','최소 운영현금','월말 결제 여력','발주자금 확인'];
   const cell=v=>`<td>${v}</td>`;
-  t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i>=7&&i<=11?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
-    data.map(r=>`<tr>${[r.mm+'월',won(r.open),won(r.inc),won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.collected),man(r.floor),man(r.available)+`<div class="sub">월말 현금 ${man(r.closing)}</div>`,r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'].map(cell).join('')}</tr>`).join('')+
-    `</tbody><tfoot><tr>${['기간 합계',won(tO),won(tI),won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'].map(cell).join('')}</tr></tfoot>`;
+  const trace=o=>`${planDate(o.orderDay)} → ${planDate(o.arrivalDay)} → ${won(o.qty)}개`;
+  t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i===4?'<span class="u">원발주일 → 입고 예정일 → 수량</span>':i===3||i>=9&&i<=13?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
+    data.map(r=>`<tr>${[r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.collected),man(r.floor),man(r.available)+`<div class="sub">월말 현금 ${man(r.closing)}</div>`,r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'].map(cell).join('')}</tr>`).join('')+
+    `</tbody><tfoot><tr>${['기간 합계',won(tO),won(tI),man(data.reduce((a,r)=>a+r.receiptAmount,0)),'—',won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'].map(cell).join('')}</tr></tfoot>`;
   t._data=data; t._tot={open:tO,inc:tI,out:tS,delta:tI-tS,stock:tStock,ord:tQ,amt:tA,short:tShort,shortQty:tShortQty};
   t._pending=pending;t._pendMonths=[...pendMonths].join(', ');
   const cap=document.getElementById('ledgerCap');
   if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 입고 예정일은 발주일 + 리드타임(달력일)입니다.'+(pend>0?`<br><b>다음 기간 입고 ${won(pend)}개</b> · 입고 예정월 ${pm}`:'')+(tShortQty>0?`<br><b class="neg">미충족 수요 ${won(tShortQty)}개 · 판매 기준 ${man(tShort)}</b>`:'<br><b>미충족 수요 0개</b> · 선택 기간의 제품별 월 수요를 모두 충족합니다.');}
   if(cap)cap.innerHTML+='<br>판매대금 회수 추정 = 기초 매출채권 + 당월 청구액 − 기말 매출채권. 월말 현금에 이미 반영되므로 다시 더하지 않습니다. 월말 결제 여력은 최소 운영현금을 남긴 뒤의 잔액(최저 0)입니다. 회사 전체 발주액(부가세 포함)을 월말에 추가 결제할 수 있는지 보는 보수적 점검입니다. 이미 반영된 매입 지급이 있을 수 있으므로 실제 미지급액이나 발주일 당일의 지급 가능 여부를 뜻하지 않습니다.';
+  if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
 }
 function ledgerCsv(){
   const t=document.getElementById('invLedger'); if(!t||!t._data) return;
   const rows=[['월','기초재고(개)','당기입고(개)','당기출고(개)','당기재고 증감(개)','미충족 판매액(원)','기말재고(개)','발주수량(개)','발주금액(원)','월초 회사 보유현금(원)','판매대금 회수 추정(원)','월말 현금(원)','최소 운영현금(원)','월말 결제 여력(원)','전체 발주 결제 가정액(원)','추가 결제 가정 후 잔액(원)','발주자금 판정']];
   t._data.forEach(r=>rows.push([r.mm+'월',r.open,r.inc,r.out,r.delta,Math.round(r.short||0),r.stock,r.ord,...[r.amt,r.cash,r.collected,r.closing,r.floor,r.available,r.gross].map(Math.round),r.hasOrder?Math.round(r.gap):'',r.hasOrder?(r.gap<-0.005?'부족':'충분'):'발주 없음']));
   const g=t._tot;rows.push(['기간 합계',g.open,g.inc,g.out,g.delta,Math.round(g.short||0),g.stock,g.ord,Math.round(g.amt),t._data.length?Math.round(t._data[0].cash):'',Math.round(t._data.reduce((a,r)=>a+r.collected,0)),'','','','','','']);
-  download('월별재고원장.csv','\ufeff'+rows.map(r=>r.map(v=>/[",]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\r\n'));
+  rows[0].splice(3,0,'당기입고 금액(원)','입고의 원발주 내역');
+  t._data.forEach((r,i)=>rows[i+1].splice(3,0,Math.round(r.receiptAmount),r.receipts.map(o=>`${o.name} · ${planDate(o.orderDay)} → ${planDate(o.arrivalDay)} → ${o.qty}개`).join(' | ')));
+  rows.at(-1).splice(3,0,Math.round(t._data.reduce((a,r)=>a+r.receiptAmount,0)),'');
+  download('월별재고원장.csv','\ufeff'+rows.map(r=>r.map(v=>/[",\r\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v).join(',')).join('\r\n'));
   toast('월별 재고 원장 CSV를 내려받았습니다');
 }
 
