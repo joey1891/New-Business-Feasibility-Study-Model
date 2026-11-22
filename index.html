@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>사업타당성 · 재고발주 통합 플래너</title>
+<title>사업타당성 · 재고발주 통합 플래너 · 채권 대사판</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1309,6 +1309,34 @@ function nonopYear(s,y,rev){
 }
 
 /* ---------- 메인 ---------- */
+// Sales are spread over calendar days because the demand input is monthly.
+// Each invoice keeps the terms in effect when it originated.
+const RECEIVABLES_REVISION='채권 대사판 2026-11-22 · 23:08';
+function settlementSchedule(months,invoices){
+  const starts=months.map(m=>planDay(m.y,m.mm,1)), n=months.length;
+  const paid=Array(n).fill(0), balances=Array(n).fill(0), issued=Array(n).fill(0);
+  const index=day=>starts.findLastIndex(first=>first<=day);
+  for(const {day,amount,term} of invoices){
+    const from=index(day), due=day+Math.max(0,Math.ceil(num(term))), to=index(due);
+    issued[from]+=amount;
+    if(due<starts[n-1]+months[n-1].days)paid[to]+=amount;
+  }
+  let carry=0;
+  for(let i=0;i<n;i++){carry+=issued[i]-paid[i];if(Math.abs(carry)<1e-6)carry=0;balances[i]=carry;}
+  return {issued,paid,balances};
+}
+function receivablesAudit(r,start=0,end=r.NM){
+  return r.months.slice(start,end).map((m,k)=>{const i=start+k,q=r.receivables;
+    const opening=q.balances[i-1]||0,net=r.revM[i],vat=r.vat.rows[i].output,billed=q.issued[i],collected=q.paid[i],closing=q.balances[i];
+    return {m,i,opening,net,vat,billed,collected,closing,error:opening+billed-collected-closing,term:assumeYear(r.s,m.t0?0:m.yi).arDays};
+  });
+}
+function receivablesAuditHtml(r,start,end){
+  const rows=receivablesAudit(r,start,end),sum=k=>rows.reduce((v,x)=>v+x[k],0),first=rows[0],last=rows.at(-1),f=x=>man(x);
+  if(!first)return '';
+  const issues=rows.filter(x=>Math.abs(x.error)>.005||Math.abs(x.net+x.vat-x.billed)>.005||x.collected<-.005||x.closing<-.005||x.closing>x.opening+x.billed+.005);
+  return `<details class="ar-audit" open><summary><b>매출채권 대사 · ${RECEIVABLES_REVISION} · ${issues.length?'확인 필요 '+issues.length+'개월':'일치'}</b></summary><p>금액 단위: ${unitLabel()}. 기말채권 = 기초채권 + 실제판매 청구액(부가세 포함) − 회수액. 판매수요 자체는 채권이 아닙니다. 회수일은 청구 당시 조건이며 월별 청구를 달력일에 균등 안분합니다.</p>${resultTable(['기간','회수일','기초채권','실제판매액 · 세전','매출 부가세','청구액','회수액','기말채권','대사 차이'],[...rows.map(x=>[x.m.y+'년 '+x.m.mm+'월',x.term+'일',...['opening','net','vat','billed','collected','closing','error'].map(k=>f(x[k]))]),['기간 합계 / 잔액','—',...[first.opening,sum('net'),sum('vat'),sum('billed'),sum('collected'),last.closing,first.opening+sum('billed')-sum('collected')-last.closing].map(f)]])}</details>`;
+}
 function compute(s0){
   const s=prepareExtended(ensureState(clone(s0)));
   const H=s.meta.years,off=t0MonthsOf(s),NM=off+12*H,
@@ -1397,14 +1425,19 @@ function compute(s0){
   })();
 
   /* 월별 AR/AP/세금/현금 */
-  const arM=new Array(NM).fill(0),apM=new Array(NM).fill(0),niM=new Array(NM).fill(0),cfoM=new Array(NM).fill(0),cashM=new Array(NM).fill(0);
+  const terms=i=>assumeYear(s,months[i].t0?0:months[i].yi);
+  const receivables=settlementSchedule(months,months.flatMap((m,i)=>{
+    const amount=vat.rows[i].salesGross/m.days,start=planDay(m.y,m.mm,1),term=terms(i).arDays;
+    return amount?Array.from({length:m.days},(_,d)=>({day:start+d,amount,term})):[];
+  }));
+  const payables=settlementSchedule(months,invGroups.flatMap(g=>g.orders.filter(o=>o.arrMonth<NM).map(o=>({day:o.arrivalDay,amount:o.gross,term:terms(o.arrMonth).apDays}))));
+  const arM=receivables.balances,apM=payables.balances,niM=new Array(NM).fill(0),cfoM=new Array(NM).fill(0),cashM=new Array(NM).fill(0);
+  const depM=months.map((_,i)=>(i<lifeM?s.invest.capex/lifeM:0)+(i<lifeI?s.invest.intangible/lifeI:0));
   for(let i=0;i<NM;i++){
     const yd=months[i].t0?t0rec:years[months[i].yi],dv=yd.div;
-    arM[i]=(vat.rows[i].salesGross/months[i].days)*assumeYear(s,months[i].t0?0:months[i].yi).arDays;
-    apM[i]=(vat.rows[i].purchaseGross/months[i].days)*assumeYear(s,months[i].t0?0:months[i].yi).apDays;
     const sgaMonthly=(yd.sga.fixed.amt+yd.sga.semi.amt+yd.sga.variable.amt)/dv;
     const nonOpMonthly=(yd.nonOpInc-yd.nonOpExp)/dv;
-    niM[i]=revM[i]-cogsM[i]-yd.pay.mfg/dv-yd.pay.sga/dv-sgaMonthly-yd.dep/dv-yd.intr/dv+nonOpMonthly-yd.tax/dv;
+    niM[i]=revM[i]-cogsM[i]-yd.pay.mfg/dv-yd.pay.sga/dv-sgaMonthly-depM[i]-yd.intr/dv+nonOpMonthly-yd.tax/dv;
   }
 
   const cash0=s.invest.equity+s.invest.debt+s.assume.openingCash-s.invest.capex-s.invest.intangible-s.invest.longInvest-openingStock-vat.opening;
@@ -1415,9 +1448,9 @@ function compute(s0){
     const dAR=arM[i]-prevAR,dInv=invM[i]-prevInv,dAP=apM[i]-prevAP;
     const yd=months[i].t0?t0rec:years[months[i].yi],dv=yd.div;
     const nonCashAdj=(yd.nonop.expNonCash.amt-yd.nonop.incNonCash.amt)/dv;
-    const wp=wcPhase(s,i),wc=wcYear(s,months[i].t0?0:months[i].yi),prevWC=wp.prev,nowWC=wp.now;
+     const wp=wcPhase(s,i),prevWC=i?wp.prev:{prepaid:0,receivable:0,advance:0,accrued:0},nowWC=wp.now;
     const wcCash=-(nowWC.prepaid-prevWC.prepaid)-(nowWC.receivable-prevWC.receivable)+(nowWC.advance-prevWC.advance)+(nowWC.accrued-prevWC.accrued);
-    cfoM[i]=niM[i]+yd.dep/dv+nonCashAdj-dAR-dInv+dAP+wcCash+vat.rows[i].cashAdjustment;
+    cfoM[i]=niM[i]+depM[i]+nonCashAdj-dAR-dInv+dAP+wcCash+vat.rows[i].cashAdjustment;
     cash+=cfoM[i]-repayM[i];
     cashM[i]=cash; dInvArr.push(dInv);
   }
@@ -1432,21 +1465,21 @@ function compute(s0){
       interestCover:r.intr>0?r.ebit/r.intr:null});
     const cfo=cfoM.slice(a,b).reduce((x,v)=>x+v,0);
     const repay=repayM.slice(a,b).reduce((x,v)=>x+v,0);
-    const dAR=(arM[last]-(y?arM[a-1]:0)),dInv=(invM[last]-(y?invM[a-1]:openingStock)),dAP=(apM[last]-(y?apM[a-1]:0));
-    const wc=wcYear(s,y),pwc=y?wcYear(s,y-1):wcT0(s);
+     const dAR=arM[last]-(a?arM[a-1]:0),dInv=invM[last]-(a?invM[a-1]:openingStock),dAP=apM[last]-(a?apM[a-1]:0);
+     const wc=wcYear(s,y),pwc=y?wcYear(s,y-1):off?wcT0(s):{prepaid:0,receivable:0,advance:0,accrued:0};
     cf.push({y,ni:r.ni,dep:r.dep,depPPE:r.depPPE,depInt:r.depInt,nonCashExp:r.nonop.expNonCash.amt,nonCashInc:r.nonop.incNonCash.amt,
       dPrepaid:wc.prepaid-pwc.prepaid,dReceivable:wc.receivable-pwc.receivable,dAdvance:wc.advance-pwc.advance,dAccrued:wc.accrued-pwc.accrued,
-      dAR,dInv,dAP,vatCash:vat.rows.slice(a,b).reduce((v,m)=>v+m.cashAdjustment,0),dVatCredit:vat.rows[last].credit-(y?vat.rows[a-1].credit:vat.opening),dVatDue:vat.rows[last].due-(y?vat.rows[a-1].due:0),cfo,cfi:0,cff:-repay,net:cfo-repay,begin:y?cashM[a-1]:(off?cashM[off-1]:cash0),end:cashM[last],interest:r.intr,tax:r.tax});
+       dAR,dInv,dAP,vatCash:vat.rows.slice(a,b).reduce((v,m)=>v+m.cashAdjustment,0),dVatCredit:vat.rows[last].credit-(a?vat.rows[a-1].credit:vat.opening),dVatDue:vat.rows[last].due-(a?vat.rows[a-1].due:0),cfo,cfi:0,cff:-repay,net:cfo-repay,begin:a?cashM[a-1]:cash0,end:cashM[last],interest:r.intr,tax:r.tax});
     const ppe=Math.max(0,s.invest.capex-(s.invest.capex/lifeM)*Math.min(lifeM,off+(y+1)*12));
     const intang=Math.max(0,s.invest.intangible-(s.invest.intangible/lifeI)*Math.min(lifeI,off+(y+1)*12));
     const retained=(off?t0rec.ni:0)+pl.slice(0,y+1).reduce((x,v)=>x+v.ni,0);
     const capital=s.invest.equity+s.assume.openingCash;
-    const otherAsset=pl.slice(0,y+1).reduce((v,p)=>v+p.nonop.incNonCash.amt,0),otherLiab=pl.slice(0,y+1).reduce((v,p)=>v+p.nonop.expNonCash.amt,0);
+     const otherAsset=pl.slice(0,y+1).reduce((v,p)=>v+p.nonop.incNonCash.amt,t0rec?.nonop.incNonCash.amt||0),otherLiab=pl.slice(0,y+1).reduce((v,p)=>v+p.nonop.expNonCash.amt,t0rec?.nonop.expNonCash.amt||0);
     const vatCredit=vat.rows[last].credit,vatDue=vat.rows[last].due;
     bs.push({y,cash:cashM[last],ar:arM[last],inv:invM[last],ppe,intang,...wc,vatCredit,vatDue,
-      otherAsset,otherLiab,assets:cashM[last]+arM[last]+invM[last]+ppe+intang+otherAsset+wc.prepaid+wc.receivable+vatCredit,
+       otherAsset,otherLiab,invest:s.invest.longInvest,assets:cashM[last]+arM[last]+invM[last]+ppe+intang+s.invest.longInvest+otherAsset+wc.prepaid+wc.receivable+vatCredit,
       ap:apM[last],debt:debtM[last],liab:apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued+vatDue,capital,retained,equity:capital+retained,
-      check:(cashM[last]+arM[last]+invM[last]+ppe+intang+otherAsset+wc.prepaid+wc.receivable+vatCredit)-(apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued+vatDue+capital+retained)});
+       check:(cashM[last]+arM[last]+invM[last]+ppe+intang+s.invest.longInvest+otherAsset+wc.prepaid+wc.receivable+vatCredit)-(apM[last]+debtM[last]+otherLiab+wc.advance+wc.accrued+vatDue+capital+retained)});
   }
 
   /* 사업성 */
@@ -1472,7 +1505,7 @@ function compute(s0){
   const tvValid=tvMode!=='gordon'||waccYears[H-1]>g;
   const tv=tvMode==='none'?0:tvMode==='gordon'?(tvValid?fcf[H-1].fcff*(1+g)/(waccYears[H-1]-g):null):navTV;
   const t0NWCend=off?operatingNWC({ar:arM[off-1],inv:invM[off-1],ap:apM[off-1],...wcT0(s),vatCredit:vat.rows[off-1].credit,vatDue:vat.rows[off-1].due}):0;
-  const t0NWCstart=openingStock+vat.opening+Object.values(wcT0(s)).reduce((a,b)=>a+b,0);
+  const t0NWCstart=openingStock+vat.opening;
   const t0dnwc=off?(t0NWCend-t0NWCstart):0;
   const t0nopat=t0rec?t0rec.ebit-Math.max(0,t0rec.ebit)*assumeYear(s,0).taxRate/100:0;
   const t0fcff=off?(t0nopat+t0rec.dep-t0dnwc):0;
@@ -1482,7 +1515,7 @@ function compute(s0){
   let pv=0,cum=flows[0],payback=null;const pvCum=[];
   for(let i=0;i<=H;i++){
     const disc=i===0?1:discounts[i-1];
-    const f=i===0?-I0:flows[i];
+    const f=flows[i];
     pv=f===null||pv===null?null:pv+f/disc;
     if(i>0&&flows[i]!==null){ const prev=cum; cum+=flows[i]; if(payback===null&&cum>=0&&flows[i]>0) payback=(i-1)+(-prev/flows[i]); }
     pvCum.push(pv);
@@ -1553,7 +1586,7 @@ function compute(s0){
   if(products.some(p=>p.rows[0]&&p.rows[0].lost>0)) diag.push({level:'amber',t:'Y1 초기재고 부족',text:'현재재고가 첫 달 수요보다 적습니다.'});
 
   return enrichDetail({s,H,NM,off,t0:t0rec,t0fcff,t0In,t0Out,months,products,invGroups,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,wcNeedYears,opFundYears,
-    tv,tvMode,tvValid,navTV,I0,cash0,openingStock,vat,totals,minCash,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,niM,cfoM,repayM,debtM,interestM,
+    tv,tvMode,tvValid,navTV,I0,cash0,openingStock,vat,totals,minCash,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,receivables,payables,niM,depM,cfoM,repayM,debtM,interestM,
     diag,funding,equityIrr:eqIrr,moic,exitEquity,eqCF:eqCF,flows,pvCum,
     bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,invest:s.invest.longInvest,vatCredit:vat.opening,vatDue:0,
       assets:cash0+openingStock+s.invest.capex+s.invest.intangible+s.invest.longInvest+vat.opening,ap:0,debt:s.invest.debt,
@@ -1564,7 +1597,7 @@ function compute(s0){
 function wcYear(s,y){const w=s.wc?.years?.[y]||{};return Object.fromEntries(['prepaid','receivable','advance','accrued'].map(k=>[k,Math.max(0,num(w[k]))]));}
 function wcT0(s){const w=(s.wc&&s.wc.t0)||{};return Object.fromEntries(['prepaid','receivable','advance','accrued'].map(k=>[k,Math.max(0,num(w[k]))]));}
 function wcMonth(s,i){const y=Math.floor(i/12),f=(i%12+1)/12,a=y?wcYear(s,y-1):wcT0(s),b=wcYear(s,y);return Object.fromEntries(Object.keys(b).map(k=>[k,a[k]+(b[k]-a[k])*f]));}
-function wcPhase(s,i){const off=t0MonthsOf(s);if(i<off){const w=wcT0(s);return{prev:w,now:w};}const j=i-off,y=Math.floor(j/12),a=y?wcYear(s,y-1):wcT0(s),b=wcYear(s,y);return{prev:a,now:Object.fromEntries(Object.keys(b).map(k=>[k,a[k]+(b[k]-a[k])*((j%12+1)/12)]))};}
+function wcPhase(s,i){const off=t0MonthsOf(s),zero={prepaid:0,receivable:0,advance:0,accrued:0};if(i<off){const w=wcT0(s);return{prev:i?w:zero,now:w};}const j=i-off,y=Math.floor(j/12),a=y?wcYear(s,y-1):off?wcT0(s):zero,b=wcYear(s,y),at=f=>Object.fromEntries(Object.keys(b).map(k=>[k,a[k]+(b[k]-a[k])*f]));return{prev:at(j%12/12),now:at((j%12+1)/12)};}
 function operatingNWC(b){return b.ar+b.inv+(b.prepaid||0)+(b.receivable||0)+(b.vatCredit||0)-b.ap-(b.advance||0)-(b.accrued||0)-(b.vatDue||0);}
 function enrichDetail(r){
   const keys=['rev','productCost','mfgAlloc','cogs','gp','sellingAlloc','varCost','cm','qty'];
@@ -1589,13 +1622,14 @@ function enrichDetail(r){
   r.accountTree={tree,totals,keys,unallocated:fallback};
   r.segment=lvl=>{const nodes=[];function find(a,names=[]){a.forEach(n=>{const path=names.concat(n.name);if(n.depth===lvl)nodes.push({n,path});else find(n.children,path);});}find(tree);const total=r.totals.rev||1;return nodes.map(({n,path})=>{const a=Object.fromEntries(keys.map(k=>[k,n.years.reduce((v,y)=>v+y[k],0)])),gp=a.gp;return {...a,id:n.key,name:path.join(' › '),gm:a.rev?gp/a.rev:0,share:a.rev/total};}).sort((a,b)=>b.rev-a.rev);};
   const wcFields=[['ar','매출채권','dAR',-1],['inv','재고자산','dInv',-1],['ap','매입채무','dAP',1],['advance','선수금 등','dAdvance',1],['accrued','미지급금 등','dAccrued',1],['prepaid','선급금 등','dPrepaid',-1],['receivable','미수금 등','dReceivable',-1],['vatCredit','부가세대급금','dVatCredit',-1],['vatDue','부가세예수금','dVatDue',1]];
-  const vOff=r.off||0,t0chg=k=>!vOff?0:(k==='ar'?r.arM[vOff-1]:k==='ap'?r.apM[vOff-1]:k==='inv'?r.invM[vOff-1]-r.openingStock:k==='vatCredit'?r.vat.rows[vOff-1].credit-r.vat.opening:k==='vatDue'?r.vat.rows[vOff-1].due:0);
-  r.wcLines=wcFields.map(([key,label,d,sign])=>({key,label,values:[key==='inv'&&!vOff?-r.openingStock:key==='vatCredit'&&!vOff?-r.vat.opening:t0chg(key),...r.cf.map(c=>sign*(c[d]||0))]}));
+  const vOff=r.off||0,t0chg=k=>!vOff?0:(k==='ar'?r.arM[vOff-1]:k==='ap'?r.apM[vOff-1]:k==='inv'?r.invM[vOff-1]-r.openingStock:k==='vatCredit'?r.vat.rows[vOff-1].credit-r.vat.opening:k==='vatDue'?r.vat.rows[vOff-1].due:wcT0(r.s)[k]||0);
+  r.wcLines=wcFields.map(([key,label,d,sign])=>({key,label,values:[sign*t0chg(key),...r.cf.map(c=>sign*(c[d]||0))]}));
   const cOff=r.off||0,cfoT0=cOff?r.cfoM.slice(0,cOff).reduce((a,b)=>a+b,0):0,end0=cOff?r.cashM[cOff-1]:r.cash0;
-  r.cf0={cfo:cfoT0,cfi:-(r.s.invest.capex+r.s.invest.intangible+(r.s.invest.longInvest||0)+r.openingStock+r.vat.opening),cff:r.s.invest.equity+r.s.invest.debt,begin:r.s.assume.openingCash,end:end0,net:end0-r.s.assume.openingCash};
+  r.cf0={cfo:cfoT0,cfi:-r.I0,cff:r.s.invest.equity+r.s.invest.debt-(r.t0?.repay||0),begin:r.s.assume.openingCash,end:end0,net:end0-r.s.assume.openingCash};
   r.fcffDetails={inflows:[],outflows:[],pv:r.flows.map((f,i)=>f===null?null:f/(i?r.discounts[i-1]:1))};
-  r.fcffDetails.inflows=Array.from({length:r.H+1},(_,i)=>i===0?(r.t0In||0):r.fcf[i-1].nopat+r.fcf[i-1].dep+r.wcLines.reduce((v,l)=>v+Math.max(0,l.values[i]),0)+(i===r.H?r.tv||0:0));
-  r.fcffDetails.outflows=Array.from({length:r.H+1},(_,i)=>i===0?r.I0+(r.t0Out||0):r.wcLines.reduce((v,l)=>v+Math.max(0,-l.values[i]),0));
+  const t0Operating=r.t0?r.t0.ebit-Math.max(0,r.t0.ebit)*assumeYear(r.s,0).taxRate/100+r.t0.dep:0;
+  r.fcffDetails.inflows=Array.from({length:r.H+1},(_,i)=>(i===0?t0Operating:r.fcf[i-1].nopat+r.fcf[i-1].dep)+r.wcLines.reduce((v,l)=>v+Math.max(0,l.values[i]),0)+(i===r.H?r.tv||0:0));
+  r.fcffDetails.outflows=Array.from({length:r.H+1},(_,i)=>(i===0?r.I0:0)+r.wcLines.reduce((v,l)=>v+Math.max(0,-l.values[i]),0));
   r.fcffDetails.cumulative=[];let c=0;r.flows.forEach(f=>{c=c===null||f===null?null:c+f;r.fcffDetails.cumulative.push(c);});
   return extendMonthly(r);
 }
@@ -1693,13 +1727,13 @@ function rankPayroll(s,y){
 function extendMonthly(r){
   const s=r.s,off=r.off||0,t0p=r.t0;let retained=0;const monthly=[];
   r.months.forEach((month,i)=>{
-    const t0m=!!month.t0,y=t0m?-1:month.yi,p=t0m?t0p:r.pl[y],tax=r.vat.rows[i],wp=wcPhase(s,i),wc=wp.now,prev=i?monthly[i-1]:{ar:0,ap:0,inv:r.openingStock,...wcT0(s),vatCredit:r.vat.opening,vatDue:0},qty=r.products.reduce((v,p)=>v+p.rows[i].sold,0);
-    const dv=t0m?t0p.div:12,cogs=r.cogsM[i]+p.pay.mfg/dv,rev=r.revM[i],sga=(p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt)/dv,gp=rev-cogs,dep=p.dep/dv,ebit=gp-sga-p.pay.sga/dv-dep,ni=r.niM[i];retained+=ni;
+    const t0m=!!month.t0,y=t0m?-1:month.yi,p=t0m?t0p:r.pl[y],tax=r.vat.rows[i],wp=wcPhase(s,i),wc=wp.now,prev=i?monthly[i-1]:{ar:0,ap:0,inv:r.openingStock,vatCredit:r.vat.opening,vatDue:0},qty=r.products.reduce((v,p)=>v+p.rows[i].sold,0);
+    const dv=t0m?t0p.div:12,cogs=r.cogsM[i]+p.pay.mfg/dv,rev=r.revM[i],sga=(p.sga.fixed.amt+p.sga.semi.amt+p.sga.variable.amt)/dv,gp=rev-cogs,dep=r.depM[i],ebit=gp-sga-p.pay.sga/dv-dep,ni=r.niM[i];retained+=ni;
     const lifeM=Math.max(1,Math.round(s.invest.capexLife*12)),lifeI=Math.max(1,Math.round(s.invest.intangibleLife*12));
     const ppe=Math.max(0,s.invest.capex-(s.invest.capex/lifeM)*Math.min(lifeM,i+1)),intang=Math.max(0,s.invest.intangible-(s.invest.intangible/lifeI)*Math.min(lifeI,i+1));
     const el1=t0m?(i+1):((i-off)%12+1),dvE=t0m?t0p.div:12;
-    const otherAsset=(t0m?0:r.pl.slice(0,y).reduce((a,p)=>a+p.nonop.incNonCash.amt,0))+p.nonop.incNonCash.amt*el1/dvE,otherLiab=(t0m?0:r.pl.slice(0,y).reduce((a,p)=>a+p.nonop.expNonCash.amt,0))+p.nonop.expNonCash.amt*el1/dvE;
-    const assets=r.cashM[i]+r.arM[i]+r.invM[i]+ppe+intang+otherAsset+wc.prepaid+wc.receivable+tax.credit,liab=r.apM[i]+r.debtM[i]+otherLiab+wc.advance+wc.accrued+tax.due,equity=s.invest.equity+s.assume.openingCash+retained;
+    const otherAsset=(t0m?0:r.pl.slice(0,y).reduce((a,p)=>a+p.nonop.incNonCash.amt,t0p?.nonop.incNonCash.amt||0))+p.nonop.incNonCash.amt*el1/dvE,otherLiab=(t0m?0:r.pl.slice(0,y).reduce((a,p)=>a+p.nonop.expNonCash.amt,t0p?.nonop.expNonCash.amt||0))+p.nonop.expNonCash.amt*el1/dvE;
+    const assets=r.cashM[i]+r.arM[i]+r.invM[i]+ppe+intang+s.invest.longInvest+otherAsset+wc.prepaid+wc.receivable+tax.credit,liab=r.apM[i]+r.debtM[i]+otherLiab+wc.advance+wc.accrued+tax.due,equity=s.invest.equity+s.assume.openingCash+retained;
     const b={ar:r.arM[i],ap:r.apM[i],inv:r.invM[i],...wc,vatCredit:tax.credit,vatDue:tax.due},dnwc=operatingNWC(b)-operatingNWC(prev),nopat=ebit-Math.max(0,p.ebit)*assumeYear(s,t0m?0:y).taxRate/100/dvE,fcff=nopat+dep-dnwc;
     const tv=i===r.NM-1?r.tv:0,flow=tv===null?null:fcff+tv;
     const parts=p.pay.sgaComponents?Object.fromEntries(PAY_COMPONENTS.map(([k])=>['pay_'+k,(num(p.pay.sgaComponents[k])+num(p.pay.mfgComponents[k]))/dvE])):{pay_salary:p.pay.total/dvE};
@@ -1955,8 +1989,8 @@ function buildFundingPlan(r){
 function openingTopUp(r){return Math.ceil(Math.max(0,r.minCash-r.cash0,...r.cashM.map((v,i)=>r.minCashYears[r.months[i].t0?0:r.months[i].yi]-v))-1e-7);}
 function operatingCashParts(r,i){
   const m=r.months[i],p=m.t0?r.t0:r.pl[m.yi],d=p.div||12,v=r.vat.rows[i];
-  const receipts=v.salesGross+(i?r.arM[i-1]:0)-r.arM[i];
-  const payments=v.purchaseGross+(i?r.apM[i-1]:0)-r.apM[i];
+  const receipts=r.receivables.paid[i];
+  const payments=r.payables.paid[i];
   const items=[['판매대금 회수',receipts],['상품 매입 지급',-payments],['제조 인건비',-p.pay.mfg/d],['판매·관리 인건비',-p.pay.sga/d],['고정 판관비',-p.sga.fixed.amt/d],['준변동 판관비',-p.sga.semi.amt/d],['변동 판관비',-p.sga.variable.amt/d],['영업외 현금 수익',p.nonop.incCash.amt/d],['영업외 현금 비용',-p.nonop.expCash.amt/d],['이자비용',-p.intr/d],['법인세 반영액',-p.tax/d],['부가세 정산(납부·환급)',v.refunded-v.paid]];
   items.push(['기타 운전자본·부가세 및 월 배분 조정',r.cfoM[i]-items.reduce((a,[,n])=>a+n,0)]);
   return items;
@@ -2329,7 +2363,7 @@ function renderInvLedger(){
     const short=sel.reduce((a,g)=>a+g.members.reduce((v,p)=>v+(p.rows[i]?.lost||0)*(p.rows[i]?.price||0),0),0);
     if(short)tShort+=short; if(shortQ)tShortQty+=shortQ;
     const cash=(i?R.cashM[i-1]:R.cash0)+topUp;
-    const collected=R.vat.rows[i].salesGross+(i?R.arM[i-1]:0)-R.arM[i];
+    const collected=R.receivables.paid[i];
     const closing=R.cashM[i]+topUp,floor=R.minCashYears[R.months[i].t0?0:R.months[i].yi];
     const available=Math.max(0,closing-floor), reserveGap=Math.max(0,floor-closing);
     const companyOrders=groups.flatMap(g=>(g.orders||[]).filter(o=>o.month===i));
@@ -2355,10 +2389,10 @@ function renderInvLedger(){
   t._pending=pending;t._pendMonths=[...pendMonths].join(', ');
   const cap=document.getElementById('ledgerCap');
   if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 입고 예정일은 발주일 + 리드타임(달력일)입니다.'+(pend>0?`<br><b>다음 기간 입고 ${won(pend)}개</b> · 입고 예정월 ${pm}`:'')+(tShortQty>0?`<br><b class="neg">미충족 수요 ${won(tShortQty)}개 · 판매 기준 ${man(tShort)}</b>`:'<br><b>미충족 수요 0개</b> · 선택 기간의 제품별 월 수요를 모두 충족합니다.');}
-  if(cap)cap.innerHTML+='<br>판매대금 회수 추정 = 기초 매출채권 + 당월 청구액 − 기말 매출채권. 월말 현금에 이미 반영되므로 다시 더하지 않습니다. 월말 결제 여력은 최소 운영현금을 남긴 뒤의 잔액(최저 0)입니다. 회사 전체 발주액(부가세 포함)을 월말에 추가 결제할 수 있는지 보는 보수적 점검입니다. 이미 반영된 매입 지급이 있을 수 있으므로 실제 미지급액이나 발주일 당일의 지급 가능 여부를 뜻하지 않습니다.';
+  if(cap)cap.innerHTML+='<br>실제판매의 부가세 포함 청구액을 판매월의 달력일에 균등 배분하고, 청구 당시 회수일수를 적용합니다. 매입은 건별 입고일의 지급조건을 적용합니다. 회수·지급은 월말 현금에 이미 반영되며, 월말 결제 여력은 최소 운영현금을 유보한 금액입니다. 발주자금 확인은 별도의 즉시 추가 결제 점검이며, 실제 지급일이나 이미 지급한 금액을 뜻하지 않습니다.';
   if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
   if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 부족액은 결제 가정액과 최소 운영현금을 모두 충당하는 데 필요한 추가 현금입니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
-  if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 자동 추가투입 ${man(topUp)} = <b>${man(R.cash0+topUp)} ${unitLabel()}</b><br>`+cap.innerHTML+renderT0CashBridge(R,topUp);
+  if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 자동 추가투입 ${man(topUp)} = <b>${man(R.cash0+topUp)} ${unitLabel()}</b><br>`+cap.innerHTML+receivablesAuditHtml(R,ledgerYear<0?0:R.off+ledgerYear*12,NMw)+renderT0CashBridge(R,topUp);
 }
 function renderT0CashBridge(r,topUp){
   if(!r.off)return '';
@@ -2532,6 +2566,20 @@ function managementRows(r){
   const cost=(l,f)=>({l,v:pl.map(f),sub:true,cls:'ind2'});
   return [amounts('매출액',g=>g.rev,'strong','rev'),{l:'매출원가 · 제품원가 + 제조인건비 배부',v:pl.map(p=>-p.cogs),metric:'cogs',sign:-1},amounts('변동비',g=>-g.varCost,'grprow','varCost',-1),cost('· 제품·상품 매출원가',p=>-(p.cogs-p.pay.mfg)),cost('· 제조인건비',p=>-p.pay.mfg),cost('· 변동 판관비',p=>-p.sga.variable.amt),amounts('공헌이익',g=>g.cm,'subtotal','cm'),amounts('공헌이익률',g=>pcv(g.cmRatio),'subtotal'),amounts('고정비',g=>-g.fixed,'grprow'),cost('· 인건비 (판관)',p=>-p.pay.sga),cost('· 고정비',p=>-p.sga.fixed.amt),cost('· 준변동비',p=>-p.sga.semi.amt),cost('· 감가상각비',p=>-p.dep),amounts('영업이익',g=>g.op,'subtotal'),amounts('BEP 매출액',g=>g.bep??'—','total'),amounts('안전율 (매출−BEP)/매출',g=>pcv(g.margin),'total'),amounts('영업레버리지 (DOL)',g=>g.dol==null?'—':g.dol.toFixed(2)+'배','total')];
 }
+function financialRatioRows(r){
+  const days=r.months.slice(0,r.off).reduce((a,m)=>a+m.days,0);
+  const periods=r.pl.map((p,y)=>({p,b:r.bs[y],days:365,prev:y?r.pl[y-1]:null,t0:false}));
+  if(r.t0&&r.t0bs)periods.unshift({p:r.t0,b:r.t0bs,days,prev:null,t0:true});
+  const row=(l,f)=>({l,v:periods.map(f),sub:true});
+  const group=l=>({l,v:periods.map(()=>''),cls:'grprow'});
+  const pctOf=(n,d,t0)=>pcv(d?n/d:t0?null:0);
+  const turn=(balance,base,d)=>base>0?Math.round(balance*d/base)+'일':'—';
+  return [group('성장성'),row('매출증가율',({p,prev})=>prev?.rev?pcv(p.rev/prev.rev-1):'—'),row('영업이익증가율',({p,prev})=>prev?.ebit?pcv(p.ebit/prev.ebit-1):'—'),
+    group('수익성'),row('매출총이익률',({p,t0})=>t0?pcv(p.rev?p.gp/p.rev:null):pcv(p.gm)),row('영업이익률',({p,t0})=>t0?pcv(p.rev?p.ebit/p.rev:null):pcv(p.om)),row('순이익률',({p,t0})=>t0?pcv(p.rev?p.ni/p.rev:null):pcv(p.nm)),
+    row('ROE (순이익/자본)',({p,b,t0})=>pctOf(p.ni,b.equity,t0)),row('ROA (순이익/자산)',({p,b,t0})=>pctOf(p.ni,b.assets,t0)),
+    group('안정성'),row('부채비율',({b,t0})=>pctOf(b.liab,b.equity,t0)),row('유동비율',({b,t0})=>pctOf(b.cash+b.ar+b.inv,b.ap,t0)),row('이자보상배율',({p})=>p.intr?(p.ebit/p.intr).toFixed(2)+'배':'—'),
+    group('활동성'),row('재고자산회전일',({p,b,days})=>turn(b.inv,p.cogs,days)),row('매출채권회전일',({p,b,days})=>turn(b.ar,p.rev,days)),row('매입채무회전일',({p,b,days})=>turn(b.ap,p.cogs,days))];
+}
 function renderFinance(){
   {const _n0=document.getElementById('stmtNote'); if(_n0){_n0.hidden=false;if(_n0.parentElement)_n0.parentElement.hidden=false;}}
   if(!document.getElementById('stmtTable')) return;
@@ -2634,22 +2682,23 @@ function renderFinance(){
     const b0=R.bs0;
     const c=k=>[off?(R.t0bs[k]!=null?R.t0bs[k]:0):(b0[k]!=null?b0[k]:0),...R.bs.map(b=>b[k])];
     const rows=[];
-    rows.push({l:'자산',v:R.pl.map(()=>''),cls:'grprow'});
+    rows.push({l:'자산',v:c('assets').map(()=>''),cls:'grprow'});
     rows.push({l:'현금',v:c('cash'),sub:true});
-    rows.push({l:'매출채권',v:c('ar'),sub:true});
+    rows.push({l:'매출채권 · 미회수 청구액(부가세 포함)',v:c('ar'),sub:true});
     rows.push({l:'재고자산',v:c('inv'),sub:true});
     ['prepaid','receivable'].forEach((k,i)=>rows.push({l:['선급금 등','미수금 등'][i],v:[off?(R.t0bs[k]!=null?R.t0bs[k]:0):0,...R.bs.map(b=>b[k])],sub:true}));
     rows.push({l:'유형자산 (순)',v:c('ppe'),sub:true});
     rows.push({l:'무형자산 (순)',v:c('intang'),sub:true});
-    rows.push({l:'비현금 수익 대응자산',v:[0,...R.bs.map(b=>b.otherAsset)],sub:true});
+    rows.push({l:'기타 투자자산',v:[R.bs0.invest,...R.bs.map(b=>b.invest)],sub:true});
+    rows.push({l:'비현금 수익 대응자산',v:c('otherAsset'),sub:true});
     rows.push({l:'자산 합계',v:c('assets'),cls:'subtotal'});
-    rows.push({l:'부채',v:R.pl.map(()=>''),cls:'grprow'});
+    rows.push({l:'부채',v:c('liab').map(()=>''),cls:'grprow'});
     rows.push({l:'매입채무',v:c('ap'),sub:true});
     ['advance','accrued'].forEach((k,i)=>rows.push({l:['선수금 등','미지급금 등'][i],v:[off?(R.t0bs[k]!=null?R.t0bs[k]:0):0,...R.bs.map(b=>b[k])],sub:true}));
     rows.push({l:'차입금',v:c('debt'),sub:true});
-    rows.push({l:'비현금 비용 대응부채',v:[0,...R.bs.map(b=>b.otherLiab)],sub:true});
+    rows.push({l:'비현금 비용 대응부채',v:c('otherLiab'),sub:true});
     rows.push({l:'부채 합계',v:c('liab'),cls:'subtotal'});
-    rows.push({l:'자본',v:R.pl.map(()=>''),cls:'grprow'});
+    rows.push({l:'자본',v:c('equity').map(()=>''),cls:'grprow'});
     rows.push({l:'납입자본',v:c('capital'),sub:true});
     rows.push({l:'이익잉여금',v:c('retained'),sub:true});
     rows.push({l:'자본 합계',v:c('equity'),cls:'subtotal'});
@@ -2661,27 +2710,8 @@ function renderFinance(){
   else{
     document.getElementById('stmtTitle').textContent='재무비율';
     document.getElementById('stmtDesc').textContent='성장성 · 수익성 · 안정성 · 활동성.';
-    const g=(arr,f)=>R.pl.map((p,y)=>y?f(p,R.pl[y-1]):null);
-    const rows=[];
-    rows.push({l:'성장성',v:R.pl.map(()=>''),cls:'grprow'});
-    rows.push({l:'매출증가율',v:R.pl.map((p,y)=>y&&R.pl[y-1].rev?pcv(p.rev/R.pl[y-1].rev-1):'—'),sub:true});
-    rows.push({l:'영업이익증가율',v:R.pl.map((p,y)=>y&&R.pl[y-1].ebit?pcv(p.ebit/R.pl[y-1].ebit-1):'—'),sub:true});
-    rows.push({l:'수익성',v:R.pl.map(()=>''),cls:'grprow'});
-    rows.push({l:'매출총이익률',v:R.pl.map(p=>pcv(p.gm)),sub:true});
-    rows.push({l:'영업이익률',v:R.pl.map(p=>pcv(p.om)),sub:true});
-    rows.push({l:'순이익률',v:R.pl.map(p=>pcv(p.nm)),sub:true});
-    rows.push({l:'ROE (순이익/자본)',v:R.pl.map((p,y)=>pcv(R.bs[y].equity?p.ni/R.bs[y].equity:0)),sub:true});
-    rows.push({l:'ROA (순이익/자산)',v:R.pl.map((p,y)=>pcv(R.bs[y].assets?p.ni/R.bs[y].assets:0)),sub:true});
-    rows.push({l:'안정성',v:R.pl.map(()=>''),cls:'grprow'});
-    rows.push({l:'부채비율',v:R.pl.map((p,y)=>pcv(R.bs[y].equity?R.bs[y].liab/R.bs[y].equity:0)),sub:true});
-    rows.push({l:'유동비율',v:R.pl.map((p,y)=>pcv(R.bs[y].ap?((R.bs[y].cash+R.bs[y].ar+R.bs[y].inv)/R.bs[y].ap):0)),sub:true});
-    rows.push({l:'이자보상배율',v:R.pl.map(p=>p.intr? (p.ebit/p.intr).toFixed(2)+'배':'—'),sub:true});
-    rows.push({l:'활동성',v:R.pl.map(()=>''),cls:'grprow'});
-    rows.push({l:'재고자산회전일',v:R.pl.map((p,y)=>{const inv=R.bs[y].inv;return p.cogs>0?Math.round(inv/(p.cogs/365))+'일':'—';}),sub:true});
-    rows.push({l:'매출채권회전일',v:R.pl.map((p,y)=>{const ar=R.bs[y].ar;return p.rev>0?Math.round(ar/(p.rev/365))+'일':'—';}),sub:true});
-    rows.push({l:'매입채무회전일',v:R.pl.map((p,y)=>{const ap=R.bs[y].ap;return p.cogs>0?Math.round(ap/(p.cogs/365))+'일':'—';}),sub:true});
-    T.innerHTML=buildStmt(rows,P);
-    document.getElementById('stmtNote').innerHTML='<b>비율 해석</b> — 부채비율 200% 이하, 이자보상배율 3배 이상이면 안정적입니다. 재고자산회전일이 길어지면 「재고 · 발주」에서 안전재고·목표커버를 줄여보세요.';
+    T.innerHTML=buildStmt(financialRatioRows(R),R.t0&&R.t0bs?[`T0<span class="u">${t0Label(S)}</span>`,...P]:P);
+    document.getElementById('stmtNote').innerHTML=R.t0&&R.t0bs?'T0는 개시월~12월 손익과 12월 말 재무상태 잔액을 사용합니다. 수익률은 연간 환산하지 않고, 회전일은 T0의 달력일 수로 계산합니다. 비교할 전년이 없거나 Y1과 T0의 기간이 달라 성장률은 Y2부터 표시합니다.':'1월 개시 시 별도 T0 운영기간이 없어 Y1부터 표시합니다.';
   }
 }
 
@@ -3185,7 +3215,7 @@ function nestedTable(nodes,scope,head){
 function cashflowNodes(){
   const p=R.t0,off=R.off||0,last=off-1,vat=R.vat.rows[last];
   const ni=p?.ni||0,dep=p?.depPPE||0,amort=p?.depInt||0,exp=p?.nonop.expNonCash.amt||0,inc=p?.nonop.incNonCash.amt||0,repay=p?.repay||0;
-  const t0wc=off?{ar:-R.arM[last],inv:R.openingStock-R.invM[last],ap:R.apM[last],vatCredit:R.vat.opening-vat.credit,vatDue:vat.due}:{};
+  const t0wc=off?Object.fromEntries(R.wcLines.map(l=>[l.key,l.values[0]])):{};
   const v=(field,initial=0)=>[initial,...R.cf.map(c=>c[field]||0)],zero=Array(R.H+1).fill(0),wc=R.wcLines.map(l=>({id:'wc-'+l.key,label:l.label+(['ap','advance','accrued','vatDue'].includes(l.key)?' 증가(+) / 감소(−)':' 감소(+) / 증가(−)'),values:[t0wc[l.key]||0,...l.values.slice(1)]}));
   const adjustment=R.cf0.cfo-ni-dep-amort-exp+inc-wc.reduce((a,l)=>a+l.values[0],0);
   return [
@@ -3195,7 +3225,7 @@ function cashflowNodes(){
       {id:'noncash-inc',label:'현금유입 없는 수익 차감(−)',values:v('nonCashInc',inc).map(x=>-x),children:[{id:'other-inc',label:'기타비현금수익',values:v('nonCashInc',inc).map(x=>-x)}]},
       {id:'wc',label:'영업자산부채 변동 증감(ΔWC)',values:Array.from({length:R.H+1},(_,i)=>wc.reduce((v,l)=>v+l.values[i],0)),children:wc},...(off&&Math.abs(adjustment)>0.000001?[{id:'t0-reconcile',label:'T0 기타 조정 · 월별 현금원장 대사 차이',values:[adjustment,...R.cf.map(()=>0)]}]:[])]},
     {id:'cfi',label:'Ⅱ. 투자활동 현금흐름',cls:'subtotal',values:v('cfi',R.cf0.cfi),children:[{id:'capex',label:'CAPEX · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.capex-R.vat.assetVat.capex,...R.cf.map(()=>0)]},{id:'intangible',label:'무형자산투자 · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.intangible-R.vat.assetVat.intangible,...R.cf.map(()=>0)]}]},
-    {id:'cff',label:'Ⅲ. 재무활동 현금흐름',cls:'subtotal',values:v('cff',R.cf0.cff-repay),children:[{id:'equity',label:'자본유입',values:[S.invest.equity,...R.cf.map(()=>0)]},{id:'debt',label:'차입유입',values:[S.invest.debt,...R.cf.map(()=>0)]},{id:'repay',label:'차입상환',values:v('cff',-repay)}]},
+    {id:'cff',label:'Ⅲ. 재무활동 현금흐름',cls:'subtotal',values:v('cff',R.cf0.cff),children:[{id:'equity',label:'자본유입',values:[S.invest.equity,...R.cf.map(()=>0)]},{id:'debt',label:'차입유입',values:[S.invest.debt,...R.cf.map(()=>0)]},{id:'repay',label:'차입상환',values:v('cff',-repay)}]},
     {id:'net',label:'현금증감',cls:'total',values:v('net',R.cf0.net)},{id:'begin',label:'기초현금 · t0는 기존 보유현금',values:v('begin',R.cf0.begin)},{id:'end',label:'기말현금',cls:'subtotal',values:v('end',R.cf0.end)}
   ];
 }
@@ -3550,8 +3580,12 @@ const financeExtendedBase=renderFinance;renderFinance=function(){if(!Gate.approv
 const valueExtendedBase=renderValue;renderValue=function(){if(!Gate.approved)return;valueExtendedBase();renderCurrencyPanels();};
 function appendFinanceDetails(){
   const table=$('#stmtTable');if(!table)return;
+  const note=$('#stmtNote');if(note){note.insertAdjacentHTML('beforeend',`<div class="cap">${RECEIVABLES_REVISION} · ${R.off?'T0 '+t0Label(S):'1월 개시: 별도 T0 운영기간 없음'}</div>`);
+    if(['cf','bs','ratio'].includes(finTab)){const from=t0Sel?0:R.off+editYear*12,to=t0Sel?R.off:from+12;
+      if(R.off)note.insertAdjacentHTML('beforeend',receivablesAuditHtml(R,0,R.off));
+      if(!t0Sel)note.insertAdjacentHTML('beforeend',receivablesAuditHtml(R,from,to));}}
   if(finTab==='mgmt'&&R.pl[0].pay.sgaComponents){const periods=R.t0?[R.t0,...R.pl]:R.pl;const rows=PAY_COMPONENTS.map(([k,n])=>`<tr><td class="l ind">판관 인건비 · ${n}</td>${periods.map(p=>'<td>'+m(-num(p.pay.sgaComponents?.[k]))+'</td>').join('')}</tr>`).join('');table.tBodies[0].insertAdjacentHTML('beforeend',rows);}
-  if(finTab==='bs'){table.tBodies[0].insertAdjacentHTML('beforeend',`<tr><td class="l">부가세대급금 (자산합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatCredit)+'</td>').join('')}</tr><tr><td class="l">부가세예수금 (부채합계에 포함)</td>${[R.bs0,...R.bs].map(b=>'<td>'+m(b.vatDue)+'</td>').join('')}</tr>`);}
+  if(finTab==='bs'){table.tBodies[0].insertAdjacentHTML('beforeend',`<tr><td class="l">부가세대급금 (자산합계에 포함)</td>${[R.t0bs||R.bs0,...R.bs].map(b=>'<td>'+m(b.vatCredit)+'</td>').join('')}</tr><tr><td class="l">부가세예수금 (부채합계에 포함)</td>${[R.t0bs||R.bs0,...R.bs].map(b=>'<td>'+m(b.vatDue)+'</td>').join('')}</tr>`);}
 }
 const extendedMountBase=mountApproved;mountApproved=function(...args){extendedMountBase(...args);if(Gate.approved){renderExtensions();if(typeof saveBadge==='function')saveBadge();}};
 function renderCurrencyPanels(){
@@ -3920,9 +3954,6 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
-
-
-
 
 
 
