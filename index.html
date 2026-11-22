@@ -1087,11 +1087,15 @@ function simulateProduct(p,cfg,months,H,s){
   const leads=rules.map(c=>Math.ceil(Math.max(0,num(c.lead))));
   const dated=typeof cfg.firstOrderDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(cfg.firstOrderDate)?Date.parse(cfg.firstOrderDate+'T00:00:00Z')/PLAN_DAY:NaN;
   const earliest=Number.isFinite(dated)?Math.max(days[0],dated):cfg.firstOrder==null?days[0]:(days[cfg.firstOrder]??Infinity);
+  const manualQty=Math.max(0,Math.floor(num(cfg.firstOrderQty,0)));
+  const monthAt=day=>days.findLastIndex(start=>start<=day);
+  const lastDay=days.at(-1)+months.at(-1).days-1;
+  const manualMonth=manualQty&&earliest<=lastDay?monthAt(earliest):-1;
   const findOrder=i=>{
     for(let j=i;j>=0;j--){
       const last=days[j]+months[j].days-1;
       const orderDay=Math.min(last,days[i]-leads[j]);
-      if(orderDay<Math.max(days[j],earliest))continue;
+      if(orderDay<Math.max(days[j],earliest)||j<=manualMonth)continue;
       const arrivalDay=orderDay+leads[j];
       let k=i; while(days[k]>arrivalDay)k--;
       return {month:j,arrMonth:k,orderDay,arrivalDay};
@@ -1108,10 +1112,21 @@ function simulateProduct(p,cfg,months,H,s){
   }
   const enteredStock=Math.max(0,Math.floor(num(cfg.stock))), effectiveOpening=enteredStock;
   const rows=[],orders=[], receipts=Array.from({length:NM},()=>[]), placements=Array.from({length:NM},()=>[]),targets=[];
+  function record(slot,qty,manual=false){
+    const py=productYear(p,years[slot.month]);
+    const order={...slot,qty,manual,amount:qty*py.cost,supply:qty*(py._purchaseSupply??py.cost),vat:qty*(py._purchaseTax||0),deduct:qty*(py._purchaseDeduct||0),gross:qty*(py._purchaseSupply??py.cost)+qty*(py._purchaseTax||0)};
+    orders.push(order);placements[slot.month].push(order);if(receipts[slot.arrMonth])receipts[slot.arrMonth].push(order);
+  }
+  let manualArrival=-1;
+  if(manualMonth>=0){
+    const arrivalDay=earliest+leads[manualMonth];manualArrival=arrivalDay<=lastDay?monthAt(arrivalDay):NM;
+    record({month:manualMonth,arrMonth:manualArrival,orderDay:earliest,arrivalDay},manualQty,true);
+  }
   const active=dem.some(q=>q>0);
   let projected=effectiveOpening;
   for(let i=0;i<NM;i++){
     const slot=slots[i];
+    if(manualArrival===i)projected+=manualQty;
     let cover=coverOf(cfg,years[i]), future=0;
     for(let j=i+1;j<NM&&cover>0;j++){ const use=Math.min(cover,months[j].days);future+=dem[j]*use/months[j].days;cover-=use; }
     const trigger=dem[i]+safety[i], target=trigger+Math.ceil(future);
@@ -1119,9 +1134,7 @@ function simulateProduct(p,cfg,months,H,s){
     if(active&&slot&&(dem[i]>0||future>0)&&projected<trigger){
       const cy=rules[slot.month], lot=Math.max(1,Math.ceil(num(cy.lot,1))), moq=Math.max(0,Math.ceil(num(cy.moq)));
       const qty=Math.ceil(Math.max(moq,target-projected)/lot)*lot;
-      const py=productYear(p,years[slot.month]), unitCost=py.cost;
-      const order={...slot,qty,amount:qty*unitCost,supply:qty*(py._purchaseSupply??unitCost),vat:qty*(py._purchaseTax||0),deduct:qty*(py._purchaseDeduct||0),gross:qty*(py._purchaseSupply??unitCost)+qty*(py._purchaseTax||0)};
-      orders.push(order); placements[slot.month].push(order);receipts[slot.arrMonth].push(order);projected+=qty;
+      record(slot,qty);projected+=qty;
     }
     projected=Math.max(0,projected-dem[i]);
   }
@@ -1224,6 +1237,7 @@ function applyInvEdit(el,value){
   const f=el.dataset.pf;
   ids.forEach((id,ix)=>{
     const c=invCfg(S,id);
+    if(f==='firstOrderQty'){const qty=Math.floor(num(el.value,0));if(qty>0)c.firstOrderQty=qty;else delete c.firstOrderQty;return;}
     if(f==='firstOrder'){ c.firstOrder=value==null?null:Math.max(0,Math.round(value)); return; }
     if(f==='firstDate'){
       const v=(el&&el.value!=null)?el.value:'';
@@ -2208,7 +2222,7 @@ function demandCsv(){
 function renderInvSettings(){
   const t=$('#invSettings'); if(!t) return;
   const opt=$('#invStockOpt');
-  if(opt) opt.innerHTML=`<span class="sub"><b>입고된 수량만 판매에 사용합니다.</b> 개시 전에 실제 확보한 재고가 없으면 입력 재고를 0으로 두세요. 첫 입고 전 부족분은 미충족 수요로 표시합니다. 발주 가능 시작일은 주문 확정일이 아닙니다.</span>`;
+  if(opt) opt.innerHTML=`<span class="sub"><b>최초 발주수량을 입력하면 제품별로 그 수량만 발주합니다.</b> 지정한 시작일(미지정 시 사업 개시일)에 발주하며, 같은 달에는 해당 제품을 추가 자동 발주하지 않습니다. 비우거나 0을 입력하면 기존 자동 발주로 돌아갑니다.</span>`;
   const groups=R.invGroups||[];
   const byName=new Map();
   groups.forEach(g=>{ if(!byName.has(g.name)) byName.set(g.name,[]); byName.get(g.name).push(g); });
@@ -2231,11 +2245,12 @@ function renderInvSettings(){
       <td><input class="cell" type="number" min="0" step="10" data-pid="${g.id}" data-gids="${ids}" data-pf="cover" value="${coverOf(c,editYear)}" title="필요 입고월 이후 추가 확보할 수요 기간"></td>
       <td class="fixedcell" title="개당 공급가 · 원">${won(py.cost)}</td><td class="fixedcell" title="개당 공급가 · 원">${won(py.price)}</td>
       <td>${(()=>{const cf=invCfg(S,g.id),order=g.orders[0];return `<input class="cell" type="date" data-pid="${g.id}" data-gids="${ids}" data-pf="firstDate" value="${esc(cf.firstOrderDate||'')}" title="이 날짜부터 신규 발주 가능 · 미지정 시 사업 개시일부터 가능"><div class="sub">${order?`첫 계획 발주 ${planDate(order.orderDay)}<br>첫 계획 입고 ${planDate(order.arrivalDay)}`:'계획기간 내 추가 발주 없음'}</div>`;})()}</td>
+      <td><input class="cell" type="number" min="0" step="1" data-pid="${g.id}" data-gids="${ids}" data-pf="firstOrderQty" value="${num(c.firstOrderQty)>0?Math.floor(num(c.firstOrderQty)):''}" placeholder="자동" aria-label="${esc(g.name)} 최초 발주수량"><div class="sub">${g.orders[0]?.manual?`수동 ${won(g.orders[0].qty)}개`:'미입력 시 자동'}</div></td>
       <td class="fixedcell" title="사전 확보 재고만 반영 · 사업 개시 기준">${man(g.openStock*g.unitCost)}</td>
     </tr>`;
   }).join('');
-  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>입력 재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>목표커버<span class="u">일</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>발주 가능 시작일</th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="11" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
+  t.innerHTML=`<thead><tr><th class="l">제품 · 경로(거래처 제외)</th><th>입력 재고<span class="u">개</span></th><th>리드타임<span class="u">일</span></th><th>안전재고<span class="u">일</span></th><th>최소발주<span class="u">개</span></th><th>발주단위<span class="u">개</span></th><th>목표커버<span class="u">일</span></th><th>원가<span class="u">공급가</span></th><th>판가<span class="u">공급가</span></th><th>발주 가능 시작일</th><th>최초 발주수량<span class="u">개 · 수동</span></th><th>초기재고액<span class="u">${unitLabel()}</span></th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="12" class="l">매출 수요를 먼저 입력하세요.</td></tr>'}</tbody>`;
 }
 
 function renderInventory(){
@@ -2294,7 +2309,7 @@ function renderInvLedger(){
     let open=0,inc=0,out=0,stock=0,ord=0,amt=0;
     sel.forEach(g=>{ const r=g.rows[i]; if(!r) return;
       open+=r.openingQty; inc+=r.arrival; out+=r.sold; stock+=r.stock; ord+=r.ordered; amt+=r.orderAmt;
-      (g.orders||[]).forEach(o=>{ if(o.month===i&&o.arrMonth>=NMw){pending+=o.qty;pendMonths.add(R.months[o.arrMonth]?R.months[o.arrMonth].y+'.'+String(R.months[o.arrMonth].mm).padStart(2,'0'):null);} });
+      (g.orders||[]).forEach(o=>{ if(o.month===i&&o.arrMonth>=NMw){pending+=o.qty;pendMonths.add(planDate(o.arrivalDay).slice(0,7));} });
     });
     const delta=inc-out;
     const shortQ=sel.reduce((a,g)=>a+(g.rows[i]?.lost||0),0);
@@ -3849,7 +3864,6 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
-
 
 
 
