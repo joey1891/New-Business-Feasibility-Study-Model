@@ -133,7 +133,7 @@ table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;
 .cost-period{margin:0 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .cost-period-switch{display:flex;flex-wrap:wrap;gap:6px}.cost-period .help{margin:6px 0 0}
 .cost-overview{display:flex;gap:8px 18px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:9px;margin-top:9px;font-size:12px;color:var(--mut)}.cost-overview b{color:var(--ink);margin-left:4px}
-.cost-editor{min-width:560px}.cost-editor th{white-space:normal}.cost-editor td:first-child{min-width:145px}.cost-editor input.money{min-width:92px}.cost-editor select{padding:5px;font-size:12px}.cost-editor td small{display:block;color:var(--mut)}.cost-editor .cost-auto{color:var(--mut)}.cost-editor .cost-sum{font-weight:700}.cost-editor [data-ce=reset]{display:block;margin:4px 0 0 auto}.cost-editor [data-ce=reset][hidden]{display:none}
+.stmt td .pct{font-size:10px;color:var(--mut);font-weight:600;margin-top:2px}.cost-editor{min-width:560px}.cost-editor th{white-space:normal}.cost-editor td:first-child{min-width:145px}.cost-editor input.money{min-width:92px}.cost-editor select{padding:5px;font-size:12px}.cost-editor td small{display:block;color:var(--mut)}.cost-editor .cost-auto{color:var(--mut)}.cost-editor .cost-sum{font-weight:700}.cost-editor [data-ce=reset]{display:block;margin:4px 0 0 auto}.cost-editor [data-ce=reset][hidden]{display:none}
 #rankSettings .extended-result th{min-width:112px}
 #rankSettings .extended-result th:first-child{min-width:160px}
 #rankSettings .extended-result{min-width:650px}
@@ -2056,10 +2056,11 @@ function calcOpeningCashNeed(s,groups,months,minimums,cash,cash0){
   const first=groups.map(g=>g.orders[0]).filter(Boolean).map(o=>{
     const arrival=months[o.arrMonth];
     const term=arrival?Math.max(0,Math.ceil(num(assumeYear(s,arrival.t0?0:arrival.yi).apDays))):0;
-    return {amount:o.gross,due:arrival?o.arrivalDay+term:Infinity};
+    return {amount:o.gross,due:arrival?o.arrivalDay+term:Infinity,term};
   });
   const payrollBase=minimums[0],firstOrders=first.reduce((a,o)=>a+o.amount,0);
-  const reserve=months.map(m=>{const end=planDay(m.y,m.mm,1)+m.days;return first.reduce((a,o)=>a+(o.due>=end?o.amount:0),0);});
+  // 지급기간 0일(즉시 결제)이면 발주대금을 예치금으로 유보하지 않는다 — 결제가 월 현금흐름에 직접 반영되므로 이중 반영된다.
+  const reserve=months.map(m=>{const end=planDay(m.y,m.mm,1)+m.days;return first.reduce((a,o)=>a+((o.term>0&&o.due>=end)?o.amount:0),0);});
   const floors=months.map((m,i)=>minimums[m.t0?0:m.yi]+reserve[i]);
   // Cash already includes actual payments and working-capital changes. Only carry unpaid first-order reserves.
   const base=payrollBase+firstOrders;
@@ -2068,6 +2069,7 @@ function calcOpeningCashNeed(s,groups,months,minimums,cash,cash0){
     firstList:first.map((o,j)=>({name:groups.filter(g=>g.orders[0]).map(g=>g.orders[0]===o?g.name:null).find(Boolean)||('품목 '+(j+1)),amount:o.amount,arrMonth:o.arrMonth,due:o.due,month:o.arrMonth>=0&&o.arrMonth<months.length?months[o.arrMonth]:null})),
     months};
   detail.payrollMonths=months.map(m=>minimums[m.t0?0:m.yi]);
+  detail.immPay=first.length>0&&first.every(o=>o.term===0);
   detail.reserveMonths=reserve;
   detail.cash0=cash0;
   return detail;
@@ -2519,29 +2521,30 @@ function renderInvLedger(){
     const gross=companyOrders.reduce((v,o)=>v+o.gross,0);
     const receipts=(receiptsByMonth.get(i)||[]).sort((a,b)=>a.arrivalDay-b.arrivalDay||a.orderDay-b.orderDay||a.name.localeCompare(b.name,'ko'));
     const receiptAmount=receipts.reduce((v,o)=>v+o.amount,0);
-    const reserve=reserveMonths[i]||0,stressFloor=floor-reserve; // 발주예치금(reserve)은 결제 가정액과 같은 돈이므로 스트레스 판정에서 재차 빼지 않는다
-    data.push({i,mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,cfo:R.cfoM[i],repay:R.repayM[i],collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,reserve,stressFloor,hasOrder:companyOrders.length>0,gap:closing-gross-stressFloor});
+    const imm=!!R.openingCashNeed.immPay;
+    const reserve=imm?0:(reserveMonths[i]||0),stressFloor=floor-reserve; // 회전일 0이면 예치금 없음 · 발주대금은 월 현금흐름에 이미 반영되어 가정액을 다시 빼지 않는다
+    data.push({i,mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,cfo:R.cfoM[i],repay:R.repayM[i],collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,reserve,stressFloor,imm,hasOrder:companyOrders.length>0,gap:imm?closing-stressFloor:closing-gross-stressFloor});
     if(m===0)tO+=open; tI+=inc; tS+=out; tQ+=ord; tA+=amt; tStock=stock;
   }
-  t.innerHTML=`<thead><tr><th class="l">월</th><th>기초재고<span class="u">개</span></th><th>당기입고<span class="u">개</span></th><th>당기출고<span class="u">개</span></th><th>당기재고<span class="u">증감</span></th><th>기말재고<span class="u">개</span></th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>회사 보유현금<span class="u">월초 · ${unitLabel()}</span></th><th>발주자금 확인<span class="u">회사 전체 · 즉시 결제 가정</span></th></tr></thead><tbody>`+
-    data.map(r=>`<tr><td class="l">${r.mm}월</td><td>${won(r.open)}</td><td>${won(r.inc)}</td><td style="color:${r.delta<0?'var(--red)':'var(--ink2)'}">${r.delta>0?'+':''}${won(r.delta)}${r.short?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(r.short)}</div>`:''}</td><td${r.stock<=0?' style="color:var(--red)"':''}>${won(r.stock)}</td><td class="tot-col strong">${r.ord?won(r.ord):'—'}</td><td>${r.amt?man(r.amt):'—'}</td><td class="strong${r.cash<0?' neg':''}">${man(r.cash)}</td><td>${r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)} ${unitLabel()}</div>`:'발주 없음'}</td></tr>`).join('')+
+  t.innerHTML=`<thead><tr><th class="l">월</th><th>기초재고<span class="u">개</span></th><th>당기입고<span class="u">개</span></th><th>당기출고<span class="u">개</span></th><th>당기재고<span class="u">증감</span></th><th>기말재고<span class="u">개</span></th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>회사 보유현금<span class="u">월초 · ${unitLabel()}</span></th><th>발주대금 제외 여유현금<span class="u">회사 전체 · 최소 운영현금 기준</span></th></tr></thead><tbody>`+
+    data.map(r=>`<tr><td class="l">${r.mm}월</td><td>${won(r.open)}</td><td>${won(r.inc)}</td><td style="color:${r.delta<0?'var(--red)':'var(--ink2)'}">${r.delta>0?'+':''}${won(r.delta)}${r.short?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(r.short)}</div>`:''}</td><td${r.stock<=0?' style="color:var(--red)"':''}>${won(r.stock)}</td><td class="tot-col strong">${r.ord?won(r.ord):'—'}</td><td>${r.amt?man(r.amt):'—'}</td><td class="strong${r.cash<0?' neg':''}">${man(r.cash)}</td><td>${r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">${r.imm?`발주대금 즉시 결제 · 월 현금흐름 반영 (가정액 ${man(r.gross)})`:`결제 가정액 ${man(r.gross)} ${unitLabel()} · 별도 결제 시`}</div>`:'발주 없음'}</td></tr>`).join('')+
     `</tbody><tfoot><tr><td class="l">기간 합계</td><td>${won(tO)}</td><td>${won(tI)}</td><td>${won(tS)}</td><td>${tI-tS>0?'+':''}${won(tI-tS)}${tShort?`<div class="sub" style="color:var(--red)">부족 ≈ ${man(tShort)}</div>`:''}</td><td>${won(tStock)}</td><td>${won(tQ)}</td><td>${man(tA)}</td><td>${data.length?man(data[0].cash)+' (기초)':'—'}</td><td>—</td></tr></tfoot>`;
-  const fields=['월','기초재고','당기입고','당기입고 금액','입고의 원발주 내역','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','월말 매출채권','월말 매입채무','판매대금 회수 추정','현금 확보 기준','월말 결제 여력','발주자금 확인'];
+  const fields=['월','기초재고','당기입고','당기입고 금액','입고의 원발주 내역','당기출고','재고 증감','기말재고','발주수량','발주금액','월초 보유현금','월말 매출채권','월말 매입채무','판매대금 회수 추정','현금 확보 기준','월말 결제 여력','발주대금 제외 여유현금'];
   const cashHeaders=['영업현금흐름','차입 원금 상환','월말 현금'];
   fields.splice(11,0,...cashHeaders);
   const cell=v=>`<td>${v}</td>`;
   const withCash=(values,r)=>{values.splice(11,0,...(r?[man(r.cfo),man(r.repay),man(r.closing)]:[man(data.reduce((a,x)=>a+x.cfo,0)),man(data.reduce((a,x)=>a+x.repay,0)),data.length?man(data.at(-1).closing):'—']));return values.map(cell).join('');};
   const trace=o=>`${planDate(o.orderDay)} → ${planDate(o.arrivalDay)} → ${won(o.qty)}개`;
   t.innerHTML=`<thead><tr>${fields.map((f,i)=>`<th>${f}${i===4?'<span class="u">원발주일 → 입고 예정일 → 수량</span>':i===3||i>=9&&i<fields.length-1?`<span class="u">${unitLabel()}</span>`:''}</th>`).join('')}</tr></thead><tbody>`+
-    data.map(r=>`<tr>${withCash([r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.ar),man(r.ap),man(r.collected),man(r.floor),man(r.available)+(r.reserveGap>0?`<div class="sub neg">최소현금 부족 ${man(r.reserveGap)}</div>`:''),r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">결제 가정액 ${man(r.gross)}</div>`:'발주 없음'],r)}</tr>`).join('')+
+    data.map(r=>`<tr>${withCash([r.mm+'월',won(r.open),won(r.inc),r.receipts.length?man(r.receiptAmount):'—',r.receipts.length?`<div class="receipt-trace">${r.receipts.map(o=>`<div title="${esc(o.path||o.name)}"><b>${esc(o.name)}</b><span>${trace(o)}</span></div>`).join('')}</div>`:'—',won(r.out),won(r.delta),won(r.stock),won(r.ord),man(r.amt),man(r.cash),man(r.ar),man(r.ap),man(r.collected),man(r.floor),man(r.available)+(r.reserveGap>0?`<div class="sub neg">최소현금 부족 ${man(r.reserveGap)}</div>`:''),r.hasOrder?`<strong class="${r.gap<-0.005?'neg':''}">${r.gap<-0.005?'부족':'충분'} · ${man(Math.abs(r.gap))} ${unitLabel()}${r.gap<-0.005?' 부족':' 남음'}</strong><div class="sub">${r.imm?`발주대금 즉시 결제 · 월 현금흐름 반영`:`결제 가정액 ${man(r.gross)} · 별도 결제 시`}</div>`:'발주 없음'],r)}</tr>`).join('')+
     `</tbody><tfoot><tr>${withCash(['기간 합계',won(tO),won(tI),man(data.reduce((a,r)=>a+r.receiptAmount,0)),'—',won(tS),won(tI-tS),won(tStock),won(tQ),man(tA),data.length?man(data[0].cash):'—',data.length?man(data.at(-1).ar)+' (기말)':'—',data.length?man(data.at(-1).ap)+' (기말)':'—',man(data.reduce((a,r)=>a+r.collected,0)),'—','—','—'])}</tr></tfoot>`;
   t._data=data; t._tot={open:tO,inc:tI,out:tS,delta:tI-tS,stock:tStock,ord:tQ,amt:tA,short:tShort,shortQty:tShortQty};
   t._pending=pending;t._pendMonths=[...pendMonths].join(', ');
   const cap=document.getElementById('ledgerCap');
   if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 입고 예정일은 발주일 + 리드타임(달력일)입니다.'+(pend>0?`<br><b>다음 기간 입고 ${won(pend)}개</b> · 입고 예정월 ${pm}`:'')+(tShortQty>0?`<br><b class="neg">미충족 수요 ${won(tShortQty)}개 · 판매 기준 ${man(tShort)}</b>`:'<br><b>미충족 수요 0개</b> · 선택 기간의 제품별 월 수요를 모두 충족합니다.');}
-  if(cap)cap.innerHTML+='<br>실제판매의 부가세 포함 청구액을 판매월의 달력일에 균등 배분하고, 청구 당시 회수일수를 적용합니다. 매입은 건별 입고일의 지급조건을 적용합니다. 회수·지급은 월말 현금에 이미 반영되며, 월말 결제 여력은 최소 운영현금을 유보한 금액입니다. 발주자금 확인은 별도의 즉시 추가 결제 점검이며, 실제 지급일이나 이미 지급한 금액을 뜻하지 않습니다.';
+  if(cap)cap.innerHTML+='<br>실제판매의 부가세 포함 청구액을 판매월의 달력일에 균등 배분하고, 청구 당시 회수일수를 적용합니다. 매입은 건별 입고일의 지급조건을 적용합니다. 회수·지급은 월말 현금에 이미 반영되며, 월말 결제 여력은 최소 운영현금을 유보한 금액입니다. 발주대금 제외 여유현금은 그 달 발주를 전부 추가로 결제해도 최소 운영현금이 유지되는지의 점검이며, 실제 지급일이나 이미 지급한 금액을 뜻하지 않습니다. 매입 지급기간이 0일이면 발주대금이 그 달 현금흐름에 직접 반영되므로 별도의 예치금·가정액 차감 없이 최소 운영현금 대비 여유분만 봅니다.';
   if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
-  if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 판정은 그 달 발주를 전부 즉시 결제한다고 가정해도 인건비 등 최소 운영현금(발주예치금 제외)을 유지할 수 있는지 점검합니다. 결제 가정액은 현금 확보 기준의 발주예치금과 같은 돈이므로 두 번 빼지 않습니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
+  if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주대금 제외 여유현금은 그 달 발주를 전부 즉시 결제한다고 가정해도 인건비 등 최소 운영현금을 유지할 수 있는지 점검합니다. 지급기간이 있으면 미지급 최초 발주분을 현금 확보 기준에 예치금으로 유보하고, 결제 가정액은 그 예치금과 같은 돈이므로 두 번 빼지 않습니다. 지급기간이 0일이면 예치금 없이 발주대금이 월 현금흐름에 직접 반영됩니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
   if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 추가투입(${fundingAmount(R.s.invest.openingTopUp)==null?'자동':'직접 입력'}) ${man(topUp)} = <b>${man(funding.opening)} ${unitLabel()}</b>. 이후 잔액에는 월별 추가 투입도 포함됩니다.<br>`+cap.innerHTML+receivablesAuditHtml(R,ledgerYear<0?0:R.off+ledgerYear*12,NMw)+renderT0CashBridge(R,funding);
 }
 function renderT0CashBridge(r,funding){
@@ -2553,7 +2556,7 @@ function renderT0CashBridge(r,funding){
 }
 function ledgerCsv(){
   const t=document.getElementById('invLedger'); if(!t||!t._data) return;
-  const rows=[['월','기초재고(개)','당기입고(개)','당기출고(개)','당기재고 증감(개)','미충족 판매액(원)','기말재고(개)','발주수량(개)','발주금액(원)','월초 회사 보유현금(원)','판매대금 회수 추정(원)','월말 현금(원)','최소 운영현금(원)','월말 결제 여력(원)','전체 발주 결제 가정액(원)','추가 결제 가정 후 잔액(원)','발주자금 판정']];
+  const rows=[['월','기초재고(개)','당기입고(개)','당기출고(개)','당기재고 증감(개)','미충족 판매액(원)','기말재고(개)','발주수량(개)','발주금액(원)','월초 회사 보유현금(원)','판매대금 회수 추정(원)','월말 현금(원)','최소 운영현금(원)','월말 결제 여력(원)','전체 발주 결제 가정액(원)','추가 결제 가정 후 잔액(원)','발주대금 제외 여유현금(원)']];
   t._data.forEach(r=>rows.push([r.mm+'월',r.open,r.inc,r.out,r.delta,Math.round(r.short||0),r.stock,r.ord,...[r.amt,r.cash,r.collected,r.closing,r.floor,r.available,r.gross].map(Math.round),r.hasOrder?Math.round(r.gap):'',r.hasOrder?(r.gap<-0.005?'부족':'충분'):'발주 없음']));
   const g=t._tot;rows.push(['기간 합계',g.open,g.inc,g.out,g.delta,Math.round(g.short||0),g.stock,g.ord,Math.round(g.amt),t._data.length?Math.round(t._data[0].cash):'',Math.round(t._data.reduce((a,r)=>a+r.collected,0)),'','','','','','']);
   rows[0].splice(3,0,'당기입고 금액(원)','입고의 원발주 내역');
@@ -2745,7 +2748,7 @@ function pctRow(label,vals){return {l:label,v:vals,sub:true,cls:'ind2'};}
 function ofRev(vals,revs){return vals.map((v,i)=>{const r=num(revs[i]);return r>0?pcv(Math.abs(num(v)||0)/r):'—';});}
 function buildStmt(rows,head){
   return `<thead><tr><th class="l sticky" style="width:240px">계정 <span class="u">${unitLabel()}</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(r=>r.metric?accountRows(r):`<tr class="${r.cls||''}"><td class="l ${r.sub?'ind':''}">${r.l}</td>${r.v.map(c=>`<td>${typeof c==='number'?m(c):c}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    <tbody>${rows.map(r=>r.metric?accountRows(r):`<tr class="${r.cls||''}"><td class="l ${r.sub?'ind':''}">${r.l}</td>${r.v.map((c,i)=>`<td>${typeof c==='number'?m(c):c}${r.pct&&r.pct[i]!=null?`<div class="pct">${esc(String(r.pct[i]))}</div>`:''}</td>`).join('')}</tr>`).join('')}</tbody>`;
 }
 function periods(){
   return R.pl.map((p,y)=>`${fyShort(y).replace(' · ','<span class="u">')}</span>`);
@@ -2758,8 +2761,10 @@ function managementRows(r){
   const amounts=(l,f,cls,metric,sign)=>({l,v:mg.map(f),cls,metric,sign});
   const cost=(l,f)=>({l,v:pl.map(f),sub:true,cls:'ind2'});
   const revs=pl.map(p=>p.rev),pct=(f)=>ofRev(pl.map(f),revs);
-  return [amounts('매출액',g=>g.rev,'strong','rev'),{l:'매출원가 · 제품원가 + 제조인건비 배부',v:pl.map(p=>-p.cogs),metric:'cogs',sign:-1},amounts('변동비',g=>-g.varCost,'grprow','varCost',-1),cost('· 제품·상품 매출원가',p=>-(p.cogs-p.pay.mfg)),cost('· 제조인건비',p=>-p.pay.mfg),cost('· 변동 판관비',p=>-p.sga.variable.amt),amounts('공헌이익',g=>g.cm,'subtotal','cm'),amounts('공헌이익률',g=>pcv(g.cmRatio),'subtotal'),amounts('고정비',g=>-g.fixed,'grprow'),cost('· 자동 인력 관련 판관비',p=>-p.pay.sga),cost('· 수동 고정 판관비',p=>-p.sga.fixed.amt),cost('· 감가상각비',p=>-p.dep),amounts('영업이익',g=>g.op,'subtotal'),amounts('BEP 매출액',g=>g.bep??'—','total'),amounts('안전율 (매출−BEP)/매출',g=>pcv(g.margin),'total'),
-  amounts('— 매출 대비 비율 (참고)',()=> '', 'grprow'),pctRow('· 제품·상품 매출원가 / 매출',pct(p=>-(p.cogs-p.pay.mfg))),pctRow('· 제조인건비 / 매출',pct(p=>-p.pay.mfg)),pctRow('· 변동 판관비 / 매출',pct(p=>-p.sga.variable.amt)),pctRow('· 자동 인력 관련 판관비 / 매출',pct(p=>-p.pay.sga)),pctRow('· 수동 고정 판관비 / 매출',pct(p=>-p.sga.fixed.amt)),pctRow('· 고정비 합계 / 매출',pct(p=>-p.fixed)),pctRow('· 영업이익 / 매출',pct(p=>p.op))];
+  const rows=[amounts('매출액',g=>g.rev,'strong','rev'),{l:'매출원가 · 제품원가 + 제조인건비 배부',v:pl.map(p=>-p.cogs),metric:'cogs',sign:-1},amounts('변동비',g=>-g.varCost,'grprow','varCost',-1),cost('· 제품·상품 매출원가',p=>-(p.cogs-p.pay.mfg)),cost('· 제조인건비',p=>-p.pay.mfg),cost('· 변동 판관비',p=>-p.sga.variable.amt),amounts('공헌이익',g=>g.cm,'subtotal','cm'),amounts('공헌이익률',g=>pcv(g.cmRatio),'subtotal'),amounts('고정비',g=>-g.fixed,'grprow'),cost('· 자동 인력 관련 판관비',p=>-p.pay.sga),cost('· 수동 고정 판관비',p=>-p.sga.fixed.amt),cost('· 감가상각비',p=>-p.dep),amounts('영업이익',g=>g.op,'subtotal'),amounts('BEP 매출액',g=>g.bep??'—','total'),amounts('안전율 (매출−BEP)/매출',g=>pcv(g.margin),'total')];
+  const attach=(l,f)=>{const r=rows.find(x=>x.l===l);if(r)r.pct=pct(f);};
+  attach('· 제품·상품 매출원가',p=>-(p.cogs-p.pay.mfg));attach('· 제조인건비',p=>-p.pay.mfg);attach('· 변동 판관비',p=>-p.sga.variable.amt);attach('· 자동 인력 관련 판관비',p=>-p.pay.sga);attach('· 수동 고정 판관비',p=>-p.sga.fixed.amt);attach('고정비',p=>-p.fixed);attach('영업이익',p=>p.op);
+  return rows;
 }
 function financialRatioRows(r){
   const days=r.months.slice(0,r.off).reduce((a,m)=>a+m.days,0);
@@ -2811,18 +2816,18 @@ function renderFinanceInner(){
     rows.push({l:'법인세',v:values(p=>-p.tax),sub:true});
     rows.push({l:'당기순이익',v:values(p=>p.ni),cls:'subtotal'});
     rows.push({l:'EBITDA',v:values(p=>p.ebitda),cls:'grprow'});
-    rows.push({l:'매출총이익률',v:values(p=>p.rev?pcv(p.gp/p.rev):(p.t0?'—':pcv(0))),cls:'subtotal'});
-    rows.push({l:'영업이익률',v:values(p=>p.rev?pcv(p.ebit/p.rev):(p.t0?'—':pcv(0))),cls:'subtotal'});
-    rows.push({l:'순이익률',v:values(p=>p.rev?pcv(p.ni/p.rev):(p.t0?'—':pcv(0))),cls:'subtotal'});
-    rows.push({l:'— 매출 대비 비율 (참고)',v:values(()=>''),cls:'grprow'});
-    rows.push(pctRow('· 매출원가 / 매출',ofRev(values(p=>-p.cogs),values(p=>p.rev))));
-    rows.push(pctRow('· 제조 인력 관련 경비 / 매출',ofRev(values(p=>-p.pay.mfg),values(p=>p.rev))));
-    rows.push(pctRow('· 판매비와 관리비 / 매출',ofRev(values(p=>-(p.pay.sga+p.sga.fixed.amt+p.sga.variable.amt+p.dep)),values(p=>p.rev))));
-    names.forEach(n=>rows.push(pctRow('· '+esc(n)+' / 매출',ofRev(accounts.map(a=>-(a.get(n)||0)),values(p=>p.rev)))));
-    rows.push(pctRow('· 영업외 수익 / 매출',ofRev(values(p=>p.nonOpInc),values(p=>p.rev))));
-    rows.push(pctRow('· 영업외 비용 / 매출',ofRev(values(p=>-(p.intr+p.nonOpExp)),values(p=>p.rev))));
-    rows.push(pctRow('· 법인세 / 매출',ofRev(values(p=>-p.tax),values(p=>p.rev))));
-    rows.push(pctRow('· EBITDA / 매출',ofRev(values(p=>p.ebitda),values(p=>p.rev))));
+    const revsAll=values(p=>p.rev),withPct=(l,vals)=>{const row=rows.find(r=>r.l===l);if(row&&Array.isArray(vals))row.pct=ofRev(vals,revsAll);};
+    withPct('매출원가 합계 · 제품원가 + 제조 인력 관련 경비',values(p=>-p.cogs));
+    withPct('매출원가 (제품·상품)',values(p=>-first(p)));
+    names.forEach(n=>withPct('· '+esc(n),accounts.map(a=>-(a.get(n)||0))));
+    const idxTotal=rows.findIndex(r=>r.l==='판관비 합계');if(idxTotal>=0)withPct(rows[idxTotal],values(p=>-(p.pay.sga+p.sga.fixed.amt+p.sga.variable.amt+p.dep)));
+    const idxEbit=rows.findIndex(r=>r.l==='영업이익 (EBIT)');if(idxEbit>=0)withPct(rows[idxEbit],values(p=>p.ebit));
+    const idxInc=rows.findIndex(r=>r.l==='영업외 수익');if(idxInc>=0)withPct(rows[idxInc],values(p=>p.nonOpInc));
+    const idxExp=rows.findIndex(r=>r.l==='영업외 비용');if(idxExp>=0)withPct(rows[idxExp],values(p=>-(p.intr+p.nonOpExp)));
+    const idxEbt=rows.findIndex(r=>r.l==='세전이익');if(idxEbt>=0)withPct(rows[idxEbt],values(p=>p.ebt));
+    const idxTax=rows.findIndex(r=>r.l==='법인세');if(idxTax>=0)withPct(rows[idxTax],values(p=>-p.tax));
+    const idxNi=rows.findIndex(r=>r.l==='당기순이익');if(idxNi>=0)withPct(rows[idxNi],values(p=>p.ni));
+    const idxEbitda=rows.findIndex(r=>r.l==='EBITDA');if(idxEbitda>=0)withPct(rows[idxEbitda],values(p=>p.ebitda));
     T.innerHTML=buildStmt(rows,P2);
     T.classList.add('stmt');
     const _sn=document.getElementById('stmtNote'); if(_sn){_sn.innerHTML='';_sn.hidden=true;if(_sn.parentElement)_sn.parentElement.hidden=true;}
@@ -2890,16 +2895,9 @@ function renderFinanceInner(){
     rows.push({l:'자본 합계',v:c('equity'),cls:'subtotal'});
     rows.push({l:'부채 + 자본',v:[off?(R.t0bs.liab+R.t0bs.equity):(b0.liab+b0.equity),...R.bs.map(b=>b.liab+b.equity)],cls:'total'});
     rows.push({l:'검증 (자산 − 부채 − 자본)',v:[off?R.t0bs.check:b0.check,...R.bs.map(b=>b.check)],cls:'total'});
-    rows.push({l:'— 자산 대비 비율 (참고)',v:c('assets').map(()=>''),cls:'grprow'});
     const assets=c('assets'),pctOfAssets=k=>ofRev(c(k).map((v,i)=>-(num(v)||0)),assets);
-    rows.push(pctRow('· 현금 / 자산',pctOfAssets('cash')));
-    rows.push(pctRow('· 매출채권 / 자산',pctOfAssets('ar')));
-    rows.push(pctRow('· 재고자산 / 자산',pctOfAssets('inv')));
-    rows.push(pctRow('· 유형자산 (순) / 자산',pctOfAssets('ppe')));
-    rows.push(pctRow('· 매입채무 / 자산',pctOfAssets('ap')));
-    rows.push(pctRow('· 차입금 / 자산',pctOfAssets('debt')));
-    rows.push(pctRow('· 부채 합계 / 자산',pctOfAssets('liab')));
-    rows.push(pctRow('· 자본 합계 / 자산',pctOfAssets('equity')));
+    const attachBs=(l,k)=>{const r=rows.find(x=>x.l===l);if(r)r.pct=pctOfAssets(k);};
+    attachBs('현금','cash');attachBs('매출채권 · 미회수 청구액(부가세 포함)','ar');attachBs('재고자산','inv');attachBs('유형자산 (순)','ppe');attachBs('매입채무','ap');attachBs('차입금','debt');attachBs('부채 합계','liab');attachBs('자본 합계','equity');
     T.innerHTML=buildStmt(rows,head);
     document.getElementById('stmtNote').innerHTML='<b>검증 행은 0이어야 합니다</b> — 월별 현금흐름과 발생주의 손익을 같은 원장에서 계산하므로 자산·부채·자본이 자동으로 맞습니다.';
   }
@@ -4179,6 +4177,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
