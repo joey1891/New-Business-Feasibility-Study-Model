@@ -960,14 +960,11 @@ function ensureState(s0){
     if(x.hirePlanT0M&&typeof x.hirePlanT0M==='object'){const h0={};Object.keys(x.hirePlanT0M).forEach(rk=>{const a=x.hirePlanT0M[rk];if(!Array.isArray(a))return;const arr=Array.from({length:12},(_,i)=>Math.max(0,num(a[i],0)));h0[rk]=arr;});x.hirePlanT0M=h0;}else delete x.hirePlanT0M;
     if(x.hirePlanM&&typeof x.hirePlanM==='object'){const hm={};Object.keys(x.hirePlanM).forEach(yy=>{const p=x.hirePlanM[yy];if(!p||typeof p!=='object')return;const o={};Object.keys(p).forEach(rk=>{const arr=Array.isArray(p[rk])?p[rk].slice(0,12):[];const a=Array.from({length:12},(_,i)=>Math.max(0,num(arr[i],0)));o[rk]=a;});if(Object.keys(o).length)hm[yy]=o;});x.hirePlanM=hm;}else delete x.hirePlanM;
   });
-  ['fixed','semi','variable'].forEach(k=>{
-    if(!Array.isArray(s.sga[k])) s.sga[k]=[];
-    s.sga[k].forEach(it=>{ if(!it.id) it.id=uid('s'); it.type=it.type==='rate'?'rate':'amount'; it.value=Math.max(0,num(it.value,0)); it.grow=num(it.grow,0); });
-  });
+  if(!Array.isArray(s.sga.fixed)) s.sga.fixed=[];
+  if(!Array.isArray(s.sga.variable)) s.sga.variable=[];
   // Migrate former semi-variable rows once; keep their original rate and growth settings.
-  s.sga.fixed.push(...s.sga.semi);
-  ecMergeFixed(s.sga.fixed);
-  delete s.sga.semi;
+  if(Array.isArray(s.sga.semi)){s.sga.fixed.push(...s.sga.semi);delete s.sga.semi;}
+  [...s.sga.fixed,...s.sga.variable].forEach(it=>{ if(!it.id) it.id=uid('s'); it.type=it.type==='rate'?'rate':'amount'; it.value=Math.max(0,num(it.value,0)); it.grow=num(it.grow,0); });
   ['incCash','incNonCash','expCash','expNonCash'].forEach(k=>{
     if(!Array.isArray(s.nonop[k])) s.nonop[k]=[];
     s.nonop[k].forEach(it=>{ if(!it.id) it.id=uid('n'); it.type=it.type==='rate'?'rate':'amount'; it.value=Math.max(0,num(it.value,0)); it.grow=num(it.grow,0); });
@@ -1301,6 +1298,28 @@ function payrollYear(s,y){
   });
   return {total,mfg,sga,heads,byDept};
 }
+// 월별 배분: 금액형은 1/12 균등, 매출%형은 그 달 매출에 비례. T0는 시작월부터 12월까지.
+function sgaSplitMonths(s,months,revM){
+  const off=t0MonthsOf(s);
+  const split=(list,key)=>months.map((m,mi)=>{
+    const y=m.t0?-1:m.yi;
+    const idx=m.t0?mi:m.mi;
+    return list.reduce((a,it)=>{
+      const iy=expensePeriod(it,y,off,'sga',key);
+      if(iy.type==='rate'){
+        // 매출%형: 그 달 매출 × 비율 (T0 비율형은 T0 누적 매출 기준을 월간으로 환산하지 않고 그 달 매출 적용)
+        const rev=m.t0?revM[mi]:revM[off+y*12+m.mi];
+        const base=rev*iy.value/100;
+        a.amount+=base;a.lines.push({id:it.id,name:it.name,amount:base});
+      }else{
+        const base=y<0?iy.value/off:iy.value/12;
+        a.amount+=base;a.lines.push({id:it.id,name:it.name,amount:base});
+      }
+      return a;
+    },{amount:0,lines:[]});
+  });
+  return {fixed:split(s.sga.fixed||[],'fixed'),variable:split(s.sga.variable||[],'variable')};
+}
 function sgaYear(s,y,rev){
   const pick=(list,key)=>{
     let amt=0;const lines=[];
@@ -1445,9 +1464,10 @@ function compute(s0){
   const payables=settlementSchedule(months,invGroups.flatMap(g=>g.orders.filter(o=>o.arrMonth<NM).map(o=>({day:o.arrivalDay,amount:o.gross,term:terms(o.arrMonth).apDays}))));
   const arM=receivables.balances,apM=payables.balances,niM=new Array(NM).fill(0),cfoM=new Array(NM).fill(0),cashM=new Array(NM).fill(0);
   const depM=months.map((_,i)=>(i<lifeM?s.invest.capex/lifeM:0)+(i<lifeI?s.invest.intangible/lifeI:0));
+  const sgaSplit=sgaSplitMonths(s,months,revM);
   for(let i=0;i<NM;i++){
-    const yd=months[i].t0?t0rec:years[months[i].yi],dv=yd.div;
-    const sgaMonthly=(yd.sga.fixed.amt+yd.sga.variable.amt)/dv;
+    const yd=months[i].t0?t0rec:years[months[i].yi],dv=yd.div,splitM=sgaSplit[i]||{fixed:{amount:0},variable:{amount:0}};
+    const sgaMonthly=splitM.fixed.amount+splitM.variable.amount;
     const labor=periodPayroll(yd,i);
     const nonOpMonthly=(yd.nonOpInc-yd.nonOpExp)/dv;
     niM[i]=revM[i]-cogsM[i]-labor.pay.mfg/labor.div-labor.pay.sga/labor.div-sgaMonthly-depM[i]-yd.intr/dv+nonOpMonthly-yd.tax/dv;
@@ -1468,6 +1488,16 @@ function compute(s0){
     cashM[i]=cash; dInvArr.push(dInv);
   }
 
+  // 연간·T0 판관비를 월 배분 합계로 확정해 월별 손익·현금과 정합시킨다.
+  const lineSum=(parts,id)=>parts.flatMap(m=>m.lines).filter(x=>x.id===id).reduce((v,x)=>v+x.amount,0);
+  const applySplit=(rec,parts,a0,n)=>{
+    rec.sga.fixed.amt=parts.fixed.slice(a0,a0+n).reduce((v,m)=>v+m.amount,0);
+    rec.sga.fixed.lines.forEach(l=>l.amount=lineSum(parts.fixed.slice(a0,a0+n),l.id));
+    rec.sga.variable.amt=parts.variable.slice(a0,a0+n).reduce((v,m)=>v+m.amount,0);
+    rec.sga.variable.lines.forEach(l=>l.amount=lineSum(parts.variable.slice(a0,a0+n),l.id));
+  };
+  years.forEach((r,y)=>applySplit(r,sgaSplit,off+y*12,12));
+  if(t0rec)applySplit(t0rec,sgaSplit,0,off);
   /* 연도 재무제표 */
   const pl=[],cf=[],bs=[];
   for(let y=0;y<H;y++){
@@ -4073,6 +4103,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
