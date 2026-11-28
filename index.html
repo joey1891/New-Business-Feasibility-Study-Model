@@ -1964,6 +1964,7 @@ let editYear=0;
 let S=null, R=null;
 let currentView='assume', finTab='pl', orderYear=0, ledgerYear=0, ledgerGroup='__all', segLevel=7, COLLAPSED=new Set(), allCollapsed=false;
 let sensCfg={price:0,vol:0,cost:0,disc:0};
+let moYearSel=null;
 
 const VIEW_META={
   assume:['01 / 07','기본 가정','분석 기간, 할인율, 회수·지급 조건과 최소 운영현금을 정합니다. 모든 화면이 이 가정을 공유합니다.'],
@@ -2688,7 +2689,8 @@ function renderMoInputs(){
   let card=document.getElementById('moCard');
   if(!card){card=document.createElement('div');card.className='card';card.id='moCard';const host=document.querySelector('#view-cost .stack')||document.querySelector('#view-cost');if(host)host.prepend(card);}
   if(!card)return;
-  const off=t0MonthsOf(S),y=editYear,n=y<0?off:12;
+  const off=t0MonthsOf(S),y=(typeof moYearSel==='number'&&moYearSel<=S.meta.years)?(moYearSel<0?-1:moYearSel):editYear,n=y<0?off:12;
+  const yearOpts=[...(off?['<option value="-1"'+(y<0?' selected':'')+' >T0 · '+t0Label(S)+'</option>']:[]),...Array.from({length:S.meta.years},(_,yy)=>`<option value="${yy}"${y===yy?' selected':''}>${fyShort(yy,S)}</option>`)].join('');
   const groups=[['sga-fixed','판매비와 관리비 · 고정',S.sga.fixed],['sga-variable','판매비와 관리비 · 변동',S.sga.variable],['nonop-incCash','영업외 수익 · 현금',S.nonop.incCash],['nonop-incNonCash','영업외 수익 · 비현금',S.nonop.incNonCash],['nonop-expCash','영업외 비용 · 현금',S.nonop.expCash],['nonop-expNonCash','영업외 비용 · 비현금',S.nonop.expNonCash]];
   const rows=groups.flatMap(([area,label,list])=>(list||[]).filter(it=>it.type!=='rate').map(it=>{
     const mo=moOf(it,y,off),sum=mo?mo.reduce((a,x)=>a+Math.max(0,num(x,0)),0):null;
@@ -2696,7 +2698,7 @@ function renderMoInputs(){
     const cells=Array.from({length:n},(_,i)=>`<td><input class="cell" type="text" inputmode="numeric" data-mo-area="${area}" data-mo-id="${ppAttr(it.id)}" data-mo-year="${y}" data-mo-mi="${i}" value="${mo&&mo[i]!=null?won(mo[i]):''}" placeholder="${won(ph)}"></td>`).join('');
     return `<tr><td class="l"><small>${label}</small> ${esc(it.name)}</td>${cells}<td class="strong">${sum!=null?formatMoney(sum):'—'}</td><td><button class="del" data-mo-clear="${area}" data-mo-id="${ppAttr(it.id)}" data-mo-year="${y}">월별 지우기</button></td></tr>`;
   }));
-  card.innerHTML=`<div class="card-h"><div><h2>월별 금액 입력 · 판관비 · 영업외 수익·비용</h2><p>${costPeriodName(y)} 기준. 월별 금액을 넣으면 연간 값 대신 월별 합계가 적용됩니다(매출%형은 제외). 비워 두면 연간 값을 월간으로 나눠 배분합니다.</p></div></div>
+  card.innerHTML=`<div class="card-h"><div><h2>월별 금액 입력 · 판관비 · 영업외 수익·비용</h2><p>${costPeriodName(y)} 기준. 월별 금액을 넣으면 연간 값 대신 월별 합계가 적용됩니다(매출%형은 제외). 비워 두면 연간 값을 월간으로 나눠 배분합니다.</p><div style="display:flex;align-items:center;gap:6px;margin-top:8px"><span style="font-size:12px;color:var(--mut)">입력 기간</span><select id="moYearSel" class="sm" style="padding:5px 8px;font-size:11px">${yearOpts}</select></div></div></div>
     <div class="tablewrap"><table class="tbl plain"><thead><tr><th class="l">항목</th>${Array.from({length:n},(_,i)=>`<th>${fyMonth(i)}</th>`).join('')}<th>월별 합계</th><th></th></tr></thead><tbody>${rows.join('')||'<tr><td class="l" colspan="15">금액형 항목이 없습니다.</td></tr>'}</tbody></table></div>`;
 }
 function renderCost(){
@@ -3104,7 +3106,10 @@ function walkProducts(tree){
 /* ================= 이벤트 ================= */
 function bindStatic(){
   $$('.navbtn').forEach(b=>b.addEventListener('click',()=>switchView(b.dataset.view)));
-  document.addEventListener('click',e=>{
+  document.addEventListener('change',e=>{
+    if(e.target.id==='moYearSel'){moYearSel=num(e.target.value,editYear);renderMoInputs();return;}
+  });
+document.addEventListener('click',e=>{
     const g=e.target.closest('[data-goto]'); if(g) switchView(g.dataset.goto);
   });
   document.addEventListener('input',e=>{
@@ -4267,6 +4272,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
