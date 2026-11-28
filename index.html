@@ -2935,6 +2935,11 @@ function renderFinanceInner(){
 }
 
 /* ================= 07 사업성 분석 ================= */
+function irrMult(R){
+  const inv=-(R.flows[0]||0);
+  const inflow=R.flows.reduce((a,f,i)=>i>0&&f!=null&&f>0?a+f:a,0);
+  return {x:inv>0?inflow/inv:0};
+}
 function scenario(label,mut){
   const s2=clone(S); mut(s2); const r=compute(s2);
   return {label,npv:r.npv,irr:r.irr,pb:r.payback};
@@ -2982,11 +2987,11 @@ function renderValue(){
     <div class="npvrow total"><span>순현재가치 (NPV)</span><b class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':formatMoney(R.npv)+' '+unitLabel()}</b></div>
     <div class="cap">등가 연율 ${(R.wacc*100).toFixed(2)}% · 연도별 누적할인 · 잔존가치 ${R.tvMode==='gordon'?'영구성장모형':R.tvMode==='none'?'미포함':'순자산가치'}${R.t0&&R.t0fcff<0?` · T0 투자성 유출(재고 등)은 T0 FCFF(${shortWon(R.t0fcff)})에 포함`:''}</div>`;
   document.getElementById('valCells').innerHTML=[
-    ['IRR',R.irr!=null?(R.irr*100).toFixed(1):'—','%',R.irr!=null?(R.irrExcl?'잔존가치 제외 · 할인율 ':'할인율 ')+(R.wacc*100).toFixed(1)+'% 대비':R.I0<=0?'초기투자(t=0 유출)가 없어 산출 불가':'현금흐름이 +로 전환되지 않아 산출 불가'],
+    ['IRR',R.irr!=null?`${(R.irr*100).toFixed(1)}<small style="font-size:12px;color:var(--mut);font-weight:600"> · ${(irrMult(R).x).toFixed(2)}배</small>`:'—','%',R.irr!=null?(R.irrExcl?'잔존가치 제외 · 할인율 ':'할인율 ')+(R.wacc*100).toFixed(1)+'% 대비 · 미할인 총유입/총유출':R.I0<=0?'초기투자(t=0 유출)가 없어 산출 불가':'현금흐름이 +로 전환되지 않아 산출 불가'],
     ['회수기간',R.I0<=0?'—':R.payback!=null?R.payback.toFixed(1):'> '+R.H,'년',R.I0<=0?'초기투자 없음':R.tvValid?'누적 FCFF 기준':'누적 FCFF 기준 · 잔존가치 제외'],
     ['수익성지수',R.I0<=0?'계산불가':R.pi===null?'계산불가':R.pi.toFixed(2),'',R.I0<=0?'초기투자가 0이면 산출 불가':(R.piExcl?'잔존가치 제외 · PV / 초기투자':'PV / 초기투자')+(R.explicitInvest===0?' · 초기투자 미입력 → 자본금으로 대체':'')],
     ['초기투자',formatMoney(R.I0),unitLabel(),R.explicitInvest>0?'t=0 유출 · CAPEX+무형+초기재고+기타 초기 유출':'초기투자 미입력 → 자본금+보유현금으로 대체'],
-    ['주주 IRR',R.equityIrr!=null?(R.equityIrr*100).toFixed(1):'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)}`],
+    ['주주 IRR',R.equityIrr!=null?`${(R.equityIrr*100).toFixed(1)}<small style="font-size:12px;color:var(--mut);font-weight:600"> · ${R.moic.toFixed(2)}배</small>`:'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)} · MOIC 병기`],
     ['MOIC',R.moic.toFixed(2),'배','Exit 가치 / 자본금']
   ].map(([k,val,u,s])=>`<div class="hero-cell"><div class="k">${k}</div><div class="v">${val}<small>${u}</small></div><div class="s">${s}</div></div>`).join('');
 
@@ -4200,6 +4205,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
