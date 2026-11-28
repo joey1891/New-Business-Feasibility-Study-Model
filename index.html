@@ -1034,6 +1034,15 @@ function deptRankHeads(d,y,off=12){
 }
 function deptPlanHeads(d,y,off=12){const h=deptRankHeads(d,y,off);return Object.values(h).reduce((a,b)=>a+b,0);}
 function expenseYear(it,y){return annual(it,y,{...it,value:it.type==='rate'?it.value:it.value*Math.pow(1+it.grow/100,y)});}
+function moOf(it,y,off){
+  if(!it)return null;
+  if(y<0){const a=it.t0Mo;return (Array.isArray(a)&&a.length===off)?a:null;}
+  const a=(it.moByYear||{})[y];return (Array.isArray(a)&&a.length===12)?a:null;
+}
+function setMo(it,y,off,idx,val){
+  if(y<0){it.t0Mo=(Array.isArray(it.t0Mo)&&it.t0Mo.length===off)?it.t0Mo:Array(off).fill(0);it.t0Mo[idx]=val;}
+  else{it.moByYear=it.moByYear||{};const a=(Array.isArray(it.moByYear[y])&&it.moByYear[y].length===12)?it.moByYear[y]:Array(12).fill(0);a[idx]=val;it.moByYear[y]=a;}
+}
 function expensePeriod(it,y,off,area,key){
   if(y>=0)return expenseYear(it,y);
   const base=expenseYear(it,0),saved=it.t0||{},type=(saved.type||base.type)==='rate'?'rate':'amount';
@@ -1335,18 +1344,37 @@ function sgaYear(s,y,rev){
   const pick=(list,key)=>{
     let amt=0;const lines=[];
     (list||[]).forEach(it=>{
-      const iy=expensePeriod(it,y,t0MonthsOf(s),'sga',key),v=iy.type==='rate'? rev*(iy.value/100) : iy.value;
+      const iy=expensePeriod(it,y,t0MonthsOf(s),'sga',key);
+      const mo=moOf(it,y,t0MonthsOf(s));
+      const v=(mo&&iy.type!=='rate')?mo.reduce((a,x)=>a+Math.max(0,num(x,0)),0):(iy.type==='rate'? rev*(iy.value/100) : iy.value);
       amt+=v; lines.push({id:it.id,name:it.name,amount:v});
     });
     return {amt,lines};
   };
   return {fixed:pick(s.sga.fixed,'fixed'),variable:pick(s.sga.variable,'variable')};
 }
+function nonopSplitMonths(s,months,revM){
+  const off=t0MonthsOf(s);
+  const split=list=>months.map((m,mi)=>{
+    const y=m.t0?-1:m.yi,idx=m.t0?mi:m.mi;
+    return list.reduce((a,it)=>{
+      const iy=expensePeriod(it,y,off,'nonop');
+      let base;
+      if(iy.type==='rate'){const rev=m.t0?revM[mi]:revM[off+y*12+m.mi];base=rev*iy.value/100;}
+      else{const mo=moOf(it,y,off);base=mo?Math.max(0,num(mo[idx],0)):(y<0?iy.value/off:iy.value/12);}
+      a.amount+=base;a.lines.push({id:it.id,name:it.name,amount:base});
+      return a;
+    },{amount:0,lines:[]});
+  });
+  return {incCash:split(s.nonop.incCash),incNonCash:split(s.nonop.incNonCash),expCash:split(s.nonop.expCash),expNonCash:split(s.nonop.expNonCash)};
+}
 function nonopYear(s,y,rev){
   const pick=list=>{
     let amt=0;const lines=[];
     (list||[]).forEach(it=>{
-      const iy=expensePeriod(it,y,t0MonthsOf(s),'nonop'),v=iy.type==='rate'? rev*(iy.value/100) : iy.value;
+      const iy=expensePeriod(it,y,t0MonthsOf(s),'nonop');
+      const mo=moOf(it,y,t0MonthsOf(s));
+      const v=(mo&&iy.type!=='rate')?mo.reduce((a,x)=>a+Math.max(0,num(x,0)),0):(iy.type==='rate'? rev*(iy.value/100) : iy.value);
       amt+=v; lines.push({id:it.id,name:it.name,amount:v});
     });
     return {amt,lines};
@@ -1476,11 +1504,12 @@ function compute(s0){
   const arM=receivables.balances,apM=payables.balances,niM=new Array(NM).fill(0),cfoM=new Array(NM).fill(0),cashM=new Array(NM).fill(0);
   const depM=months.map((_,i)=>(i<lifeM?s.invest.capex/lifeM:0)+(i<lifeI?s.invest.intangible/lifeI:0));
   const sgaSplit=sgaSplitMonths(s,months,revM);
+  const nonopSplit=nonopSplitMonths(s,months,revM);
   for(let i=0;i<NM;i++){
     const yd=months[i].t0?t0rec:years[months[i].yi],dv=yd.div,splitM=sgaSplit[i]||{fixed:{amount:0},variable:{amount:0}};
     const sgaMonthly=splitM.fixed.amount+splitM.variable.amount;
     const labor=periodPayroll(yd,i);
-    const nonOpMonthly=(yd.nonOpInc-yd.nonOpExp)/dv;
+    const nonOpMonthly=nonopSplit.incCash[i].amount+nonopSplit.incNonCash[i].amount-nonopSplit.expCash[i].amount-nonopSplit.expNonCash[i].amount;
     niM[i]=revM[i]-cogsM[i]-labor.pay.mfg/labor.div-labor.pay.sga/labor.div-sgaMonthly-depM[i]-yd.intr/dv+nonOpMonthly-yd.tax/dv;
   }
 
@@ -1491,7 +1520,7 @@ function compute(s0){
     const prevAR=i?arM[i-1]:0,prevAP=i?apM[i-1]:0,prevInv=i?invM[i-1]:openingStock;
     const dAR=arM[i]-prevAR,dInv=invM[i]-prevInv,dAP=apM[i]-prevAP;
     const yd=months[i].t0?t0rec:years[months[i].yi],dv=yd.div;
-    const nonCashAdj=(yd.nonop.expNonCash.amt-yd.nonop.incNonCash.amt)/dv;
+    const nonCashAdj=nonopSplit.expNonCash[i].amount-nonopSplit.incNonCash[i].amount;
      const wp=wcPhase(s,i),prevWC=i?wp.prev:{prepaid:0,receivable:0,advance:0,accrued:0},nowWC=wp.now;
     const wcCash=-(nowWC.prepaid-prevWC.prepaid)-(nowWC.receivable-prevWC.receivable)+(nowWC.advance-prevWC.advance)+(nowWC.accrued-prevWC.accrued);
     cfoM[i]=niM[i]+depM[i]+nonCashAdj-dAR-dInv+dAP+wcCash+vat.rows[i].cashAdjustment;
@@ -2655,6 +2684,21 @@ function drawCashChart(){
 }
 
 /* ================= 05 인건비·판관비 ================= */
+function renderMoInputs(){
+  let card=document.getElementById('moCard');
+  if(!card){card=document.createElement('div');card.className='card';card.id='moCard';const host=document.querySelector('#view-cost .stack')||document.querySelector('#view-cost');if(host)host.appendChild(card);}
+  if(!card)return;
+  const off=t0MonthsOf(S),y=editYear,n=y<0?off:12;
+  const groups=[['sga-fixed','판매비와 관리비 · 고정',S.sga.fixed],['sga-variable','판매비와 관리비 · 변동',S.sga.variable],['nonop-incCash','영업외 수익 · 현금',S.nonop.incCash],['nonop-incNonCash','영업외 수익 · 비현금',S.nonop.incNonCash],['nonop-expCash','영업외 비용 · 현금',S.nonop.expCash],['nonop-expNonCash','영업외 비용 · 비현금',S.nonop.expNonCash]];
+  const rows=groups.flatMap(([area,label,list])=>(list||[]).filter(it=>it.type!=='rate').map(it=>{
+    const mo=moOf(it,y,off),sum=mo?mo.reduce((a,x)=>a+Math.max(0,num(x,0)),0):null;
+    const ph=(y<0?num(expensePeriod(it,y,off,'nonop').value,0)/off:num(expenseYear(it,y).value,0))/n;
+    const cells=Array.from({length:n},(_,i)=>`<td><input class="cell" type="text" inputmode="numeric" data-mo-area="${area}" data-mo-id="${ppAttr(it.id)}" data-mo-year="${y}" data-mo-mi="${i}" value="${mo&&mo[i]!=null?won(mo[i]):''}" placeholder="${won(ph)}"></td>`).join('');
+    return `<tr><td class="l"><small>${label}</small> ${esc(it.name)}</td>${cells}<td class="strong">${sum!=null?formatMoney(sum):'—'}</td><td><button class="del" data-mo-clear="${area}" data-mo-id="${ppAttr(it.id)}" data-mo-year="${y}">월별 지우기</button></td></tr>`;
+  }));
+  card.innerHTML=`<div class="card-h"><div><h2>월별 금액 입력 · 판관비 · 영업외 수익·비용</h2><p>${costPeriodName(y)} 기준. 월별 금액을 넣으면 연간 값 대신 월별 합계가 적용됩니다(매출%형은 제외). 비워 두면 연간 값을 월간으로 나눠 배분합니다.</p></div></div>
+    <div class="tablewrap"><table class="tbl plain"><thead><tr><th class="l">항목</th>${Array.from({length:n},(_,i)=>`<th>${fyMonth(i)}</th>`).join('')}<th>월별 합계</th><th></th></tr></thead><tbody>${rows.join('')||'<tr><td class="l" colspan="15">금액형 항목이 없습니다.</td></tr>'}</tbody></table></div>`;
+}
 function renderCost(){
   if(!Gate.approved||!R||!document.getElementById('view-cost'))return;
   renderCostAccounts();
@@ -3064,6 +3108,12 @@ function bindStatic(){
   });
   document.addEventListener('input',e=>{
     const el=e.target;
+    if(el.dataset&&el.dataset.moArea){
+      const area=el.dataset.moArea,list=area.startsWith('nonop-')?S.nonop[area.slice(6)]:area==='sga-fixed'?S.sga.fixed:S.sga.variable;
+      const it=list&&list.find(x=>x.id===el.dataset.moId);
+      if(it){const off=t0MonthsOf(S);setMo(it,num(el.dataset.moYear,-1)|0,off,num(el.dataset.moMi,0)|0,Math.max(0,num(el.value,0)));saveState();paint();}
+      return;
+    }
     if(el.dataset&&el.dataset.sens){sensCfg[el.dataset.sens]=num(el.value);if(currentView==='value')renderValue();return;}
     if(el.id==='projName'){ S.meta.name=el.value; saveState(); return; }
     if(el.dataset.bind){
@@ -4214,6 +4264,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
