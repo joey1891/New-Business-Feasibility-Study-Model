@@ -2575,7 +2575,7 @@ function renderCostAccounts(preserve=null){
   if(!Gate.approved||!R)return;
   const y=costYear(),p=y<0?R.t0:R.pl[y],unit=unitLabel(),dis=!canEdit()||Workspace.busy?' disabled':'';
   const toolbar=$('#costPeriodControls');
-  if(toolbar&&!preserve)toolbar.innerHTML=`<div class="cost-period-switch" role="group" aria-label="판관비 및 영업외 편집 기간">${[...(R.t0?[-1]:[]),...R.pl.map((_,i)=>i)].map(i=>`<button type="button" class="btn sm ${i===y?'teal':''}" data-ce="period" data-ce-year="${i}" data-readonly-skip="1" aria-pressed="${i===y}">${costPeriodName(i)}</button>`).join('')}</div><p class="help">${y<0?'T0 금액은 부분기간 전체액, 매출%는 T0 매출 기준입니다. 빈칸은 기존 추정값을 사용합니다. 비용을 제외하려면 0을 입력하세요.':'입력 단위는 원 또는 매출%, 결과 단위는 '+unit+'입니다. 연도별 입력값은 서로 독립적입니다.'}</p><div class="cost-overview" aria-live="polite"></div>`;
+  if(toolbar&&!preserve)toolbar.innerHTML=`<div class="cost-period-switch" role="group" aria-label="판관비 및 영업외 편집 기간">${[...(R.t0?[-1]:[]),...R.pl.map((_,i)=>i)].map(i=>`<button type="button" class="btn sm ${i===y?'teal':''}" data-ce="period" data-ce-year="${i}" data-readonly-skip="1" aria-pressed="${i===y}">${costPeriodName(i)}</button>`).join('')}${y>=1?`<button type="button" class="btn sm" data-ce="copy-prev" data-ce-year="${y}" data-readonly-skip="1"${dis}>전년도 수동 입력 복사</button>`:''}</div><p class="help">${y<0?'T0 금액은 부분기간 전체액, 매출%는 T0 매출 기준입니다. 빈칸은 기존 추정값을 사용합니다. 비용을 제외하려면 0을 입력하세요.':'입력 단위는 원 또는 매출%, 결과 단위는 '+unit+'입니다. 연도별 입력값은 서로 독립적입니다.'}</p><div class="cost-overview" aria-live="polite"></div>`;
   const overview=toolbar?.querySelector('.cost-overview');
   if(overview){const a=p.pay.sga+p.dep,b=p.sga.variable.amt+p.sga.fixed.amt;overview.innerHTML=`<span>자동 <b>${formatMoney(a)}</b></span><span>수동 <b>${formatMoney(b)}</b></span><span>판관비 합계 <b>${formatMoney(a+b)} ${unit}</b></span>`;}
   COST_TABLES.forEach(([id,area,key])=>{
@@ -2615,6 +2615,15 @@ function costEvent(e){
   e.stopImmediatePropagation();
   if(!canEdit()||Workspace.busy){e.preventDefault();return;}
   if(e.type==='input'||(e.type==='click'&&el.tagName!=='BUTTON'))return;
+  if(f==='copy-prev'&&e.type==='click'){
+    e.preventDefault();
+    const prev=y-1,manual=[...Object.values(S.sga),...Object.values(S.nonop)].flat().filter(x=>x.years?.[prev]&&(x.years[prev].value!=null||x.years[prev].type));
+    if(!manual.length){toast('전년도에 직접 입력한 수동 항목이 없습니다.');return;}
+    if(!confirm(`전년도(${costPeriodName(prev)})에 직접 입력한 수동 항목 ${manual.length}개를 ${costPeriodName(y)}에 복사할까요? 선택 연도의 기존 입력은 교체되고, 인상률과 자동 계산액은 그대로 유지됩니다.`))return;
+    manual.forEach(x=>{['type','value'].forEach(k=>{const v=x.years[prev][k];if(v!=null)putAnnual(x,y,k,v);});});
+    R=compute(S);window.__R=R;saveState();renderCostAccounts();renderPeriodResults();enforceReadonly();
+    toast(`${costPeriodName(y)}에 ${manual.length}개 수동 항목을 복사했습니다. DB는 별도 저장하세요.`);return;
+  }
   const list=S[area]?.[key];if(!list)return;
   let it=list.find(x=>x.id===id),focus='';
   if(e.type==='click'){
@@ -4011,7 +4020,7 @@ renderExtensions=function(){renderExtBase2();try{renderT0Banner();}catch(e){cons
 
 ;;
 
-function putAnnual(o,y,field,value){o.years=o.years||{};o.years[y]=o.years[y]||{};o.years[y][field]=clone(value);}
+function putAnnual(o,y,field,value){o.years=o.years||{};o.years[y]=o.years[y]||{};o.years[y][field]=value==null?undefined:clone(value);}
 
 function saveBadge(){
   const lab=document.querySelector('.autosave'),tg=document.getElementById('autoSaveToggle'),btn=document.getElementById('btnSaveNow');
@@ -4030,6 +4039,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
