@@ -2476,7 +2476,7 @@ function renderInvLedger(){
   const selKey=groups.find(g=>g.key===ledgerGroup);
   const sel=ledgerGroup==='__all'?groups:(selKey?groups.filter(g=>g.name===selKey.name):groups);
   const receiptsByMonth=new Map();
-  const funding=buildFundingPlan(R),topUp=funding.upfront;
+  const funding=buildFundingPlan(R),topUp=funding.upfront,reserveMonths=R.openingCashNeed.reserveMonths||[];
   sel.forEach(g=>(g.orders||[]).forEach(o=>{if(!receiptsByMonth.has(o.arrMonth))receiptsByMonth.set(o.arrMonth,[]);receiptsByMonth.get(o.arrMonth).push({name:g.name,path:g.parentLabel,orderDay:o.orderDay,arrivalDay:o.arrivalDay,qty:o.qty,amount:o.amount});}));
   const data=[];let tO=0,tI=0,tS=0,tQ=0,tA=0,tStock=0,tShort=0,tShortQty=0,pending=0;const pendMonths=new Set();
   const NMw=ledgerYear<0?t0MonthsOf(S):(t0MonthsOf(S)+(ledgerYear+1)*12);
@@ -2499,7 +2499,8 @@ function renderInvLedger(){
     const gross=companyOrders.reduce((v,o)=>v+o.gross,0);
     const receipts=(receiptsByMonth.get(i)||[]).sort((a,b)=>a.arrivalDay-b.arrivalDay||a.orderDay-b.orderDay||a.name.localeCompare(b.name,'ko'));
     const receiptAmount=receipts.reduce((v,o)=>v+o.amount,0);
-    data.push({i,mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,cfo:R.cfoM[i],repay:R.repayM[i],collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,hasOrder:companyOrders.length>0,gap:closing-floor-gross});
+    const reserve=reserveMonths[i]||0,stressFloor=floor-reserve; // 발주예치금(reserve)은 결제 가정액과 같은 돈이므로 스트레스 판정에서 재차 빼지 않는다
+    data.push({i,mm:R.months[i].mm,open,inc,out,delta,stock,ord,amt,short,receipts,receiptAmount,cash,cfo:R.cfoM[i],repay:R.repayM[i],collected,ar:R.arM[i],ap:R.apM[i],closing,floor,available,reserveGap,gross,reserve,stressFloor,hasOrder:companyOrders.length>0,gap:closing-gross-stressFloor});
     if(m===0)tO+=open; tI+=inc; tS+=out; tQ+=ord; tA+=amt; tStock=stock;
   }
   t.innerHTML=`<thead><tr><th class="l">월</th><th>기초재고<span class="u">개</span></th><th>당기입고<span class="u">개</span></th><th>당기출고<span class="u">개</span></th><th>당기재고<span class="u">증감</span></th><th>기말재고<span class="u">개</span></th><th>발주수량<span class="u">개</span></th><th>발주금액<span class="u">${unitLabel()}</span></th><th>회사 보유현금<span class="u">월초 · ${unitLabel()}</span></th><th>발주자금 확인<span class="u">회사 전체 · 즉시 결제 가정</span></th></tr></thead><tbody>`+
@@ -2520,7 +2521,7 @@ function renderInvLedger(){
   if(cap){const pend=t._pending||0,pm=t._pendMonths||'';cap.innerHTML='기말재고 = 기초재고 + 당기입고 − 당기출고. 입고 예정일은 발주일 + 리드타임(달력일)입니다.'+(pend>0?`<br><b>다음 기간 입고 ${won(pend)}개</b> · 입고 예정월 ${pm}`:'')+(tShortQty>0?`<br><b class="neg">미충족 수요 ${won(tShortQty)}개 · 판매 기준 ${man(tShort)}</b>`:'<br><b>미충족 수요 0개</b> · 선택 기간의 제품별 월 수요를 모두 충족합니다.');}
   if(cap)cap.innerHTML+='<br>실제판매의 부가세 포함 청구액을 판매월의 달력일에 균등 배분하고, 청구 당시 회수일수를 적용합니다. 매입은 건별 입고일의 지급조건을 적용합니다. 회수·지급은 월말 현금에 이미 반영되며, 월말 결제 여력은 최소 운영현금을 유보한 금액입니다. 발주자금 확인은 별도의 즉시 추가 결제 점검이며, 실제 지급일이나 이미 지급한 금액을 뜻하지 않습니다.';
   if(cap)cap.innerHTML+='<br>당기입고 금액은 원장에 반영한 입고 원가입니다. 원발주 내역은 계획 주문 기준이며 이전 달·연도의 발주도 포함합니다.';
-  if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 부족액은 결제 가정액과 최소 운영현금을 모두 충당하는 데 필요한 추가 현금입니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
+  if(cap)cap.innerHTML=`<b>개시 현금 산출 (${unitLabel()})</b> · 자기자본 ${man(S.invest.equity)} + 차입 ${man(S.invest.debt)} + 기존 보유현금 ${man(S.assume.openingCash)} − 개시 투자 ${man(R.I0)} = <b>${man(R.cash0)}</b><br>발주자금 판정은 그 달 발주를 전부 즉시 결제한다고 가정해도 인건비 등 최소 운영현금(발주예치금 제외)을 유지할 수 있는지 점검합니다. 결제 가정액은 현금 확보 기준의 발주예치금과 같은 돈이므로 두 번 빼지 않습니다. 매출채권·매입채무는 회사 전체의 월말 추정 잔액이며, 합계 행에는 기간 말 잔액을 보여줍니다.<br>`+cap.innerHTML;
   if(cap)cap.innerHTML=`<b>원장 개시 현금(계획)</b> · 기존 개시 현금 ${man(R.cash0)} + 개시일 추가투입(${fundingAmount(R.s.invest.openingTopUp)==null?'자동':'직접 입력'}) ${man(topUp)} = <b>${man(funding.opening)} ${unitLabel()}</b>. 이후 잔액에는 월별 추가 투입도 포함됩니다.<br>`+cap.innerHTML+receivablesAuditHtml(R,ledgerYear<0?0:R.off+ledgerYear*12,NMw)+renderT0CashBridge(R,funding);
 }
 function renderT0CashBridge(r,funding){
@@ -4103,6 +4104,11 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
+
+
+
 
 
 
