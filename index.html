@@ -1557,7 +1557,10 @@ function compute(s0){
   }
 
   /* 사업성 */
-  const I0=s.invest.capex+s.invest.intangible+s.invest.longInvest+num(s.invest.t0Outflow,0)+openingStock+vat.opening;
+  const explicitInvest=s.invest.capex+s.invest.intangible+s.invest.longInvest+num(s.invest.t0Outflow,0);
+  const I0Invested=explicitInvest+openingStock+vat.opening;
+  // 명시적 초기투자(CAPEX·무형·투자자산·기타 초기 유출)가 전부 비어 있으면 자본금+보유현금을 초기투자로 사용
+  const I0=explicitInvest>0?I0Invested:Math.max(num(s.invest.equity,0)+num(s.assume.openingCash,0),0);
   const fcf=[];
   for(let y=0;y<H;y++){
     const nwc=operatingNWC(bs[y]);
@@ -1666,7 +1669,7 @@ function compute(s0){
   if(products.some(p=>p.rows[0]&&p.rows[0].lost>0)) diag.push({level:'amber',t:'Y1 초기재고 부족',text:'현재재고가 첫 달 수요보다 적습니다.'});
 
   return enrichDetail({s,H,NM,off,t0:t0rec,t0fcff,t0In,t0Out,months,products,invGroups,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,wcNeedYears,opFundYears,
-    tv,tvMode,tvValid,irrExcl,piExcl,navTV,I0,cash0,openingStock,vat,totals,minCash,openingCashNeed,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,receivables,payables,niM,depM,cfoM,repayM,debtM,interestM,
+    tv,tvMode,tvValid,irrExcl,piExcl,navTV,I0,I0Invested,explicitInvest,cash0,openingStock,vat,totals,minCash,openingCashNeed,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,receivables,payables,niM,depM,cfoM,repayM,debtM,interestM,
     diag,funding,equityIrr:eqIrr,moic,exitEquity,eqCF:eqCF,flows,pvCum,
     bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,invest:s.invest.longInvest,vatCredit:vat.opening,vatDue:0,
       assets:cash0+openingStock+s.invest.capex+s.invest.intangible+s.invest.longInvest+vat.opening,ap:0,debt:s.invest.debt,
@@ -2975,14 +2978,14 @@ function renderValue(){
   document.getElementById('npvBreak').innerHTML=`
     <div class="npvrow"><span>영업가치 현재가치</span><b>${formatMoney(pvOps)} ${unitLabel()}</b></div>
     <div class="npvrow"><span>잔존가치 현재가치</span><b>${R.tv===null?'계산불가':formatMoney(pvTV)+' '+unitLabel()}</b></div>
-    <div class="npvrow minus"><span>초기투자 (t=0)</span><b>−${formatMoney(R.I0)} ${unitLabel()}</b></div>
+    <div class="npvrow minus"><span>초기투자 (t=0)${R.explicitInvest===0?' · 자본금 대체':''}</span><b>−${formatMoney(R.I0)} ${unitLabel()}</b></div>
     <div class="npvrow total"><span>순현재가치 (NPV)</span><b class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':formatMoney(R.npv)+' '+unitLabel()}</b></div>
     <div class="cap">등가 연율 ${(R.wacc*100).toFixed(2)}% · 연도별 누적할인 · 잔존가치 ${R.tvMode==='gordon'?'영구성장모형':R.tvMode==='none'?'미포함':'순자산가치'}${R.t0&&R.t0fcff<0?` · T0 투자성 유출(재고 등)은 T0 FCFF(${shortWon(R.t0fcff)})에 포함`:''}</div>`;
   document.getElementById('valCells').innerHTML=[
     ['IRR',R.irr!=null?(R.irr*100).toFixed(1):'—','%',R.irr!=null?(R.irrExcl?'잔존가치 제외 · 할인율 ':'할인율 ')+(R.wacc*100).toFixed(1)+'% 대비':R.I0<=0?'초기투자(t=0 유출)가 없어 산출 불가':'현금흐름이 +로 전환되지 않아 산출 불가'],
     ['회수기간',R.I0<=0?'—':R.payback!=null?R.payback.toFixed(1):'> '+R.H,'년',R.I0<=0?'초기투자 없음':R.tvValid?'누적 FCFF 기준':'누적 FCFF 기준 · 잔존가치 제외'],
-    ['수익성지수',R.I0<=0?'계산불가':R.pi===null?'계산불가':R.pi.toFixed(2),'',R.I0<=0?'초기투자가 0이면 산출 불가':R.piExcl?'잔존가치 제외 · PV / 초기투자':'PV / 초기투자'],
-    ['초기투자',formatMoney(R.I0),unitLabel(),R.I0>0?'t=0 유출 · CAPEX+무형+초기재고+기타 초기 유출':'02 초기 투자에 투자액을 입력하세요 — 재고 등은 이미 T0 FCFF에 포함'],
+    ['수익성지수',R.I0<=0?'계산불가':R.pi===null?'계산불가':R.pi.toFixed(2),'',R.I0<=0?'초기투자가 0이면 산출 불가':(R.piExcl?'잔존가치 제외 · PV / 초기투자':'PV / 초기투자')+(R.explicitInvest===0?' · 초기투자 미입력 → 자본금으로 대체':'')],
+    ['초기투자',formatMoney(R.I0),unitLabel(),R.explicitInvest>0?'t=0 유출 · CAPEX+무형+초기재고+기타 초기 유출':'초기투자 미입력 → 자본금+보유현금으로 대체'],
     ['주주 IRR',R.equityIrr!=null?(R.equityIrr*100).toFixed(1):'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)}`],
     ['MOIC',R.moic.toFixed(2),'배','Exit 가치 / 자본금']
   ].map(([k,val,u,s])=>`<div class="hero-cell"><div class="k">${k}</div><div class="v">${val}<small>${u}</small></div><div class="s">${s}</div></div>`).join('');
@@ -3464,7 +3467,7 @@ function cashflowNodes(){
       {id:'noncash-exp',label:'현금유출 없는 비용 가산(+)',values:[dep+amort+exp,...R.cf.map(c=>c.dep+c.nonCashExp)],children:[{id:'dep',label:'감가상각비',values:v('depPPE',dep)},{id:'amort',label:'무형자산상각비',values:v('depInt',amort)},{id:'baddebt',label:'대손상각비 · 별도 미설정 (기타와 중복 가산하지 않음)',values:zero},{id:'other-exp',label:'기타비현금비용 · 기존 영업외 비현금비용 전체',values:v('nonCashExp',exp)}]},
       {id:'noncash-inc',label:'현금유입 없는 수익 차감(−)',values:v('nonCashInc',inc).map(x=>-x),children:[{id:'other-inc',label:'기타비현금수익',values:v('nonCashInc',inc).map(x=>-x)}]},
       {id:'wc',label:'영업자산부채 변동 증감(ΔWC)',values:Array.from({length:R.H+1},(_,i)=>wc.reduce((v,l)=>v+l.values[i],0)),children:wc},...(off&&Math.abs(adjustment)>0.000001?[{id:'t0-reconcile',label:'T0 기타 조정 · 월별 현금원장 대사 차이',values:[adjustment,...R.cf.map(()=>0)]}]:[])]},
-    {id:'cfi',label:'Ⅱ. 투자활동 현금흐름',cls:'subtotal',values:v('cfi',R.cf0.cfi),children:[{id:'capex',label:'CAPEX · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.capex-R.vat.assetVat.capex,...R.cf.map(()=>0)]},{id:'intangible',label:'무형자산투자 · 공제가능 VAT 포함 현금지출 / 연중 신규투자 미지원=0',values:[-R.s.invest.intangible-R.vat.assetVat.intangible,...R.cf.map(()=>0)]}]},
+    {id:'cfi',label:'Ⅱ. 투자활동 현금흐름',cls:'subtotal',values:v('cfi',R.cf0.cfi),children:[{id:'capex',label:'CAPEX',values:[-(R.s.invest.capex+num(R.s.invest.t0Outflow,0))-R.vat.assetVat.capex,...R.cf.map(()=>0)]},{id:'intangible',label:'무형자산투자',values:[-R.s.invest.intangible-R.vat.assetVat.intangible,...R.cf.map(()=>0)]}]},
     {id:'cff',label:'Ⅲ. 재무활동 현금흐름',cls:'subtotal',values:v('cff',R.cf0.cff),children:[{id:'equity',label:'자본유입',values:[S.invest.equity,...R.cf.map(()=>0)]},{id:'debt',label:'차입유입',values:[S.invest.debt,...R.cf.map(()=>0)]},{id:'repay',label:'차입상환',values:v('cff',-repay)}]},
     {id:'net',label:'현금증감',cls:'total',values:v('net',R.cf0.net)},{id:'begin',label:'기초현금 · t0는 기존 보유현금',values:v('begin',R.cf0.begin)},{id:'end',label:'기말현금',cls:'subtotal',values:v('end',R.cf0.end)}
   ];
@@ -3487,7 +3490,7 @@ function fcffNodes(){
       {id:'noncash',label:'비현금유출비용(가산)',values:v(p=>p.dep),children:[{id:'dep',label:'감가상각비',values:[0,...R.cf.map(c=>c.depPPE)]},{id:'amort',label:'무형자산상각비',values:[0,...R.cf.map(c=>c.depInt)]},{id:'other',label:'기타 영업 비현금 조정 · 미설정=0 (금융·영업외 제외)',values:z}]},
       {id:'wc-in',label:'영업자산부채 변동(유입)',values:wcSum(inflow),children:inflow},
       {id:'tv',label:'잔존가치(Terminal Value) · 최종연도만',values:[0,...R.pl.map((p,y)=>y===R.H-1?R.tv:0)]}]},
-    {id:'out',label:'2. 현금의 유출(-)',cls:'subtotal',values:R.fcffDetails.outflows,children:[{id:'capex',label:'CAPEX · 취득원가 / 공제 VAT는 대급금에 표시',values:[R.s.invest.capex,...R.pl.map(()=>0)]},{id:'intangible',label:'무형자산투자액 · 운영연도 신규투자 미지원=0',values:[R.s.invest.intangible,...R.pl.map(()=>0)]},{id:'invest',label:'투자자산투자액 · 운영연도 신규투자 미지원=0',values:[R.s.invest.longInvest||0,...R.pl.map(()=>0)]},{id:'wc-out',label:'영업자산부채 변동(유출)',values:wcSum(outflow),children:outflow}]},
+    {id:'out',label:'2. 현금의 유출(-)',cls:'subtotal',values:R.fcffDetails.outflows,children:[{id:'capex',label:'CAPEX',values:[R.s.invest.capex+num(R.s.invest.t0Outflow,0),...R.pl.map(()=>0)]},{id:'intangible',label:'무형자산투자',values:[R.s.invest.intangible,...R.pl.map(()=>0)]},{id:'invest',label:'투자자산투자',values:[R.s.invest.longInvest||0,...R.pl.map(()=>0)]},{id:'wc-out',label:'영업자산부채 변동(유출)',values:wcSum(outflow),children:outflow}]},
     {id:'fcff',label:'잉여현금흐름 FCFF (TV 포함)',cls:'total',values:R.flows},{id:'cum',label:'누적 FCFF',cls:'subtotal',values:R.fcffDetails.cumulative},{id:'pv',label:'할인된 FCFF(PV) · 연도별 누적할인',values:R.fcffDetails.pv},{id:'cum-pv',label:'누적 PV',cls:'subtotal',values:R.pvCum}
   ];
   fix0(nodesArr);return nodesArr;
@@ -4197,6 +4200,10 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
+
+
 
 
 
