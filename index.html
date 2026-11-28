@@ -3752,7 +3752,7 @@ function formatMoney(v){if(v===null)return '계산불가';const value=num(v)/Mon
 let periodMode='annual',inputDirty=false,composing=false,bulkDirty=false;
 function extendToolbar(){
   if(!Gate.approved)return;
-  if(!$('#displayUnit')){const bar=$('.yearbar');bar.insertAdjacentHTML('beforeend','<label>결과 단위 <select id="displayUnit" data-readonly-skip="1"><option value="won">원</option><option value="million">백만원</option><option value="eok">억원</option></select></label><label>공통 보기 <select id="periodMode" data-readonly-skip="1"><option value="annual">전체기간 연도별</option><option value="monthly">선택연도 월별</option></select></label><label>소수 자릿수 <select id="displayDecimals" data-readonly-skip="1"><option value="0">0자리 정수</option><option value="1">1자리</option><option value="2">2자리</option><option value="3">3자리</option></select></label>');}
+  if(!$('#displayUnit')){const bar=$('.yearbar');bar.insertAdjacentHTML('beforeend','<label>결과 단위 <select id="displayUnit" data-readonly-skip="1"><option value="won">원</option><option value="million">백만원</option><option value="eok">억원</option></select></label><label>공통 보기 <select id="periodMode" data-readonly-skip="1"><option value="annual">전체기간 연도별</option><option value="monthly">선택연도 월별</option></select></label><button class="btn sm" id="moJump" type="button" onclick="document.getElementById(&#39;moCard&#39;).scrollIntoView({block:&#39;start&#39;})">&#9660; 월별 입력</button><label>소수 자릿수 <select id="displayDecimals" data-readonly-skip="1"><option value="0">0자리 정수</option><option value="1">1자리</option><option value="2">2자리</option><option value="3">3자리</option></select></label>');}
   $('#displayUnit').value=unitKey();$('#periodMode').value=periodMode;$('#displayDecimals').value=String(moneyDigits());
   $('#planYear').dataset.readonlySkip='1';
   const fixed=$('[data-bind="meta.years"]')?.closest('.fgrid')?.querySelector('select[disabled]');if(fixed){fixed.innerHTML='<option>결과: '+unitLabel()+' / 입력: 원</option>';}
@@ -4267,6 +4267,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
