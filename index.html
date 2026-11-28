@@ -1721,13 +1721,15 @@ function t0PayrollTotal(months){
   return {heads:last.heads,total:sum('total'),mfg:sum('mfg'),sga:sum('sga'),byDept:last.byDept.map((d,i)=>({...d,base:months.reduce((a,p)=>a+p.byDept[i].base,0),amount:months.reduce((a,p)=>a+p.byDept[i].amount,0)})),sgaComponents:components('sgaComponents'),mfgComponents:components('mfgComponents')};
 }
 function rk2(r,y){const a=annual(r,y);const g=k=>Math.max(0,num(a[k]));return {salary:g('salary'),pension:g('pension'),health:g('health'),employment:g('employment'),accident:g('accident'),retirement:g('retirement'),care:g('care'),welfare:g('welfare'),cardLimit:g('cardLimit'),cardUse:g('cardUse'),travel:g('travel')};}
+// T0 인건비는 T0 채용 인원만 반영합니다. Y1 기초 인원의 급여는 Y1부터 계산합니다.
+function t0RankHeads(d,month){const out={},plan=d.hirePlanT0M||{};Object.keys(plan).forEach(rk=>{if(!rk)return;out[rk]=(Array.isArray(plan[rk])?plan[rk]:[]).slice(0,month+1).reduce((a,b)=>a+Math.max(0,num(b)),0);});return out;}
 function rankPayroll(s,y,t0Month=null){
   const pr=annual(s.payroll,y),ranks=pr.ranks||[],components=()=>Object.fromEntries(PAY_COMPONENTS.map(([k])=>[k,0]));let total=0,mfg=0,sga=0,heads=0;const byDept=[],sgaComponents=components(),mfgComponents=components();
   if(!pr.enabled)return {total,mfg,sga,heads,byDept,sgaComponents,mfgComponents};
   pr.departments.forEach(d=>{
     const dy=deptYear(s,d,y),rank=ranks.find(r=>r.id===dy.rankId),parts=components();let h=Math.max(0,num(dy.heads));
     if(hasRankPlan(d)){
-      const hb=deptRankHeads(d,y,t0Month===null?t0MonthsOf(s):t0Month+1);
+      const hb=t0Month===null?deptRankHeads(d,y,t0MonthsOf(s)):t0RankHeads(d,t0Month);
       Object.keys(hb).forEach(rk=>{
         const r2=ranks.find(r=>r.id===rk), hs=Math.max(0,num(hb[rk])); if(!r2||!hs) return;
         const cnt=Math.max(0,num(hb[rk]));
@@ -3738,7 +3740,7 @@ function renderRankMatrix(){
      <div class="pp-tool-scroll"><div class="pp-tools"><div class="pp-tool-group"><label>새 부서 이름<input data-pp="dept-name" placeholder="부서 이름 입력" maxlength="120"${disabled?' disabled':''}></label><label>원가 구분<select data-pp="new-role"${disabled?' disabled':''}><option value="admin">판매·관리</option><option value="manufacturing">제조</option></select></label><button class="btn" data-pp="new-dept"${disabled?' disabled':''}>부서 추가</button></div><div class="pp-tool-group"><label>행을 추가할 부서<select data-pp="add-dept"${disabled?' disabled':''}>${ppOptions(departments,PersonnelUI.dept,'부서 선택')}</select></label><label>추가할 직급<select data-pp="add-rank"${disabled?' disabled':''}>${ppOptions(ranks,PersonnelUI.rank,'직급 선택')}</select></label><button class="btn teal" data-pp="add"${disabled?' disabled':''}>직급 행 추가</button></div></div></div>
     ${rows.length?resultTable(head,rows):'<p class="note">등록된 부서가 없습니다. 부서 이름을 입력해 시작하세요.</p>'}
     <p class="help">연간 급여는 연봉 × 누적 인원이며 보험·퇴직·부대비는 제외한 값입니다. 미연결 부서의 Y2 이후 열은 기존 연도별 인원 차이(감소 가능)입니다. 채용/증감과 누적 재직인원을 더해 합산하지 않습니다. 직급 연결·변경 시 직급표의 급여 기준으로 바뀝니다. 미등록 직급의 계획은 보존되며 급여 연결 전에는 해당 직급 비용이 계산되지 않습니다.</p>
-     ${off?`<div class="pp-month" id="t0Hiring"><h3>T0 월별 채용 · ${t0Label(S)}</h3><p class="help">기초 인원은 시작월부터, 신규 채용은 채용월부터 월 단위로 비용에 반영합니다. T0 채용 인원은 Y1에 이월됩니다.</p>${resultTable(['부서 › 직급','원가 구분',...Array.from({length:off},(_,m)=>`${sy}년 ${smOf(S)+m}월`),'채용 합계'],monthly)}${monthly.length?'':'<p class="help">직급 행을 추가하면 월별 채용을 입력할 수 있습니다.</p>'}${resultTable(['월별 인력 관련 경비 · '+unitLabel(),'원가 구분',...Array.from({length:off},(_,m)=>`${smOf(S)+m}월`),'T0 합계'],[['제조 인력','매출원가',...R.t0.payMonths.map(p=>formatMoney(p.mfg)),formatMoney(R.t0.pay.mfg)],['판매·관리 인력','판관비',...R.t0.payMonths.map(p=>formatMoney(p.sga)),formatMoney(R.t0.pay.sga)]])}</div>`:'<p class="help">1월 시작은 별도 T0 부분기간이 없습니다. 사업 시작월을 변경하면 해당 월~12월의 T0 채용 열이 표시됩니다.</p>'}
+     ${off?`<div class="pp-month" id="t0Hiring"><h3>T0 월별 채용 · ${t0Label(S)}</h3><p class="help">T0 급여에는 T0 채용 인원만 반영되며, Y1 기초 인원의 급여는 Y1부터 계산합니다. 신규 채용은 채용월부터 월 단위로 비용에 반영하고, T0 채용 인원은 Y1에 이월됩니다.</p>${resultTable(['부서 › 직급','원가 구분',...Array.from({length:off},(_,m)=>`${sy}년 ${smOf(S)+m}월`),'채용 합계'],monthly)}${monthly.length?'':'<p class="help">직급 행을 추가하면 월별 채용을 입력할 수 있습니다.</p>'}${resultTable(['월별 인력 관련 경비 · '+unitLabel(),'원가 구분',...Array.from({length:off},(_,m)=>`${smOf(S)+m}월`),'T0 합계'],[['제조 인력','매출원가',...R.t0.payMonths.map(p=>formatMoney(p.mfg)),formatMoney(R.t0.pay.mfg)],['판매·관리 인력','판관비',...R.t0.payMonths.map(p=>formatMoney(p.sga)),formatMoney(R.t0.pay.sga)]])}</div>`:'<p class="help">1월 시작은 별도 T0 부분기간이 없습니다. 사업 시작월을 변경하면 해당 월~12월의 T0 채용 열이 표시됩니다.</p>'}
      <details class="pp-month"${PersonnelUI.monthly?' open':''}><summary data-pp="monthly-toggle">${fyShort(editYear,S)} 월별 채용 분해 (선택)</summary><p class="help">월별 합계가 ${editYear?'해당 연도 추가 채용':'Y1 기초 인원'}을 대체합니다. 연간 값을 직접 바꾸면 해당 월별 분해를 해제합니다. 채용월별 급여 계산이 아닌 연간 계획 입력입니다.</p>${resultTable(['부서 › 직급','원가 구분',...Array.from({length:12},(_,m)=>`${m+1}월`),'합계'],departments.flatMap(d=>rpRankList(d).map(rk=>{const a=d.hirePlanM?.[editYear]?.[rk]||[];return [`${esc(d.name)} › ${esc(ranks.find(r=>r.id===rk)?.name||rk)}`,roleName(payrollRole(S,d,editYear)),...Array.from({length:12},(_,m)=>ppInput(d,rk,'month',m,num(a[m]),`${d.name} ${rk} ${fyShort(editYear,S)} ${m+1}월`,disabled)),ppSum(a)];})))}</details>`;
    const planned=y=>departments.reduce((a,d)=>a+(hasRankPlan(d)?deptPlanHeads(d,y,off):num(deptYear(S,d,y).heads)),0);
    const t0=departments.reduce((a,d)=>a+rpRankList(d).reduce((t,rk)=>t+ppSum(activeT0Hires(S,d,rk)),0),0);
@@ -4028,6 +4030,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
