@@ -539,6 +539,7 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.capexLife" min="1" max="30" step="1"><i>년</i></span></label>
               <label class="field"><span class="lb">투자자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.longInvest" inputmode="numeric"><i>원</i></span><span class="help">장기투자·보증금 등 상각하지 않는 투자자산</span></label>
               <label class="field"><span class="lb">무형자산 · 기타</span><span class="inp"><input type="text" class="comma" data-bind="invest.intangible" inputmode="numeric"><i>원</i></span></label>
+              <label class="field"><span class="lb">기타 초기 유출 · T0 직접 입력</span><span class="inp"><input type="text" class="comma" data-bind="invest.t0Outflow" inputmode="numeric"><i>원</i></span><span class="help">개시월 가설비·인테리어·계약금 등 초기투자에 직접 반영할 유출. IRR 왜곡을 막으려면 초기투자 규모를 실제와 같게 입력하세요.</span></label>
               <label class="field"><span class="lb">내용연수</span><span class="inp"><input type="number" data-bind="invest.intangibleLife" min="1" max="30" step="1"><i>년</i></span></label>
               <label class="field"><span class="lb">사전 확보 초기재고</span><span class="inp"><input type="text" id="openingStockView" readonly><i>원</i></span><span class="help">실제로 개시 전에 확보한 입력 재고만 반영합니다.</span></label>
                <label class="field"><span class="lb">개시일 최소 운영현금</span><span class="inp"><input type="text" id="minCashView" readonly><i>원</i></span><span class="help">인건비·최초 발주 유보액과 계획기간 중 추가 현금 부족분을 포함합니다.</span></label>
@@ -867,7 +868,7 @@ function defaultState(){
   return {
     meta:{name:'2027 리빙케어 사업계획',startYear:2027,years:5,displayUnit:'won',displayDecimals:0},
     assume:{taxRate:22,ke:12,waccMode:'auto',wacc:10,minCashMonths:4,arDays:45,apDays:30,openingCash:0,tvMode:'nav',g:1},
-    invest:{capex:200000000,capexLife:5,intangible:20000000,intangibleLife:5,equity:320000000,debt:120000000,rate:6,repay:'bullet'},
+    invest:{capex:200000000,capexLife:5,intangible:20000000,intangibleLife:5,t0Outflow:0,equity:320000000,debt:120000000,rate:6,repay:'bullet'},
     sales:{tree},
     payroll:{enabled:true,insurance:11,retirement:8.33,raise:3,rateYear:2026,ranks:rankDefaults(),departments:[
       {id:uid('d'),name:'생산',heads:8,salary:3600000,headAdd:0,mfg:true,role:'manufacturing'},
@@ -944,7 +945,7 @@ function ensureState(s0){
   s.meta.startYear=Math.max(2000,Math.min(2100,Math.round(num(s.meta.startYear,2027))));
   s.meta.startMonth=Math.min(12,Math.max(1,Math.round(num(s.meta.startMonth,1))));
   ['taxRate','ke','wacc','minCashMonths','arDays','apDays','openingCash','g'].forEach(k=>s.assume[k]=num(s.assume[k],d.assume[k]));
-  ['capex','capexLife','intangible','intangibleLife','longInvest','equity','debt','rate'].forEach(k=>s.invest[k]=num(s.invest[k],d.invest[k]));
+  ['capex','capexLife','intangible','intangibleLife','t0Outflow','longInvest','equity','debt','rate'].forEach(k=>s.invest[k]=num(s.invest[k],d.invest[k]));
   s.invest.capexLife=Math.max(1,Math.round(s.invest.capexLife));
   s.invest.intangibleLife=Math.max(1,Math.round(s.invest.intangibleLife));
   if(!Array.isArray(s.sales&&s.sales.tree)) s.sales={tree:[]};
@@ -1287,7 +1288,7 @@ function applyInvEdit(el,value){
 function irr(flows){
   const f=r=>flows.reduce((s,v,i)=>s+v/Math.pow(1+r,i),0);
   let lo=-0.9999,hi=1;
-  if(f(lo)*f(hi)>0){ hi=5; if(f(lo)*f(hi)>0) return null; }
+  if(f(lo)*f(hi)>0){ for(const h of [5,20,100]){ hi=h; if(f(lo)*f(hi)<=0) break; } if(f(lo)*f(hi)>0) return null; }
   for(let i=0;i<200;i++){ const mid=(lo+hi)/2; if(f(lo)*f(mid)<=0) hi=mid; else lo=mid; }
   const r=(lo+hi)/2; return Number.isFinite(r)?r:null;
 }
@@ -1556,7 +1557,7 @@ function compute(s0){
   }
 
   /* 사업성 */
-  const I0=s.invest.capex+s.invest.intangible+s.invest.longInvest+openingStock+vat.opening;
+  const I0=s.invest.capex+s.invest.intangible+s.invest.longInvest+num(s.invest.t0Outflow,0)+openingStock+vat.opening;
   const fcf=[];
   for(let y=0;y<H;y++){
     const nwc=operatingNWC(bs[y]);
@@ -2764,7 +2765,11 @@ function pctRow(label,vals){return {l:label,v:vals,sub:true,cls:'ind2'};}
 function ofRev(vals,revs){return vals.map((v,i)=>{const r=num(revs[i]);return r>0?pcv(Math.abs(num(v)||0)/r):'—';});}
 function buildStmt(rows,head){
   return `<thead><tr><th class="l sticky" style="width:240px">계정 <span class="u">${unitLabel()}</span></th>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
-    <tbody>${rows.map(r=>r.metric?accountRows(r):`<tr class="${r.cls||''}"><td class="l ${r.sub?'ind':''}">${r.l}</td>${r.v.map((c,i)=>`<td>${typeof c==='number'?m(c):c}${r.pct&&r.pct[i]!=null?`<div class="pct">${r.pct[i]}</div>`:''}</td>`).join('')}</tr>`).join('')}</tbody>`;
+    <tbody>${rows.map(r=>{
+      const pctCell=(i)=>r.pct&&r.pct[i]!=null?`<div class="pct">${r.pct[i]}</div>`:'';
+      if(r.metric)return accountRows(r);
+      return `<tr class="${r.cls||''}"><td class="l ${r.sub?'ind':''}">${r.l}</td>${r.v.map((c,i)=>`<td>${typeof c==='number'?m(c):c}${pctCell(i)}</td>`).join('')}</tr>`;
+    }).join('')}</tbody>`;
 }
 function periods(){
   return R.pl.map((p,y)=>`${fyShort(y).replace(' · ','<span class="u">')}</span>`);
@@ -2836,14 +2841,15 @@ function renderFinanceInner(){
     withPct('매출원가 합계 · 제품원가 + 제조 인력 관련 경비',values(p=>-p.cogs));
     withPct('매출원가 (제품·상품)',values(p=>-first(p)));
     names.forEach(n=>withPct('· '+esc(n),accounts.map(a=>-(a.get(n)||0))));
-    const idxTotal=rows.findIndex(r=>r.l==='판관비 합계');if(idxTotal>=0)withPct(rows[idxTotal],values(p=>-(p.pay.sga+p.sga.fixed.amt+p.sga.variable.amt+p.dep)));
-    const idxEbit=rows.findIndex(r=>r.l==='영업이익 (EBIT)');if(idxEbit>=0)withPct(rows[idxEbit],values(p=>p.ebit));
-    const idxInc=rows.findIndex(r=>r.l==='영업외 수익');if(idxInc>=0)withPct(rows[idxInc],values(p=>p.nonOpInc));
-    const idxExp=rows.findIndex(r=>r.l==='영업외 비용');if(idxExp>=0)withPct(rows[idxExp],values(p=>-(p.intr+p.nonOpExp)));
-    const idxEbt=rows.findIndex(r=>r.l==='세전이익');if(idxEbt>=0)withPct(rows[idxEbt],values(p=>p.ebt));
-    const idxTax=rows.findIndex(r=>r.l==='법인세');if(idxTax>=0)withPct(rows[idxTax],values(p=>-p.tax));
-    const idxNi=rows.findIndex(r=>r.l==='당기순이익');if(idxNi>=0)withPct(rows[idxNi],values(p=>p.ni));
-    const idxEbitda=rows.findIndex(r=>r.l==='EBITDA');if(idxEbitda>=0)withPct(rows[idxEbitda],values(p=>p.ebitda));
+    withPct('매출총이익',values(p=>p.gp));
+    withPct('판관비 합계',values(p=>-(p.pay.sga+p.sga.fixed.amt+p.sga.variable.amt+p.dep)));
+    withPct('영업이익 (EBIT)',values(p=>p.ebit));
+    withPct('영업외 수익',values(p=>p.nonOpInc));
+    withPct('영업외 비용',values(p=>-(p.intr+p.nonOpExp)));
+    withPct('세전이익',values(p=>p.ebt));
+    withPct('법인세',values(p=>-p.tax));
+    withPct('당기순이익',values(p=>p.ni));
+    withPct('EBITDA',values(p=>p.ebitda));
     T.innerHTML=buildStmt(rows,P2);
     T.classList.add('stmt');
     const _sn=document.getElementById('stmtNote'); if(_sn){_sn.innerHTML='';_sn.hidden=true;if(_sn.parentElement)_sn.parentElement.hidden=true;}
@@ -2971,12 +2977,12 @@ function renderValue(){
     <div class="npvrow"><span>잔존가치 현재가치</span><b>${R.tv===null?'계산불가':formatMoney(pvTV)+' '+unitLabel()}</b></div>
     <div class="npvrow minus"><span>초기투자 (t=0)</span><b>−${formatMoney(R.I0)} ${unitLabel()}</b></div>
     <div class="npvrow total"><span>순현재가치 (NPV)</span><b class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':formatMoney(R.npv)+' '+unitLabel()}</b></div>
-    <div class="cap">등가 연율 ${(R.wacc*100).toFixed(2)}% · 연도별 누적할인 · 잔존가치 ${R.tvMode==='gordon'?'영구성장모형':R.tvMode==='none'?'미포함':'순자산가치'}</div>`;
+    <div class="cap">등가 연율 ${(R.wacc*100).toFixed(2)}% · 연도별 누적할인 · 잔존가치 ${R.tvMode==='gordon'?'영구성장모형':R.tvMode==='none'?'미포함':'순자산가치'}${R.t0&&R.t0fcff<0?` · T0 투자성 유출(재고 등)은 T0 FCFF(${shortWon(R.t0fcff)})에 포함`:''}</div>`;
   document.getElementById('valCells').innerHTML=[
     ['IRR',R.irr!=null?(R.irr*100).toFixed(1):'—','%',R.irr!=null?(R.irrExcl?'잔존가치 제외 · 할인율 ':'할인율 ')+(R.wacc*100).toFixed(1)+'% 대비':R.I0<=0?'초기투자(t=0 유출)가 없어 산출 불가':'현금흐름이 +로 전환되지 않아 산출 불가'],
     ['회수기간',R.I0<=0?'—':R.payback!=null?R.payback.toFixed(1):'> '+R.H,'년',R.I0<=0?'초기투자 없음':R.tvValid?'누적 FCFF 기준':'누적 FCFF 기준 · 잔존가치 제외'],
     ['수익성지수',R.I0<=0?'계산불가':R.pi===null?'계산불가':R.pi.toFixed(2),'',R.I0<=0?'초기투자가 0이면 산출 불가':R.piExcl?'잔존가치 제외 · PV / 초기투자':'PV / 초기투자'],
-    ['초기투자',formatMoney(R.I0),unitLabel(),R.I0>0?'t=0 유출':'02 초기 투자에 투자액을 입력하세요'],
+    ['초기투자',formatMoney(R.I0),unitLabel(),R.I0>0?'t=0 유출 · CAPEX+무형+초기재고+기타 초기 유출':'02 초기 투자에 투자액을 입력하세요 — 재고 등은 이미 T0 FCFF에 포함'],
     ['주주 IRR',R.equityIrr!=null?(R.equityIrr*100).toFixed(1):'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)}`],
     ['MOIC',R.moic.toFixed(2),'배','Exit 가치 / 자본금']
   ].map(([k,val,u,s])=>`<div class="hero-cell"><div class="k">${k}</div><div class="v">${val}<small>${u}</small></div><div class="s">${s}</div></div>`).join('');
@@ -3419,7 +3425,7 @@ function toggleButton(key,label,open){return `<button type="button" class="detai
 function accountRows(row){
   const off=t0MonthsOf(S);
   const key='acct:'+finTab+':'+row.metric,open=detailOpen(key,false),sign=row.sign||1;
-  let html=`<tr class="subtotal"><td class="l">${toggleButton(key,esc(row.l),open)}</td>${row.v.map(v=>`<td>${detailMoney(v)}</td>`).join('')}</tr>`;
+  let html=`<tr class="subtotal"><td class="l">${toggleButton(key,esc(row.l),open)}</td>${row.v.map((v,i)=>`<td>${detailMoney(v)}${row.pct&&row.pct[i]!=null?`<div class="pct">${row.pct[i]}</div>`:''}</td>`).join('')}</tr>`;
   if(!open)return html;
   const max=+DetailState['level:'+finTab]||1;
   function walk(nodes){nodes.forEach(n=>{const nk=key+':'+n.key,expanded=detailOpen(nk,n.depth<max),has=n.children.length>0,label=`<span class="tree-depth">${n.depth}</span> ${esc(n.name)}`;
@@ -4191,6 +4197,9 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
+
 
 
 
