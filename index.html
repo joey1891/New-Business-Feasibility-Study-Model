@@ -2687,8 +2687,11 @@ function drawCashChart(){
 /* ================= 05 인건비·판관비 ================= */
 function renderMoInputs(){
   let card=document.getElementById('moCard');
-  if(!card){card=document.createElement('div');card.className='card';card.id='moCard';const host=document.querySelector('#view-cost .stack')||document.querySelector('#view-cost');if(host)host.prepend(card);}
-  if(!card)return;
+  const moStack=document.getElementById('view-cost');
+  if(!card&&moStack){card=document.createElement('div');card.className='card';card.id='moCard';}
+  if(!card||!moStack)return;
+  if(card.parentElement!==moStack)moStack.prepend(card);
+  else if(card.previousElementSibling!==null)moStack.prepend(card);
   const off=t0MonthsOf(S),y=(typeof moYearSel==='number'&&moYearSel<=S.meta.years)?(moYearSel<0?-1:moYearSel):editYear,n=y<0?off:12;
   const yearOpts=[...(off?['<option value="-1"'+(y<0?' selected':'')+' >T0 · '+t0Label(S)+'</option>']:[]),...Array.from({length:S.meta.years},(_,yy)=>`<option value="${yy}"${y===yy?' selected':''}>${fyShort(yy,S)}</option>`)].join('');
   const groups=[['sga-fixed','판매비와 관리비 · 고정',S.sga.fixed],['sga-variable','판매비와 관리비 · 변동',S.sga.variable],['nonop-incCash','영업외 수익 · 현금',S.nonop.incCash],['nonop-incNonCash','영업외 수익 · 비현금',S.nonop.incNonCash],['nonop-expCash','영업외 비용 · 현금',S.nonop.expCash],['nonop-expNonCash','영업외 비용 · 비현금',S.nonop.expNonCash]];
@@ -3847,7 +3850,9 @@ function resultTable(head,rows){return '<div class="tablewrap"><table class="tbl
 function renderExtensions(){
   if(!Gate.approved||!R)return;extendToolbar();
   if(currentView==='cost')renderRankSettings();
-  renderPeriodResults();renderCurrencyPanels();enforceReadonly();
+  renderPeriodResults();renderCurrencyPanels();
+  if(currentView==='cost')renderMoInputs();
+  enforceReadonly();
 }
 function renderRankSettings(){
   let box=$('#rankSettings');if(!box){box=document.createElement('div');box.id='rankSettings';box.className='card extended-card';$('#view-cost').prepend(box);}
@@ -4272,6 +4277,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
