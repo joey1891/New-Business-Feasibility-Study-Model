@@ -2686,7 +2686,7 @@ function drawCashChart(){
 /* ================= 05 인건비·판관비 ================= */
 function renderMoInputs(){
   let card=document.getElementById('moCard');
-  if(!card){card=document.createElement('div');card.className='card';card.id='moCard';const host=document.querySelector('#view-cost .stack')||document.querySelector('#view-cost');if(host)host.appendChild(card);}
+  if(!card){card=document.createElement('div');card.className='card';card.id='moCard';const host=document.querySelector('#view-cost .stack')||document.querySelector('#view-cost');if(host)host.prepend(card);}
   if(!card)return;
   const off=t0MonthsOf(S),y=editYear,n=y<0?off:12;
   const groups=[['sga-fixed','판매비와 관리비 · 고정',S.sga.fixed],['sga-variable','판매비와 관리비 · 변동',S.sga.variable],['nonop-incCash','영업외 수익 · 현금',S.nonop.incCash],['nonop-incNonCash','영업외 수익 · 비현금',S.nonop.incNonCash],['nonop-expCash','영업외 비용 · 현금',S.nonop.expCash],['nonop-expNonCash','영업외 비용 · 비현금',S.nonop.expNonCash]];
@@ -2702,6 +2702,7 @@ function renderMoInputs(){
 function renderCost(){
   if(!Gate.approved||!R||!document.getElementById('view-cost'))return;
   renderCostAccounts();
+  renderMoInputs();
 }
 const COST_TABLES=[['sgaVar','sga','variable'],['sgaFixed','sga','fixed'],['nonopInc','nonop','incCash'],['nonopExp','nonop','expCash'],['nonopIncNC','nonop','incNonCash'],['nonopExpNC','nonop','expNonCash']];
 const costYear=()=>t0Sel&&R.t0?-1:editYear;
@@ -3982,9 +3983,11 @@ function renderRankMatrix(){
   const footer=['전체 합계 · 채용/증감','기초·추가와 누적 구분',...(off?[won(t0)+'명 채용']:[]),...entries.map((n,y)=>won(n)+(y?'명 추가/증감':'명 기초')),won(planned(editYear))+'명 누적',formatMoney(R.pl[editYear].pay.byDept.reduce((a,d)=>a+d.base,0)),'—'];
   const first=box.querySelector('table');if(first)first.insertAdjacentHTML('beforeend',`<tfoot><tr>${footer.map((v,i)=>`<td${i===0?' class="l"':''}>${v}</td>`).join('')}</tr></tfoot>`);
   const summary=document.createElement('div');summary.id='personnelTotals';summary.className='pp-month';
-  const metrics=[['기초 / 추가 증감（누적 아님）',...entries.map((n,y)=>won(n)+(y?'명 추가/증감':'명 기초'))],['누적 재직인원（기초 + T0 + 이후 증감）',...R.pl.map((_,y)=>won(planned(y))+'명')],['연간 급여 합계（보험·퇴직·부대비 제외）',...R.pl.map(p=>formatMoney(p.pay.byDept.reduce((a,d)=>a+d.base,0)))],['연간 총부담액（제조 + 판매·관리）',...R.pl.map(p=>formatMoney(p.pay.total))]];
-   if(R.t0){const pay=R.t0.pay;[won(t0)+'명 채용',won(planned(0))+'명 (Y1 기초 포함)',formatMoney(pay.byDept.reduce((a,d)=>a+d.base,0)),formatMoney(pay.total)].forEach((v,i)=>metrics[i].splice(1,0,v));}
-    summary.innerHTML=`<h3>전 연도 인원·급여 합계 · 금액 ${unitLabel()}</h3><p class="cap">T0 급여와 총부담액은 월별 계산액의 합계입니다. Y1 이후에는 연간 계획 인원을 적용합니다.</p>${resultTable(['합계 구분',...(R.t0?['T0 · '+t0Label(S)]:[]),...R.pl.map((_,y)=>fyShort(y,S))],metrics)}`;
+  const t0Heads=off?departments.reduce((a,d)=>a+(d.hirePlanT0M?Object.values(d.hirePlanT0M).reduce((x,arr)=>Array.isArray(arr)?x+arr.slice(0,off).reduce((u,b)=>u+Math.max(0,num(b)),0):x,0):0),0):0;
+  const t0Cum=off?won(t0Heads)+'명 T0 채용':null;
+  const metrics=[['기초 / 추가 증감（누적 아님）',...(off?[won(t0Heads)+'명 T0 채용']:[]),...entries.map((n,y)=>won(n)+(y?'명 추가/증감':'명 기초'))],['누적 재직인원（T0 채용 / 기초 + 이후 증감）',...(off?[t0Cum]:[]),...R.pl.map((_,y)=>won(planned(y))+'명')],['연간 급여 합계（보험·퇴직·부대비 제외）',...(off?[t0Cum&&formatMoney(R.t0.pay.mfg+R.t0.pay.sga)||'—']:[]),...R.pl.map(p=>formatMoney(p.pay.byDept.reduce((a,d)=>a+d.base,0)))],['연간 총부담액（제조 + 판매·관리）',...(off?[formatMoney(R.t0.pay.total)]:[]),...R.pl.map(p=>formatMoney(p.pay.total))]];
+
+    summary.innerHTML=`<h3>전 연도 인원·급여 합계 · 금액 ${unitLabel()}</h3><p class="cap">T0 열은 T0 채용 인원과 그 급여(월별 계산액 합계)입니다. Y1 누적 재직인원 = Y1 기초 + T0 채용 이월 + Y2까지 추가 채용. T0 채용 인원은 Y1에 이월됩니다.</p>${resultTable(['합계 구분',...(R.t0?['T0 · '+t0Label(S)]:[]),...R.pl.map((_,y)=>fyShort(y,S))],metrics)}`;
    const st=summary.querySelector('table');st.innerHTML=st.innerHTML.replace('<tbody>','<tfoot>').replace('</tbody>','</tfoot>');
    const anchor=box.querySelector('details.pp-month')||box.querySelector('#t0Hiring')||first?.closest('.tablewrap')||box.querySelector('.pp-tool-scroll');anchor.after(summary);
    if(departments.length){const selected=departments.find(d=>d.id===PersonnelUI.dept)||departments[0],r0=payrollRole(S,selected,editYear);
@@ -4264,6 +4267,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
