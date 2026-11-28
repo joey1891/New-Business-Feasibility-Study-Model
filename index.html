@@ -1593,7 +1593,12 @@ function compute(s0){
     if(i>0&&flows[i]!==null){ const prev=cum; cum+=flows[i]; if(payback===null&&cum>=0&&flows[i]>0) payback=(i-1)+(-prev/flows[i]); }
     pvCum.push(pv);
   }
-  const npv=pv,irrV=tvValid?irr(flows):null,pi=npv===null?null:I0>0?(npv+I0)/I0:0;
+  const npv=pv;
+  const irrFlows=tvValid?flows:flows.slice(0,flows.lastIndexOf(null));
+  const irrV=irrFlows.some(v=>v>0)&&irrFlows.some(v=>v<0)?irr(irrFlows):null;
+  const irrExcl=!tvValid&&irrV!=null;
+  let pi=npv===null?null:I0>0?(npv+I0)/I0:0,piExcl=false;
+  if(pi===null&&tvValid===false&&I0>0){const pvOp=flows.slice(0,flows.lastIndexOf(null)).reduce((a,f,i)=>a+f/(i?discounts[i-1]:1),0);pi=pvOp/I0;piExcl=true;}
   const exitEquity=Math.max(0,navTV+lastBS.cash-lastBS.debt);
   const eq0=s.invest.equity+s.assume.openingCash;
   const eqCF=[-eq0]; for(let i=0;i<H-1;i++) eqCF.push(0); eqCF.push(exitEquity);
@@ -1660,7 +1665,7 @@ function compute(s0){
   if(products.some(p=>p.rows[0]&&p.rows[0].lost>0)) diag.push({level:'amber',t:'Y1 초기재고 부족',text:'현재재고가 첫 달 수요보다 적습니다.'});
 
   return enrichDetail({s,H,NM,off,t0:t0rec,t0fcff,t0In,t0Out,months,products,invGroups,pl,cf,fcf,bs,mgmt,segment,npv,irr:irrV,payback,pi,wacc,waccYears,discounts,minCashYears,wcNeedYears,opFundYears,
-    tv,tvMode,tvValid,navTV,I0,cash0,openingStock,vat,totals,minCash,openingCashNeed,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,receivables,payables,niM,depM,cfoM,repayM,debtM,interestM,
+    tv,tvMode,tvValid,irrExcl,piExcl,navTV,I0,cash0,openingStock,vat,totals,minCash,openingCashNeed,worst,belowMin,cashM,revM,cogsM,purchM,invM,arM,apM,receivables,payables,niM,depM,cfoM,repayM,debtM,interestM,
     diag,funding,equityIrr:eqIrr,moic,exitEquity,eqCF:eqCF,flows,pvCum,
     bs0:{cash:cash0,ar:0,inv:openingStock,ppe:s.invest.capex,intang:s.invest.intangible,invest:s.invest.longInvest,vatCredit:vat.opening,vatDue:0,
       assets:cash0+openingStock+s.invest.capex+s.invest.intangible+s.invest.longInvest+vat.opening,ap:0,debt:s.invest.debt,
@@ -2968,10 +2973,10 @@ function renderValue(){
     <div class="npvrow total"><span>순현재가치 (NPV)</span><b class="${R.npv<0?'neg':''}">${R.npv===null?'계산불가':formatMoney(R.npv)+' '+unitLabel()}</b></div>
     <div class="cap">등가 연율 ${(R.wacc*100).toFixed(2)}% · 연도별 누적할인 · 잔존가치 ${R.tvMode==='gordon'?'영구성장모형':R.tvMode==='none'?'미포함':'순자산가치'}</div>`;
   document.getElementById('valCells').innerHTML=[
-    ['IRR',R.irr!=null?(R.irr*100).toFixed(1):'—','%',`할인율 ${(R.wacc*100).toFixed(1)}% 대비`],
-    ['회수기간',!R.tvValid?'계산불가':R.payback!=null?R.payback.toFixed(1):'> '+R.H,R.tvValid?'년':'','누적 FCFF 기준'],
-    ['수익성지수',R.pi===null?'계산불가':R.pi.toFixed(2),'','PV / 초기투자'],
-    ['초기투자',formatMoney(R.I0),unitLabel(),'t=0 유출'],
+    ['IRR',R.irr!=null?(R.irr*100).toFixed(1):'—','%',R.irr!=null?(R.irrExcl?'잔존가치 제외 · 할인율 ':'할인율 ')+(R.wacc*100).toFixed(1)+'% 대비':R.I0<=0?'초기투자(t=0 유출)가 없어 산출 불가':'현금흐름이 +로 전환되지 않아 산출 불가'],
+    ['회수기간',R.I0<=0?'—':R.payback!=null?R.payback.toFixed(1):'> '+R.H,'년',R.I0<=0?'초기투자 없음':R.tvValid?'누적 FCFF 기준':'누적 FCFF 기준 · 잔존가치 제외'],
+    ['수익성지수',R.I0<=0?'계산불가':R.pi===null?'계산불가':R.pi.toFixed(2),'',R.I0<=0?'초기투자가 0이면 산출 불가':R.piExcl?'잔존가치 제외 · PV / 초기투자':'PV / 초기투자'],
+    ['초기투자',formatMoney(R.I0),unitLabel(),R.I0>0?'t=0 유출':'02 초기 투자에 투자액을 입력하세요'],
     ['주주 IRR',R.equityIrr!=null?(R.equityIrr*100).toFixed(1):'—','%',`자본금 ${shortWon(S.invest.equity+S.assume.openingCash)}`],
     ['MOIC',R.moic.toFixed(2),'배','Exit 가치 / 자본금']
   ].map(([k,val,u,s])=>`<div class="hero-cell"><div class="k">${k}</div><div class="v">${val}<small>${u}</small></div><div class="s">${s}</div></div>`).join('');
@@ -4186,6 +4191,8 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
+
 
 
 
