@@ -336,6 +336,12 @@ td.dsel input{background:rgba(47,125,143,.14)}
 .neg{color:var(--red)}.pos{color:var(--green)}
 .hero-left .big.pos{color:var(--green)}.hero-left .big.neg{color:var(--red)}
 @media print{.hero-val{break-inside:avoid}}
+.sens-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin:10px 0 4px;font-size:11.5px}
+.sens-grid label{display:flex;align-items:center;gap:6px;color:var(--mut)}
+.sens-grid input{width:100%;min-width:0;padding:5px 6px;border:1px solid var(--line);border-radius:6px;font:inherit;text-align:right}
+.sens-grid i{font-style:normal;color:var(--mut)}
+#sensTable tr.mine td{background:var(--accent-soft,rgba(14,110,99,.08));font-weight:700}
+#sensTable tr.mine:first-child td{background:var(--accent-soft,rgba(14,110,99,.08))}
 .npv-break{margin-top:18px;border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;max-width:430px}
 .npvrow{display:flex;justify-content:space-between;gap:16px;padding:6px 0;font-size:11.8px;border-bottom:1px dotted var(--line)}
 .npvrow span{color:var(--mut)}.npvrow b{font-weight:700}
@@ -725,12 +731,16 @@ button.mv:hover{background:#eef3f8;color:#0f6f66;border-color:#0f6f66}
         </div>
         <aside class="rail">
           <div class="card">
-            <div class="card-h"><div><h2>민감도</h2><p>단가·수량·원가·할인율이 흔들릴 때 NPV와 IRR.</p></div></div>
+            <div class="card-h"><div><h2>민감도</h2><p>직접 숫자를 넣어 NPV·IRR의 흔들림을 확인하세요.</p></div></div>
+            <div class="sens-grid">
+              <label>판매단가<input class="num" type="number" step="1" data-sens="price" value="0"><i>%</i></label>
+              <label>판매수량<input class="num" type="number" step="1" data-sens="vol" value="0"><i>%</i></label>
+              <label>매입단가<input class="num" type="number" step="1" data-sens="cost" value="0"><i>%</i></label>
+              <label>할인율<input class="num" type="number" step="0.5" data-sens="disc" value="0"><i>%p</i></label>
+            </div>
             <div class="tablewrap"><table class="tbl plain" id="sensTable"></table></div>
-            <div class="cap">기준 대비 하나씩만 변화시킨 단일 변수 분석입니다.</div>
+            <div class="cap">위 4개 값을 자유롭게 조합하면 내 시나리오 행에 즉시 반영됩니다. 아래 목록은 기준 대비 하나씩만 바꾼 단일 변수 분석입니다.</div>
           </div>
-          <div class="card" id="bepBox"></div>
-          <div class="card" id="valDiag"></div>
           <div class="note amber" id="valFixNote">
             <span class="t">초기투자 반영 방식</span>
             t=0 행에 <b>CAPEX + 무형자산 + 초기재고</b>를 한 번에 넣고, 자본금·차입은 <b>재무활동</b>으로만 표시합니다. 그래서 NPV가 부풀지 않고, 현금흐름표에서도 초기 투자금이 보입니다.
@@ -1915,6 +1925,7 @@ const pct2=v=>(+v||0).toFixed(2)+'%';
 let editYear=0;
 let S=null, R=null;
 let currentView='assume', finTab='pl', orderYear=0, ledgerYear=0, ledgerGroup='__all', segLevel=7, COLLAPSED=new Set(), allCollapsed=false;
+let sensCfg={price:0,vol:0,cost:0,disc:0};
 
 const VIEW_META={
   assume:['01 / 07','기본 가정','분석 기간, 할인율, 회수·지급 조건과 최소 운영현금을 정합니다. 모든 화면이 이 가정을 공유합니다.'],
@@ -2974,8 +2985,21 @@ function renderValue(){
   }).join('');
   document.getElementById('fcfTable').innerHTML=`<thead><tr><th class="l">기간</th><th>FCFF<span class="u">${unitLabel()}</span></th><th>현재가치<span class="u">${unitLabel()}</span></th><th>누적 PV<span class="u">${unitLabel()}</span></th></tr></thead><tbody>${rows}</tbody>`;
 
+  const anySens=sensCfg.price||sensCfg.vol||sensCfg.cost||sensCfg.disc;
+  const mine=scenario('내 시나리오',s=>{
+    if(sensCfg.price)shiftProduct(s,'price',1+sensCfg.price/100);
+    if(sensCfg.vol)shiftProduct(s,'months',1+sensCfg.vol/100);
+    if(sensCfg.cost)shiftProduct(s,'cost',1+sensCfg.cost/100);
+    if(sensCfg.disc)shiftDiscount(s,sensCfg.disc);
+  });
+  const mineLabel='내 시나리오 · '+[
+    sensCfg.price?`단가 ${sensCfg.price>0?'+':''}${sensCfg.price}%`:null,
+    sensCfg.vol?`수량 ${sensCfg.vol>0?'+':''}${sensCfg.vol}%`:null,
+    sensCfg.cost?`원가 ${sensCfg.cost>0?'+':''}${sensCfg.cost}%`:null,
+    sensCfg.disc?`할인율 ${sensCfg.disc>0?'+':''}${sensCfg.disc}%p`:null].filter(Boolean).join(' · ');
   const list=[
     {label:'기준',npv:R.npv,irr:R.irr,pb:R.payback},
+    anySens?{...mine,label:mineLabel,mine:true}:null,
     scenario('할인율 +2%p',s=>shiftDiscount(s,2)),
     scenario('할인율 −2%p',s=>shiftDiscount(s,-2)),
     scenario('판매단가 −10%',s=>shiftProduct(s,'price',0.9)),
@@ -2983,9 +3007,9 @@ function renderValue(){
     scenario('판매수량 −10%',s=>shiftProduct(s,'months',0.9)),
     scenario('판매수량 +10%',s=>shiftProduct(s,'months',1.1)),
     scenario('원가 +10%',s=>shiftProduct(s,'cost',1.1))
-  ];
+  ].filter(Boolean);
   document.getElementById('sensTable').innerHTML=`<thead><tr><th class="l">시나리오</th><th>NPV<span class="u">${unitLabel()}</span></th><th>IRR</th></tr></thead><tbody>`+
-     list.map(x=>`<tr class="${x.label==='기준'?'hl':''}"><td class="l">${x.label}</td><td class="${x.npv<0?'neg':''}">${x.npv===null?'계산불가':man(x.npv)}</td><td>${x.irr!=null?(x.irr*100).toFixed(1)+'%':'—'}</td></tr>`).join('')+`</tbody>`;
+     list.map(x=>`<tr class="${x.label==='기준'?'hl':''}${x.mine?' mine':''}"><td class="l">${esc(x.label)}</td><td class="${x.npv<0?'neg':''}">${x.npv===null?'계산불가':man(x.npv)}</td><td>${x.irr!=null?(x.irr*100).toFixed(1)+'%':'—'}</td></tr>`).join('')+`</tbody>`;
 
   const sel=document.getElementById('segSelect');
   if(sel&&!sel.options.length){
@@ -2995,22 +3019,6 @@ function renderValue(){
   document.getElementById('segTable').innerHTML=`<thead><tr><th class="l">${LEVELS[segLevel-1]}</th><th>매출<span class="u">${unitLabel()}</span></th><th>매출총이익<span class="u">${unitLabel()}</span></th><th>이익률</th><th>비중</th></tr></thead><tbody>`+
     (seg.length?seg.map(x=>`<tr><td class="l">${esc(x.name)}</td><td>${man(x.rev)}</td><td>${man(x.gp)}</td><td>${pcv(x.gm)}</td><td>${(x.share*100).toFixed(1)}%</td></tr>`).join(''):`<tr><td colspan="5" class="l">해당 단계에 데이터가 없습니다.</td></tr>`)+`</tbody>`;
 
-  const g1=R.mgmt[0]||{bep:0,margin:0,cm:0,fixed:0};
-  document.getElementById('bepBox').innerHTML=`<div class="card-h"><div><h2>BEP · 영업레버리지</h2><p>Y1 관리회계 기준.</p></div></div>
-    <div class="kv"><span class="k">공헌이익</span><span class="v">${shortWon(g1.cm)}</span></div>
-    <div class="kv"><span class="k">고정비</span><span class="v">${shortWon(g1.fixed)}</span></div>
-    <div class="kv big"><span class="k">BEP 매출</span><span class="v">${shortWon(g1.bep)}</span></div>
-    <div class="kv"><span class="k">안전율</span><span class="v">${g1.margin==null?'—':pct(g1.margin*100)}</span></div>
-    <div class="kv"><span class="k">DOL</span><span class="v">${R.mgmt[0].dol==null?'—':R.mgmt[0].dol.toFixed(2)+'배'}</span></div>
-    <div class="cap">BEP = 고정비 ÷ 공헌이익률. 안전율이 낮으면 매출 변동에 취약합니다.</div>`;
-
-  document.getElementById('valDiag').innerHTML=`<div class="card-h"><div><h2>판정 근거</h2><p>숫자 뒤의 가정.</p></div></div>
-    <div class="kv"><span class="k">t=0 투자액</span><span class="v">${shortWon(R.I0)}</span></div>
-    <div class="kv"><span class="k">잔존가치</span><span class="v">${R.tv===null?'계산불가':shortWon(R.tv)}</span></div>
-    <div class="kv"><span class="k">계획기간 FCFF 합</span><span class="v">${shortWon(R.totals.fcff)}</span></div>
-    <div class="kv"><span class="k">누적 순이익</span><span class="v">${shortWon(R.totals.ni)}</span></div>
-    <div class="kv"><span class="k">기말 현금</span><span class="v">${shortWon(R.bs[R.H-1].cash)}</span></div>
-     ${R.diag.length?R.diag.map(d=>`<div class="diagrow ${d.level}"><b>${d.t}</b><span>${d.text}</span></div>`).join(''):''}`;
   renderDetailedFCFF();
 }
 function walkProducts(tree){
@@ -3028,6 +3036,7 @@ function bindStatic(){
   });
   document.addEventListener('input',e=>{
     const el=e.target;
+    if(el.dataset&&el.dataset.sens){sensCfg[el.dataset.sens]=num(el.value);if(currentView==='value')renderValue();return;}
     if(el.id==='projName'){ S.meta.name=el.value; saveState(); return; }
     if(el.dataset.bind){
       const path=el.dataset.bind;
@@ -4177,6 +4186,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
