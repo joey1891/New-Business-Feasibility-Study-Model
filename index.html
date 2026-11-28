@@ -124,7 +124,7 @@ select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(14,
 /* ---------- tables ---------- */
 .tablewrap{overflow:auto;border:1px solid var(--line);border-radius:var(--r);background:#fff;max-width:100%}
 #invLedger .receipt-trace{text-align:left;min-width:225px;white-space:nowrap;font-size:11px}#invLedger .receipt-trace b{display:block;color:var(--teal)}#invLedger .receipt-trace>div+div{border-top:1px solid var(--line);padding-top:4px;margin-top:4px}
-.funding-plan{overflow:hidden}.funding-plan .funding-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;padding:12px 16px}.funding-plan .funding-kpis>div{padding:10px 12px;background:var(--tealSoft);border-radius:8px}.funding-plan .funding-kpis b{display:block;font-size:19px;margin-top:4px}.funding-plan details{margin:10px 16px}.funding-plan summary{cursor:pointer;font-weight:750;padding:8px 0}.funding-plan .tbl{min-width:970px}.funding-plan .funding-positive{color:var(--teal);font-weight:800}#view-invest .cols{grid-template-columns:minmax(0,1fr)}
+.funding-plan{overflow:hidden}.funding-breakdown{margin:10px 16px 14px}.funding-breakdown summary{cursor:pointer;font-weight:750;padding:8px 0}.funding-breakdown .tablewrap{overflow-x:auto;margin-top:10px}.funding-breakdown .breakdown-list{min-width:640px}.funding-breakdown .breakdown-months{min-width:900px}.funding-breakdown th,.funding-breakdown td{white-space:nowrap}.funding-breakdown tr.total td{font-weight:800}.funding-plan .funding-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;padding:12px 16px}.funding-plan .funding-kpis>div{padding:10px 12px;background:var(--tealSoft);border-radius:8px}.funding-plan .funding-kpis b{display:block;font-size:19px;margin-top:4px}.funding-plan details{margin:10px 16px}.funding-plan summary{cursor:pointer;font-weight:750;padding:8px 0}.funding-plan .tbl{min-width:970px}.funding-plan .funding-positive{color:var(--teal);font-weight:800}#view-invest .cols{grid-template-columns:minmax(0,1fr)}
 .funding-plan .tablewrap{overflow-x:auto;max-width:100%}.funding-plan .funding-summary{min-width:850px}.funding-plan .funding-summary th{white-space:normal;word-break:keep-all;line-height:1.35}.funding-plan .funding-summary th,.funding-plan .funding-summary td{padding-left:7px;padding-right:7px}
 #invSettings{min-width:950px}#invSettings th:first-child,#invSettings td:first-child{white-space:normal;min-width:150px;max-width:230px}#invSettings td:first-child .sub{white-space:normal;overflow-wrap:anywhere}#invSettings th:nth-child(10),#invSettings td:nth-child(10){min-width:148px}#invSettings td:nth-child(10) input{min-width:126px}
 table.tbl{border-collapse:separate;border-spacing:0;width:100%;font-size:12.2px;font-variant-numeric:tabular-nums}
@@ -2013,8 +2013,14 @@ function calcOpeningCashNeed(s,groups,months,minimums,cash,cash0){
   const floors=months.map((m,i)=>minimums[m.t0?0:m.yi]+reserve[i]);
   // Cash already includes actual payments and working-capital changes. Only carry unpaid first-order reserves.
   const base=payrollBase+firstOrders;
-  const operatingGap=Math.max(0,...cash.map((v,i)=>floors[i]-(v-cash0)-base));
-  return {payrollBase,firstOrders,reserve,floors,operatingGap,total:base+operatingGap};
+  const worst=Math.max(0,...cash.map((v,i)=>floors[i]-(v-cash0)-base));
+  const detail={payrollBase,firstOrders,reserve,floors,operatingGap:worst,total:base+worst,gapMonths:cash.map((v,i)=>floors[i]-(v-cash0)-base),
+    firstList:first.map((o,j)=>({name:groups.filter(g=>g.orders[0]).map(g=>g.orders[0]===o?g.name:null).find(Boolean)||('품목 '+(j+1)),amount:o.amount,arrMonth:o.arrMonth,due:o.due,month:o.arrMonth>=0&&o.arrMonth<months.length?months[o.arrMonth]:null})),
+    months};
+  detail.payrollMonths=months.map(m=>minimums[m.t0?0:m.yi]);
+  detail.reserveMonths=reserve;
+  detail.cash0=cash0;
+  return detail;
 }
 function buildFundingPlan(r){
   const s=r.s, other=s.invest.debt+s.assume.openingCash;
@@ -2037,6 +2043,33 @@ function buildFundingPlan(r){
 function fundingMonthKey(m){return m.y+'-'+String(m.mm).padStart(2,'0');}
 function fundingAmount(v){if(v==null||String(v).trim()==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isSafeInteger(n)&&n>=0?n:null;}
 function openingFundingGap(r){return r.openingCashNeed.total-r.cash0;}
+function renderOpeningBreakdown(n){
+  const u=unitLabel(),m=v=>man(v)+' '+u,w=v=>won(Math.round(num(v)));
+  const months=n.months||[],pay=n.payrollMonths||[],res=n.reserveMonths||[],gaps=n.gapMonths||[];
+  const firstRows=(n.firstList||[]).map(o=>{
+    const due=o.due!=null&&Number.isFinite(o.due)?planDate(o.due):'발주일 미지정';
+    const paid=o.month&&months.length?months.filter(x=>planDay(x.y,x.mm,1)+x.days>o.due).length:null;
+    return [esc(o.name),m(o.amount),due,paid==null||paid<=0?'미지급':`${paid}개월차 지급`];
+  });
+  const monthHead=months.map((x,i)=>`${x.t0?'T0 ':''}${x.mm}월`);
+  const hasPayrollVariation=pay.some(v=>Math.abs(v-pay[0])>0.005);
+  return `<details class="funding-breakdown"><summary>개시일 최소 운영현금 세부 분해 보기</summary>
+  <table class="tbl plain breakdown-list"><thead><tr><th class="l">구성 항목</th><th>금액 · ${u}</th><th>산출 기준</th></tr></thead><tbody>
+  <tr><td class="l">인건비 유보액</td><td>${m(n.payrollBase)}</td><td>${w(pay[0]||0)}원 = Y1 월평균 인건비 × 최소 운영현금 개월 수${hasPayrollVariation?' · 이후 연도는 인건비가 늘어도 개시일 유보액은 Y1 기준입니다':''}</td></tr>
+  <tr><td class="l">최초 발주대금 유보액</td><td>${m(n.firstOrders)}</td><td>아래 품목별 첫 발주 금액(부가세 포함) 합계</td></tr>
+  <tr><td class="l">운영 중 추가 현금 부족분</td><td>${m(n.operatingGap)}</td><td>개시일 이후 월별 현금(회수·지급·운전자본·인건비·차입 상환 반영)이 확보 기준에 모자란 최대 금액${gaps.some(v=>v>0.005)?` · 최대 부족 월: ${monthHead[gaps.indexOf(Math.max(...gaps))]}`:' · 없음'}</td></tr>
+  <tr class="total"><td class="l">개시일 최소 운영현금</td><td>${m(n.total)}</td><td>세 항목 합계</td></tr>
+  </tbody></table>
+  ${firstRows.length?`<div class="tablewrap"><table class="tbl plain breakdown-list"><thead><tr><th class="l">품목</th><th>첫 발주 금액 · ${u}</th><th>지급 예정일</th><th>유보액 처리</th></tr></thead><tbody>${firstRows.map(r=>`<tr>${r.map((c,i)=>`<td${i?'':' class="l"'}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<p class="help">계획기간에 발주가 없어 최초 발주 유보액은 0입니다.</p>'}
+  ${months.length?`<div class="tablewrap"><table class="tbl plain breakdown-list breakdown-months"><thead><tr><th class="l">월별</th>${monthHead.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>
+  <tr><td class="l">인건비 유보 기준 · ${u}</td>${pay.map(v=>`<td>${m(v)}</td>`).join('')}</tr>
+  <tr><td class="l">미지급 최초 발주 유보액 · ${u}</td>${res.map(v=>`<td>${m(v)}</td>`).join('')}</tr>
+  <tr><td class="l">현금 확보 기준 · ${u}</td>${n.floors.map(v=>`<td>${m(v)}</td>`).join('')}</tr>
+  <tr><td class="l">추가 투입 전 현금 · ${u}</td>${months.map((_,i)=>`<td>${m(n.cash0+n.total-n.floors[i]+(gaps[i]??0))}</td>`).join('')}</tr>
+  <tr><td class="l">확보 기준 초과(+) · 부족(−) · ${u}</td>${gaps.map(v=>`<td class="${v<-0.005?'neg':''}">${m(v)}</td>`).join('')}</tr>
+  </tbody></table><p class="help">인건비 유보 기준은 연도별 월평균 인건비 × 최소 운영현금 개월 수입니다. 부족 월이 있으면 그 최대 부족액만큼 개시일에 더 확보합니다.</p></div>`:''}
+  </details>`;
+}
 function recommendedOpeningTopUp(r){return Math.max(0,Math.ceil(openingFundingGap(r)-1e-7));}
 function openingTopUp(r){return fundingAmount(r.s.invest.openingTopUp)??recommendedOpeningTopUp(r);}
 function operatingCashParts(r,i){
@@ -2068,6 +2101,7 @@ function renderFundingPlan(){
   const cards=[['개시일 최소 운영현금',n.total],['개시일 최소 자기자본',plan.equity],['개시일 추가 투입',plan.upfront],['개시 후 추가 투입 합계',plan.cumulative]];
   el.innerHTML=`<div class="card-h"><div><h2><span class="no">03</span>최소 초기투자와 단계별 자금 투입</h2><p>개시일에 투입할 금액을 정하면, 이후에는 월말 최소 운영현금에 모자라는 금액만 추가로 투입합니다.</p></div></div><div class="funding-kpis">${cards.map(([k,v])=>`<div>${k}<b>${f(v)}</b></div>`).join('')}</div>
   <div class="cap"><b>개시일 최소 운영현금</b> = 인건비 유보액 ${f(n.payrollBase)} + 품목별 최초 발주대금 유보액 ${f(n.firstOrders)} + 운영 중 추가 부족분 ${f(n.operatingGap)}. 추가 부족분은 매출 회수, 매입 지급, 운전자본 증가, 인건비와 차입 상환을 반영한 월별 현금 흐름에서 구합니다. 최초 발주 유보액에는 부가세가 포함되며, 지급 월부터는 유보액을 줄여 중복 계산하지 않습니다.<br><b>개시일 총 필요자금</b> = 개시 투자 ${f(R.I0)} + 개시일 최소 운영현금 ${f(n.total)} = ${f(R.I0+n.total)}. 최소 자기자본은 예정 차입과 보유현금 ${f(plan.other)}을 차감한 금액입니다.</div>
+  ${renderOpeningBreakdown(n)}
   <div class="cap"><label><b>개시일 추가투입액 (원)</b> ${fundingInput('opening',openingInput,'개시일 추가투입액',recommendedOpeningTopUp(R))}</label> · ${openingInput===null?'자동 적용':'직접 입력 적용'} ${f(plan.upfront)} · 자동 권장 ${f(recommendedOpeningTopUp(R))}<br>빈칸이면 계획기간에 월별 추가 조달이 필요하지 않은 최소 금액을 자동 적용합니다. 직접 입력하면 그 금액을 그대로 쓰고 이후 부족분만 다시 계산합니다. <b>0은 개시일 추가 투입 없음</b>입니다. 엔터 또는 입력칸을 벗어나면 반영됩니다.</div>
   <div class="tablewrap" tabindex="0" aria-label="개시일 및 연도별 자금 투입표"><table class="tbl plain funding-summary">${head}<tbody>${row('개시일(t=0)',[plan.wc0,plan.wc0,0,R.cash0,null,null,R.cash0,n.total,plan.upfront,plan.opening,plan.upfront])}${annual.join('')}</tbody></table></div>${detail.join('')}
   <div class="cap">표 단위: ${u}. 월별 현금 확보 기준은 해당 연도의 인건비 유보액과 아직 지급하지 않은 최초 발주 유보액입니다. 누적 추가 투입에는 개시일 투입액이 포함됩니다. 월별 직접 입력값은 유지합니다. 이 조달 계획은 재고 원장의 현금에 반영하며 설정 자본금과 재무제표에는 자동 전기하지 않습니다.</div>`;
@@ -4039,6 +4073,7 @@ let pendingDirty=false,lastSavedAt=null;;
 
 </body>
 </html>
+
 
 
 
